@@ -1,0 +1,10 @@
+# DSPy and related dependencies
+dspy-ai==2.4.9
+openai==1.12.0
+anthropic==0.18.1
+pandas==2.1.4
+scikit-learn==1.3.2
+numpy==1.24.4
+
+# Existing dependencies (if not already installed)
+python-dotenv==1.0.0
