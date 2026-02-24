@@ -22,20 +22,20 @@ pnpm-debug.log*
 dist/
 .cache/
 
-# Environment variables
+# Environment
 .env
 .env.local
 .env.production
 
-# Docker
-docker-compose.override.yml
+# Git
+.git/
+.gitignore
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
@@ -43,3 +43,4 @@ Thumbs.db
 
 # Uploads
 resume_backend/src/uploads/
+resume_backend/src/temp_uploads/
