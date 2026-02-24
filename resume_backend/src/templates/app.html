@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or 'devZen - Digital Resume Platform' }}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="devZen - Modern digital resume platform for developers and tech professionals">
+    <meta name="keywords" content="resume, developer, tech, jobs, career">
+    
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="{{ title or 'devZen - Digital Resume Platform' }}">
+    <meta property="og:description" content="Showcase your skills with confidence and get matched with the right tech opportunities">
+    <meta property="og:type" content="website">
+    
+    <!-- Brand colors CSS variables -->
+    <style>
+        :root {
+            --primary-blue: #3B82F6;
+            --secondary-green: #10B981;
+            --dark-gray: #1F2937;
+            --light-gray: #F3F4F6;
+            --white: #FFFFFF;
+        }
+        
+        /* Loading spinner styles */
+        .inertia-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-blue), var(--secondary-green));
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 9999;
+        }
+        
+        .inertia-loading.loading {
+            transform: translateX(0%);
+        }
+        
+        /* Prevent flash of unstyled content */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: var(--white);
+        }
+        
+        #app {
+            min-height: 100vh;
+        }
+    </style>
+    
+    <!-- Vite development server assets -->
+    {% if config.ENV == 'development' %}
+        <script type="module" src="http://localhost:5173/@vite/client"></script>
+        <script type="module" src="http://localhost:5173/src/main.jsx"></script>
+    {% else %}
+        <!-- Production assets will be injected here by Vite build -->
+        {{ vite_assets() }}
+    {% endif %}
+</head>
+<body>
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="inertia-loading"></div>
+    
+    <!-- Main app container -->
+    <div id="app" data-page="{{ page | tojson }}"></div>
+    
+    <!-- Inertia.js initialization script -->
+    <script>
+        // Global configuration for devZen
+        window.devZen = {
+            apiBaseUrl: '{{ config.API_BASE_URL or "" }}',
+            environment: '{{ config.ENV or "production" }}',
+            version: '{{ config.VERSION or "1.0.0" }}'
+        };
+        
+        // Loading indicator management
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            
+            // Show loading indicator on Inertia requests
+            document.addEventListener('inertia:start', function() {
+                loadingIndicator.classList.add('loading');
+            });
+            
+            // Hide loading indicator when request completes
+            document.addEventListener('inertia:finish', function() {
+                setTimeout(() => {
+                    loadingIndicator.classList.remove('loading');
+                }, 300);
+            });
+        });
+    </script>
+</body>
+</html>
