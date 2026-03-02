@@ -14,6 +14,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+console.log('🔍 [fileUpload] Debug path info:');
+console.log('  import.meta.url:', import.meta.url);
+console.log('  __filename:', __filename);
+console.log('  __dirname:', __dirname);
+
 // Recruiter auth middleware
 function verifyRecruiterToken(token: string): any {
   try {
@@ -26,7 +31,9 @@ function verifyRecruiterToken(token: string): any {
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    console.log('🔍 [fileUpload] Creating upload directory, __dirname:', __dirname);
     const uploadDir = path.join(__dirname, '../../uploads', 'resumes');
+    console.log('🔍 [fileUpload] uploadDir:', uploadDir);
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {

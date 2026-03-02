@@ -1,8 +1,27 @@
 import * as dotenv from "dotenv";
-dotenv.config();
-
 import path from "path";
 import { fileURLToPath } from "url";
+
+// Get proper directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from the project root (two levels up from dist/server)
+const envPath = path.resolve(__dirname, '../../.env');
+console.log('🔍 Loading .env from:', envPath);
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.warn('⚠️  Warning: Could not load .env file:', result.error.message);
+  console.log('🔍 Trying alternative path...');
+  // Try loading from current directory as fallback
+  dotenv.config();
+} else {
+  console.log('✅ Environment variables loaded successfully');
+  console.log('🔍 DATABASE_URL present:', !!process.env.DATABASE_URL);
+  console.log('🔍 GROQ_API_KEY present:', !!process.env.GROQ_API_KEY);
+}
+
 import { createServer } from "./index";
 import express from "express";
 
@@ -12,7 +31,14 @@ const port = process.env.PORT || 3000;
 // In production, serve the built SPA files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+console.log('🔍 Debug path info:');
+console.log('  import.meta.url:', import.meta.url);
+console.log('  __filename:', __filename);
+console.log('  __dirname:', __dirname);
+
 const distPath = path.join(__dirname, "../spa");
+console.log('  distPath:', distPath);
 
 // Serve static files
 app.use(express.static(distPath));
