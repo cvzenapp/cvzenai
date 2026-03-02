@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { z } from 'zod';
 import { guestResumeService } from '../services/guestResumeService.js';
@@ -13,10 +14,14 @@ import { resumeParsingService } from '../services/resumeParsingService.js';
 
 const router = Router();
 
+// Get proper directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Configure multer for temporary file storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'uploads', 'temp', 'guest');
+    const uploadDir = path.join(__dirname, '../../uploads', 'temp', 'guest');
     
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });

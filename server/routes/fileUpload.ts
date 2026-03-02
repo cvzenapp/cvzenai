@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import unifiedAuth, { AuthRequest } from '../middleware/unifiedAuth.js';
@@ -8,6 +9,10 @@ import { resumeParsingService } from '../services/resumeParsingService.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Get proper directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Recruiter auth middleware
 function verifyRecruiterToken(token: string): any {
@@ -21,7 +26,7 @@ function verifyRecruiterToken(token: string): any {
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
+    const uploadDir = path.join(__dirname, '../../uploads', 'resumes');
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
