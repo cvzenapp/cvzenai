@@ -150,6 +150,23 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
       }
     }
 
+    // Track usage for subscription
+    try {
+      const { SubscriptionService } = await import('../services/subscriptionService.js');
+      const subscription = await SubscriptionService.getUserSubscription(userId);
+      if (subscription) {
+        await SubscriptionService.incrementUsage(
+          subscription.id,
+          'user',
+          'job_applications_monthly',
+          1
+        );
+      }
+    } catch (usageError) {
+      console.error('Error tracking job application usage:', usageError);
+      // Don't fail the request if usage tracking fails
+    }
+
     res.json({
       success: true,
       data: {

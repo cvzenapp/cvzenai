@@ -462,6 +462,23 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
 
     console.log(`✅ Resume improved successfully - Score: ${currentATSScore.overallScore} → ${newATSScore.overallScore} (+${newATSScore.overallScore - currentATSScore.overallScore})`);
 
+    // Track usage for subscription
+    try {
+      const { SubscriptionService } = await import('../services/subscriptionService.js');
+      const subscription = await SubscriptionService.getUserSubscription(userId);
+      if (subscription) {
+        await SubscriptionService.incrementUsage(
+          subscription.id,
+          'user',
+          'ai_improvements_monthly',
+          1
+        );
+      }
+    } catch (usageError) {
+      console.error('Error tracking AI improvement usage:', usageError);
+      // Don't fail the request if usage tracking fails
+    }
+
     return res.json({
       success: true,
       method,

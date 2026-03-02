@@ -171,6 +171,7 @@ export default function Dashboard() {
   });
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
+  const [subscriptionUsage, setSubscriptionUsage] = useState<any[]>([]);
 
   // Profile settings state
   const [profileData, setProfileData] = useState({
@@ -976,6 +977,17 @@ export default function Dashboard() {
     try {
       const sub = await subscriptionApi.getUserSubscription(currentUser.id);
       setSubscription(sub);
+      
+      // Load usage data if subscription exists
+      if (sub) {
+        try {
+          const usage = await subscriptionApi.getUserUsage(currentUser.id);
+          setSubscriptionUsage(usage);
+        } catch (usageError) {
+          console.error('Error loading usage:', usageError);
+          setSubscriptionUsage([]);
+        }
+      }
     } catch (error) {
       console.error('Error loading subscription:', error);
     } finally {
@@ -1623,19 +1635,31 @@ export default function Dashboard() {
                           <CardTitle>Usage Analytics</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <JobSeekerUsageTracker 
-                            subscription={subscription} 
-                            usage={[]} 
-                          />
+                          {loadingSubscription ? (
+                            <div className="flex items-center justify-center p-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
+                          ) : (
+                            <JobSeekerUsageTracker 
+                              subscription={subscription} 
+                              usage={subscriptionUsage} 
+                            />
+                          )}
                         </CardContent>
                       </Card>
                     </TabsContent>
 
                     <TabsContent value="billing">
-                      <JobSeekerSubscriptionDashboard 
-                        userId={currentUser.id.toString()} 
-                        subscription={subscription} 
-                      />
+                      {loadingSubscription ? (
+                        <div className="flex items-center justify-center p-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : (
+                        <JobSeekerSubscriptionDashboard 
+                          userId={currentUser.id.toString()} 
+                          subscription={subscription} 
+                        />
+                      )}
                     </TabsContent>
                   </Tabs>
                 )}
