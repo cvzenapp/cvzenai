@@ -1,7 +1,9 @@
 import express from "express";
+import type * as expressType from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
 import path from "path";
+import type * as pathType from "path";
 dotenv.config();
 import {
   getResume,
