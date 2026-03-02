@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reward Confirmation - CVZen</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        .celebration {
+            text-align: center;
+            font-size: 48px;
+            margin: 20px 0;
+        }
+        .reward-amount {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .amount {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .reward-label {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .referral-details {
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .detail-value {
+            color: #6b7280;
+        }
+        .payment-info {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .payment-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+        .balance-summary {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .balance-row:last-child {
+            margin-bottom: 0;
+            font-weight: 600;
+            border-top: 1px solid #bae6fd;
+            padding-top: 8px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 14px;
+            color: #6b7280;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">CVZen</div>
+            <h1 class="title">Congratulations! You've Earned a Reward!</h1>
+        </div>
+
+        <div class="celebration">🎉</div>
+
+        <div class="reward-amount">
+            <div class="amount">${{rewardAmount}}</div>
+            <div class="reward-label">Referral Reward Earned</div>
+        </div>
+
+        <p style="text-align: center; font-size: 18px; color: #374151;">
+            Your referral of <strong>{{refereeName}}</strong> was successful!
+        </p>
+
+        <div class="referral-details">
+            <div class="detail-row">
+                <span class="detail-label">Referee:</span>
+                <span class="detail-value">{{refereeName}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Position:</span>
+                <span class="detail-value">{{positionTitle}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Company:</span>
+                <span class="detail-value">{{companyName}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Referral Date:</span>
+                <span class="detail-value">{{referralDate}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Hire Date:</span>
+                <span class="detail-value">{{hireDate}}</span>
+            </div>
+        </div>
+
+        {{#if paymentProcessed}}
+        <div class="payment-info">
+            <div class="payment-title">Payment Information</div>
+            <p>Your reward has been processed and will appear in your account within 2-3 business days.</p>
+            <ul>
+                <li><strong>Payment Method:</strong> {{paymentMethod}}</li>
+                <li><strong>Transaction ID:</strong> {{transactionId}}</li>
+                <li><strong>Processing Date:</strong> {{processingDate}}</li>
+            </ul>
+        </div>
+        {{else}}
+        <div class="payment-info">
+            <div class="payment-title">Payment Processing</div>
+            <p>Your reward is being processed and will be added to your account balance. Once you reach the minimum payout threshold of ${{minPayoutThreshold}}, payment will be automatically initiated.</p>
+        </div>
+        {{/if}}
+
+        <div class="balance-summary">
+            <div class="balance-row">
+                <span>Previous Balance:</span>
+                <span>${{previousBalance}}</span>
+            </div>
+            <div class="balance-row">
+                <span>This Reward:</span>
+                <span>+${{rewardAmount}}</span>
+            </div>
+            <div class="balance-row">
+                <span>New Balance:</span>
+                <span>${{newBalance}}</span>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{{rewardsDashboardLink}}" class="cta-button">View Rewards Dashboard</a>
+        </div>
+
+        <p style="text-align: center; color: #6b7280;">
+            Keep referring friends and colleagues to earn more rewards!<br>
+            <a href="{{referralDashboardLink}}">Make another referral</a>
+        </p>
+
+        <div class="footer">
+            <p>Thank you for helping grow the CVZen community!</p>
+            <p><strong>Important:</strong> Rewards may be reversed if the referred candidate leaves within 90 days of hire.</p>
+            <p><a href="{{unsubscribeLink}}">Unsubscribe from reward notifications</a></p>
+        </div>
+    </div>
+</body>
+</html>

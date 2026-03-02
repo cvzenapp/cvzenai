@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Welcome UI Flow</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { 
+            padding: 10px 15px; 
+            margin: 5px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+        }
+        button:hover { background: #0056b3; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .welcome-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Test Recruiter Welcome Flow</h1>
+        
+        <div class="step info">
+            <h3>📋 Instructions</h3>
+            <p>This page tests the complete recruiter authentication and welcome message flow:</p>
+            <ol>
+                <li>Clear any existing session</li>
+                <li>Register a new recruiter</li>
+                <li>Verify welcome message appears</li>
+                <li>Test that actions work without modal</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Step 1: Clear Session</h3>
+            <button onclick="clearSession()">Clear Session</button>
+            <div id="clearStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Register Recruiter</h3>
+            <button onclick="registerRecruiter()">Register New Recruiter</button>
+            <div id="registerStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Check Welcome State</h3>
+            <button onclick="checkWelcomeState()">Check Welcome State</button>
+            <div id="welcomeStatus"></div>
+        </div>
+
+        <div class="step success">
+            <h3>Step 4: Test Shared Resume</h3>
+            <p>After successful registration, visit the shared resume:</p>
+            <a href="/shared/resume/cf9bae96fa56cdf28fa5d64bc08e276c5880311a94ac6efbe7ff50d0d2abb3d7" 
+               target="_blank" 
+               style="display: inline-block; padding: 10px 15px; background: #28a745; color: white; text-decoration: none; border-radius: 4px;">
+                🔗 Open Shared Resume
+            </a>
+            <p><strong>Expected behavior:</strong></p>
+            <ul>
+                <li>✅ Welcome message should appear: "Welcome, [Your Name]"</li>
+                <li>✅ Like/Shortlist buttons should work immediately</li>
+                <li>❌ No authentication modal should appear</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function clearSession() {
+            localStorage.removeItem('recruiter_token');
+            localStorage.removeItem('recruiterUser');
+            
+            document.getElementById('clearStatus').innerHTML = 
+                '<div class="status success">✅ Session cleared successfully</div>';
+        }
+
+        async function registerRecruiter() {
+            const statusDiv = document.getElementById('registerStatus');
+            
+            try {
+                statusDiv.innerHTML = '<div class="status info">🔄 Registering recruiter...</div>';
+                
+                const timestamp = Date.now();
+                const response = await fetch('/api/recruiter/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        firstName: 'UI',
+                        lastName: 'Tester',
+                        email: `ui.tester.${timestamp}@example.com`,
+                        password: 'TestPass123!',
+                        confirmPassword: 'TestPass123!',
+                        companyName: 'UI Test Company',
+                        jobTitle: 'HR Manager',
+                        companySizeRange: '1-10 employees',
+                        companyLocation: 'Test City',
+                        acceptTerms: true,
+                        acceptPrivacyPolicy: true
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store in localStorage (simulating what RecruiterAuthModal does)
+                    localStorage.setItem('recruiter_token', data.token);
+                    localStorage.setItem('recruiterUser', JSON.stringify(data.recruiter));
+                    
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            <h4>✅ Registration Successful!</h4>
+                            <p><strong>Name:</strong> ${data.recruiter.firstName} ${data.recruiter.lastName}</p>
+                            <p><strong>Email:</strong> ${data.recruiter.email}</p>
+                            <p><strong>Company:</strong> ${data.recruiter.company.name}</p>
+                            <div class="welcome-message">
+                                Welcome, ${data.recruiter.firstName} ${data.recruiter.lastName}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="status error">
+                            <h4>❌ Registration Failed</h4>
+                            <p>${data.error || 'Unknown error'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="status error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function checkWelcomeState() {
+            const statusDiv = document.getElementById('welcomeStatus');
+            
+            const token = localStorage.getItem('recruiter_token');
+            const userStr = localStorage.getItem('recruiterUser');
+            
+            if (token && userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    const fullName = `${user.firstName} ${user.lastName}`.trim();
+                    
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            <h4>✅ Ready for Welcome Message</h4>
+                            <p><strong>Stored Name:</strong> ${fullName}</p>
+                            <p><strong>Token:</strong> ${token.substring(0, 20)}...</p>
+                            <div class="welcome-message">
+                                Expected: Welcome, ${fullName}
+                            </div>
+                            <p>🎯 Now visit the shared resume to see the welcome message!</p>
+                        </div>
+                    `;
+                } catch (error) {
+                    statusDiv.innerHTML = `
+                        <div class="status error">
+                            <h4>❌ Error Parsing Data</h4>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="status warning">
+                        <h4>⚠️ No Session Found</h4>
+                        <p>Please register first to test the welcome message.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

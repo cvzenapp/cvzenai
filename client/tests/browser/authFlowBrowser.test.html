@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Flow Browser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .test-controls {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .auth-status {
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .authenticated {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .unauthenticated {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Authentication Flow Browser Test</h1>
+    <p>This test validates the complete authentication flow in a real browser environment.</p>
+
+    <div class="test-controls">
+        <h3>Test Controls</h3>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearTestResults()">Clear Results</button>
+        <button onclick="resetAuthState()">Reset Auth State</button>
+        <div id="authStatus" class="auth-status unauthenticated">
+            Authentication Status: Not Authenticated
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>1. Login Flow Test</h3>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="loginResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Dashboard Navigation Test</h3>
+        <button onclick="testDashboardNavigation()">Test Dashboard</button>
+        <div id="dashboardResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Resume Builder Navigation Test</h3>
+        <button onclick="testResumeBuilderNavigation()">Test Resume Builder</button>
+        <div id="resumeBuilderResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Session Persistence Test</h3>
+        <button onclick="testSessionPersistence()">Test Session Persistence</button>
+        <div id="sessionResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>5. Cross-Tab Authentication Test</h3>
+        <button onclick="testCrossTabAuth()">Test Cross-Tab Auth</button>
+        <div id="crossTabResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>6. Error Handling Test</h3>
+        <button onclick="testErrorHandling()">Test Error Handling</button>
+        <div id="errorHandlingResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>7. Complete User Journey Test</h3>
+        <button onclick="testCompleteUserJourney()">Test Complete Journey</button>
+        <div id="completeJourneyResults"></div>
+    </div>
+
+    <script>
+        // Mock authentication service for browser testing
+        class MockAuthService {
+            constructor() {
+                this.isLoggedIn = false;
+                this.user = null;
+                this.token = null;
+            }
+
+            async login(credentials) {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (credentials.email && credentials.password) {
+                            this.isLoggedIn = true;
+                            this.user = {
+                                id: 1,
+                                email: credentials.email,
+                                name: 'Test User'
+                            };
+                            this.token = 'mock-jwt-token-' + Date.now();
+                            
+                            // Store in localStorage
+                            localStorage.setItem('auth_token', this.token);
+                            localStorage.setItem('auth_user', JSON.stringify(this.user));
+                            
+                            this.updateAuthStatus();
+                            resolve({ success: true, user: this.user, token: this.token });
+                        } else {
+                            resolve({ success: false, error: 'Invalid credentials' });
+                        }
+                    }, 500);
+                });
+            }
+
+            async logout() {
+                this.isLoggedIn = false;
+                this.user = null;
+                this.token = null;
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                this.updateAuthStatus();
+            }
+
+            isAuthenticated() {
+                return this.isLoggedIn;
+            }
+
+            getCurrentUser() {
+                return this.user;
+            }
+
+            initializeFromStorage() {
+                const token = localStorage.getItem('auth_token');
+                const userStr = localStorage.getItem('auth_user');
+                
+                if (token && userStr) {
+                    try {
+                        this.token = token;
+                        this.user = JSON.parse(userStr);
+                        this.isLoggedIn = true;
+                        this.updateAuthStatus();
+                        return true;
+                    } catch (e) {
+                        this.clearAuthState();
+                        return false;
+                    }
+                }
+                return false;
+            }
+
+            clearAuthState() {
+                this.isLoggedIn = false;
+                this.user = null;
+                this.token = null;
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                this.updateAuthStatus();
+            }
+
+            updateAuthStatus() {
+                const statusEl = document.getElementById('authStatus');
+                if (this.isLoggedIn) {
+                    statusEl.textContent = `Authentication Status: Authenticated as ${this.user.email}`;
+                    statusEl.className = 'auth-status authenticated';
+                } else {
+                    statusEl.textContent = 'Authentication Status: Not Authenticated';
+                    statusEl.className = 'auth-status unauthenticated';
+                }
+            }
+        }
+
+        // Mock resume API service
+        class MockResumeService {
+            constructor(authService) {
+                this.authService = authService;
+            }
+
+            async getUserResumes() {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        if (!this.authService.isAuthenticated()) {
+                            reject({ status: 401, message: 'Unauthorized' });
+                            return;
+                        }
+
+                        resolve({
+                            success: true,
+                            data: [
+                                {
+                                    id: 1,
+                                    title: 'Software Engineer Resume',
+                                    template: 'modern',
+                                    lastModified: new Date().toISOString()
+                                },
+                                {
+                                    id: 2,
+                                    title: 'Frontend Developer Resume',
+                                    template: 'creative',
+                                    lastModified: new Date().toISOString()
+                                }
+                            ]
+                        });
+                    }, 300);
+                });
+            }
+
+            async getResume(id) {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        if (!this.authService.isAuthenticated()) {
+                            reject({ status: 401, message: 'Unauthorized' });
+                            return;
+                        }
+
+                        resolve({
+                            success: true,
+                            data: {
+                                id: id,
+                                title: 'Software Engineer Resume',
+                                template: 'modern',
+                                personalInfo: {
+                                    firstName: 'Test',
+                                    lastName: 'User',
+                                    email: this.authService.getCurrentUser().email
+                                },
+                                experience: [],
+                                education: [],
+                                skills: []
+                            }
+                        });
+                    }, 300);
+                });
+            }
+        }
+
+        // Initialize services
+        const authService = new MockAuthService();
+        const resumeService = new MockResumeService(authService);
+
+        // Initialize auth state from storage on page load
+        window.addEventListener('load', () => {
+            authService.initializeFromStorage();
+        });
+
+        // Listen for storage events (cross-tab synchronization)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'auth_token' || e.key === 'auth_user') {
+                authService.initializeFromStorage();
+                addTestResult('crossTabResults', 'Cross-tab authentication sync detected', 'info');
+            }
+        });
+
+        // Utility functions
+        function addTestResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const result = document.createElement('div');
+            result.className = `test-result ${type}`;
+            result.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            container.appendChild(result);
+        }
+
+        function clearTestResults() {
+            const resultContainers = [
+                'loginResults', 'dashboardResults', 'resumeBuilderResults',
+                'sessionResults', 'crossTabResults', 'errorHandlingResults',
+                'completeJourneyResults'
+            ];
+            
+            resultContainers.forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
+        }
+
+        function resetAuthState() {
+            authService.clearAuthState();
+            addTestResult('loginResults', 'Authentication state reset', 'info');
+        }        /
+/ Test functions
+        async function testLogin() {
+            addTestResult('loginResults', 'Starting login test...', 'info');
+            
+            try {
+                // Test successful login
+                const result = await authService.login({
+                    email: 'test@example.com',
+                    password: 'password123'
+                });
+                
+                if (result.success) {
+                    addTestResult('loginResults', 'Login successful', 'success');
+                    
+                    // Verify authentication state
+                    if (authService.isAuthenticated()) {
+                        addTestResult('loginResults', 'Authentication state verified', 'success');
+                    } else {
+                        addTestResult('loginResults', 'Authentication state verification failed', 'error');
+                    }
+                    
+                    // Verify localStorage persistence
+                    const storedToken = localStorage.getItem('auth_token');
+                    const storedUser = localStorage.getItem('auth_user');
+                    
+                    if (storedToken && storedUser) {
+                        addTestResult('loginResults', 'Session data stored in localStorage', 'success');
+                    } else {
+                        addTestResult('loginResults', 'Session data not stored properly', 'error');
+                    }
+                } else {
+                    addTestResult('loginResults', `Login failed: ${result.error}`, 'error');
+                }
+                
+                // Test invalid login
+                const invalidResult = await authService.login({
+                    email: '',
+                    password: ''
+                });
+                
+                if (!invalidResult.success) {
+                    addTestResult('loginResults', 'Invalid login properly rejected', 'success');
+                } else {
+                    addTestResult('loginResults', 'Invalid login was accepted (should fail)', 'error');
+                }
+                
+            } catch (error) {
+                addTestResult('loginResults', `Login test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDashboardNavigation() {
+            addTestResult('dashboardResults', 'Starting dashboard navigation test...', 'info');
+            
+            if (!authService.isAuthenticated()) {
+                addTestResult('dashboardResults', 'Please login first', 'error');
+                return;
+            }
+            
+            try {
+                // Test dashboard API call
+                const resumes = await resumeService.getUserResumes();
+                
+                if (resumes.success) {
+                    addTestResult('dashboardResults', `Dashboard loaded ${resumes.data.length} resumes`, 'success');
+                    
+                    // Verify authentication headers are working
+                    if (authService.isAuthenticated()) {
+                        addTestResult('dashboardResults', 'Authentication maintained during dashboard load', 'success');
+                    } else {
+                        addTestResult('dashboardResults', 'Authentication lost during dashboard load', 'error');
+                    }
+                } else {
+                    addTestResult('dashboardResults', 'Dashboard failed to load resumes', 'error');
+                }
+                
+            } catch (error) {
+                if (error.status === 401) {
+                    addTestResult('dashboardResults', 'Authentication error on dashboard', 'error');
+                } else {
+                    addTestResult('dashboardResults', `Dashboard error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function testResumeBuilderNavigation() {
+            addTestResult('resumeBuilderResults', 'Starting resume builder navigation test...', 'info');
+            
+            if (!authService.isAuthenticated()) {
+                addTestResult('resumeBuilderResults', 'Please login first', 'error');
+                return;
+            }
+            
+            try {
+                // Test resume builder API call
+                const resume = await resumeService.getResume(1);
+                
+                if (resume.success) {
+                    addTestResult('resumeBuilderResults', 'Resume builder loaded resume data', 'success');
+                    
+                    // Verify user data is correct
+                    const currentUser = authService.getCurrentUser();
+                    if (resume.data.personalInfo.email === currentUser.email) {
+                        addTestResult('resumeBuilderResults', 'Resume data matches authenticated user', 'success');
+                    } else {
+                        addTestResult('resumeBuilderResults', 'Resume data mismatch with authenticated user', 'error');
+                    }
+                    
+                    // Verify authentication is still valid
+                    if (authService.isAuthenticated()) {
+                        addTestResult('resumeBuilderResults', 'Authentication maintained in resume builder', 'success');
+                    } else {
+                        addTestResult('resumeBuilderResults', 'Authentication lost in resume builder', 'error');
+                    }
+                } else {
+                    addTestResult('resumeBuilderResults', 'Resume builder failed to load resume', 'error');
+                }
+                
+            } catch (error) {
+                if (error.status === 401) {
+                    addTestResult('resumeBuilderResults', 'Authentication error in resume builder', 'error');
+                } else {
+                    addTestResult('resumeBuilderResults', `Resume builder error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function testSessionPersistence() {
+            addTestResult('sessionResults', 'Starting session persistence test...', 'info');
+            
+            // First, ensure we're logged in
+            if (!authService.isAuthenticated()) {
+                await authService.login({
+                    email: 'test@example.com',
+                    password: 'password123'
+                });
+            }
+            
+            // Store current auth state
+            const originalUser = authService.getCurrentUser();
+            const originalToken = authService.token;
+            
+            // Simulate page refresh by clearing in-memory state and restoring from storage
+            authService.isLoggedIn = false;
+            authService.user = null;
+            authService.token = null;
+            
+            addTestResult('sessionResults', 'Simulated page refresh (cleared in-memory state)', 'info');
+            
+            // Restore from storage
+            const restored = authService.initializeFromStorage();
+            
+            if (restored) {
+                addTestResult('sessionResults', 'Session restored from localStorage', 'success');
+                
+                // Verify restored data matches original
+                const restoredUser = authService.getCurrentUser();
+                if (restoredUser && restoredUser.email === originalUser.email) {
+                    addTestResult('sessionResults', 'Restored user data matches original', 'success');
+                } else {
+                    addTestResult('sessionResults', 'Restored user data does not match original', 'error');
+                }
+                
+                // Test API call after restoration
+                try {
+                    const resumes = await resumeService.getUserResumes();
+                    if (resumes.success) {
+                        addTestResult('sessionResults', 'API calls work after session restoration', 'success');
+                    } else {
+                        addTestResult('sessionResults', 'API calls failed after session restoration', 'error');
+                    }
+                } catch (error) {
+                    addTestResult('sessionResults', `API error after restoration: ${error.message}`, 'error');
+                }
+                
+            } else {
+                addTestResult('sessionResults', 'Failed to restore session from localStorage', 'error');
+            }
+        }
+
+        async function testCrossTabAuth() {
+            addTestResult('crossTabResults', 'Starting cross-tab authentication test...', 'info');
+            addTestResult('crossTabResults', 'Open this page in another tab and login/logout to test synchronization', 'info');
+            
+            // Test manual storage event simulation
+            const originalAuthState = authService.isAuthenticated();
+            
+            // Simulate another tab logging out
+            const logoutEvent = new StorageEvent('storage', {
+                key: 'auth_token',
+                oldValue: localStorage.getItem('auth_token'),
+                newValue: null,
+                storageArea: localStorage
+            });
+            
+            // Clear storage to simulate logout in another tab
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            
+            // Dispatch the event
+            window.dispatchEvent(logoutEvent);
+            
+            // Check if auth state updated
+            setTimeout(() => {
+                if (!authService.isAuthenticated()) {
+                    addTestResult('crossTabResults', 'Cross-tab logout synchronization working', 'success');
+                } else {
+                    addTestResult('crossTabResults', 'Cross-tab logout synchronization failed', 'error');
+                }
+            }, 100);
+        }
+
+        async function testErrorHandling() {
+            addTestResult('errorHandlingResults', 'Starting error handling test...', 'info');
+            
+            // Test unauthenticated API calls
+            authService.clearAuthState();
+            
+            try {
+                await resumeService.getUserResumes();
+                addTestResult('errorHandlingResults', 'Unauthenticated API call should have failed', 'error');
+            } catch (error) {
+                if (error.status === 401) {
+                    addTestResult('errorHandlingResults', 'Unauthenticated API call properly rejected', 'success');
+                } else {
+                    addTestResult('errorHandlingResults', `Unexpected error: ${error.message}`, 'error');
+                }
+            }
+            
+            // Test corrupted localStorage data
+            localStorage.setItem('auth_token', 'corrupted-token');
+            localStorage.setItem('auth_user', 'invalid-json');
+            
+            const restored = authService.initializeFromStorage();
+            if (!restored) {
+                addTestResult('errorHandlingResults', 'Corrupted localStorage data handled gracefully', 'success');
+            } else {
+                addTestResult('errorHandlingResults', 'Corrupted localStorage data not handled properly', 'error');
+            }
+            
+            // Test network error simulation
+            const originalGetUserResumes = resumeService.getUserResumes;
+            resumeService.getUserResumes = () => Promise.reject(new Error('Network error'));
+            
+            try {
+                await resumeService.getUserResumes();
+                addTestResult('errorHandlingResults', 'Network error should have been thrown', 'error');
+            } catch (error) {
+                if (error.message === 'Network error') {
+                    addTestResult('errorHandlingResults', 'Network error handled properly', 'success');
+                } else {
+                    addTestResult('errorHandlingResults', `Unexpected error: ${error.message}`, 'error');
+                }
+            }
+            
+            // Restore original function
+            resumeService.getUserResumes = originalGetUserResumes;
+        }
+
+        async function testCompleteUserJourney() {
+            addTestResult('completeJourneyResults', 'Starting complete user journey test...', 'info');
+            
+            try {
+                // Step 1: Login
+                addTestResult('completeJourneyResults', 'Step 1: Logging in...', 'info');
+                const loginResult = await authService.login({
+                    email: 'test@example.com',
+                    password: 'password123'
+                });
+                
+                if (!loginResult.success) {
+                    addTestResult('completeJourneyResults', 'Login failed', 'error');
+                    return;
+                }
+                addTestResult('completeJourneyResults', 'Step 1: Login successful ✓', 'success');
+                
+                // Step 2: Load Dashboard
+                addTestResult('completeJourneyResults', 'Step 2: Loading dashboard...', 'info');
+                const dashboardData = await resumeService.getUserResumes();
+                
+                if (!dashboardData.success) {
+                    addTestResult('completeJourneyResults', 'Dashboard load failed', 'error');
+                    return;
+                }
+                addTestResult('completeJourneyResults', `Step 2: Dashboard loaded with ${dashboardData.data.length} resumes ✓`, 'success');
+                
+                // Step 3: Navigate to Resume Builder
+                addTestResult('completeJourneyResults', 'Step 3: Loading resume builder...', 'info');
+                const resumeData = await resumeService.getResume(1);
+                
+                if (!resumeData.success) {
+                    addTestResult('completeJourneyResults', 'Resume builder load failed', 'error');
+                    return;
+                }
+                addTestResult('completeJourneyResults', 'Step 3: Resume builder loaded ✓', 'success');
+                
+                // Step 4: Navigate back to Dashboard
+                addTestResult('completeJourneyResults', 'Step 4: Returning to dashboard...', 'info');
+                const dashboardData2 = await resumeService.getUserResumes();
+                
+                if (!dashboardData2.success) {
+                    addTestResult('completeJourneyResults', 'Return to dashboard failed', 'error');
+                    return;
+                }
+                addTestResult('completeJourneyResults', 'Step 4: Returned to dashboard successfully ✓', 'success');
+                
+                // Step 5: Verify authentication consistency
+                if (authService.isAuthenticated()) {
+                    addTestResult('completeJourneyResults', 'Step 5: Authentication remained consistent throughout journey ✓', 'success');
+                } else {
+                    addTestResult('completeJourneyResults', 'Step 5: Authentication lost during journey', 'error');
+                    return;
+                }
+                
+                addTestResult('completeJourneyResults', '🎉 Complete user journey test PASSED!', 'success');
+                
+            } catch (error) {
+                addTestResult('completeJourneyResults', `Complete journey test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            clearTestResults();
+            addTestResult('loginResults', 'Running all authentication flow tests...', 'info');
+            
+            // Reset auth state
+            authService.clearAuthState();
+            
+            // Run tests in sequence
+            await testLogin();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testDashboardNavigation();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testResumeBuilderNavigation();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testSessionPersistence();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCrossTabAuth();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testErrorHandling();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testCompleteUserJourney();
+            
+            addTestResult('completeJourneyResults', '✅ All authentication flow tests completed!', 'success');
+        }
+    </script>
+</body>
+</html>

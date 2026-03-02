@@ -1,0 +1,690 @@
+/* HFI-ELITE Technology Template - 200% Optimization */
+/* Advanced Human Factors International + Neuromarketing Principles */
+
+.hfi-optimized {
+  /* ELITE Visual Hierarchy - Neuroscience-Based Color Psychology */
+  --hfi-electric: #00D9FF;           /* Electric cyan - Instant attention */
+  --hfi-authority: #7C3AED;          /* Deep purple - Authority & expertise */
+  --hfi-success: #10B981;            /* Success green - Achievement */
+  --hfi-premium: #F59E0B;            /* Gold - Premium value */
+  --hfi-danger: #EF4444;             /* Critical red - Urgency */
+  
+  /* Advanced Cognitive Load Management */
+  --hfi-content-density: 0.72;       /* Ultra-compact information density */
+  --hfi-scan-speed: 0.12s;           /* Micro-interaction timing */
+  --hfi-attention-span: 6s;          /* Average recruiter attention */
+  
+  /* Elite Typography - Golden Ratio Perfection */
+  --hfi-type-ratio: 1.618;           /* Golden ratio */
+  --hfi-micro: 10px;                 /* Micro labels */
+  --hfi-tiny: 12px;                  /* Small labels */
+  --hfi-small: 13px;                 /* Body small */
+  --hfi-base: 15px;                  /* Primary body */
+  --hfi-medium: 18px;                /* Subheadings */
+  --hfi-large: 24px;                 /* Section headings */
+  --hfi-xl: 32px;                    /* Major headings */
+  --hfi-hero: 42px;                  /* Hero text */
+  
+  /* Advanced Spacing System - Fibonacci Sequence */
+  --hfi-space-1: 0.25rem;            /* 4px */
+  --hfi-space-2: 0.5rem;             /* 8px */
+  --hfi-space-3: 0.75rem;            /* 12px */
+  --hfi-space-4: 1rem;               /* 16px */
+  --hfi-space-5: 1.5rem;             /* 24px */
+  --hfi-space-6: 2rem;               /* 32px */
+  --hfi-space-8: 3rem;               /* 48px */
+  --hfi-space-10: 4rem;              /* 64px */
+  
+  /* Elite Shadow System for Depth Perception */
+  --hfi-shadow-subtle: 0 1px 3px rgba(0, 217, 255, 0.1);
+  --hfi-shadow-medium: 0 4px 12px rgba(0, 217, 255, 0.15);
+  --hfi-shadow-strong: 0 8px 24px rgba(0, 217, 255, 0.2);
+  --hfi-shadow-glow: 0 0 20px rgba(0, 217, 255, 0.3);
+  
+  /* Advanced Animation Curves - Natural Motion */
+  --hfi-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --hfi-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --hfi-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* TIER 1: CRITICAL ASSESSMENT - Maximum Impact Zone */
+.hfi-optimized .tier-1-critical-assessment {
+  position: relative;
+  padding: var(--hfi-space-8) 0;
+  background: linear-gradient(135deg, 
+    rgba(0, 217, 255, 0.05) 0%, 
+    rgba(124, 58, 237, 0.05) 50%, 
+    rgba(16, 185, 129, 0.05) 100%);
+  border-bottom: 3px solid var(--hfi-electric);
+  overflow: hidden;
+}
+
+/* Fix grid alignment issues */
+.hfi-optimized .tier-1-critical-assessment .grid {
+  align-items: start;
+}
+
+.hfi-optimized .tier-1-critical-assessment .flex {
+  align-items: center;
+}
+
+/* Ensure avatar container is properly aligned */
+.hfi-optimized .tier-1-critical-assessment .flex-shrink-0 {
+  align-self: flex-start;
+}
+
+/* Fix button alignment */
+.hfi-optimized .tier-1-critical-assessment .lg\\:col-span-1 {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.hfi-optimized .tier-1-critical-assessment::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--hfi-electric) 50%, 
+    transparent 100%);
+  animation: scanLine 3s ease-in-out infinite;
+}
+
+@keyframes scanLine {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Elite Name Typography - Maximum Impact */
+.hfi-optimized .tier-1-critical-assessment h1 {
+  font-size: var(--hfi-hero);
+  font-weight: 800;
+  color: var(--hfi-electric);
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  margin-bottom: var(--hfi-space-2);
+  text-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+  background: linear-gradient(135deg, var(--hfi-electric), var(--hfi-authority));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: nameGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes nameGlow {
+  0% { filter: brightness(1); }
+  100% { filter: brightness(1.1); }
+}
+
+/* Elite Title Typography - Authority */
+.hfi-optimized .tier-1-critical-assessment h2 {
+  font-size: var(--hfi-large);
+  color: var(--hfi-authority);
+  font-weight: 700;
+  margin-bottom: var(--hfi-space-4);
+  position: relative;
+  padding-left: var(--hfi-space-4);
+}
+
+.hfi-optimized .tier-1-critical-assessment h2::before {
+  content: '▶';
+  position: absolute;
+  left: 0;
+  color: var(--hfi-success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* TIER 2: QUALIFICATION REVIEW - Strategic Information */
+.hfi-optimized .tier-2-qualification-review {
+  padding: var(--hfi-space-6) 0;
+  background: linear-gradient(180deg, 
+    rgba(15, 23, 42, 0.8) 0%, 
+    rgba(30, 41, 59, 0.9) 100%);
+  border-bottom: 2px solid var(--hfi-authority);
+  position: relative;
+}
+
+.hfi-optimized .tier-2-qualification-review::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    var(--hfi-authority) 0%, 
+    var(--hfi-success) 50%, 
+    var(--hfi-authority) 100%);
+}
+
+/* Elite Section Headings */
+.hfi-optimized .template-section h2 {
+  font-size: var(--hfi-xl);
+  font-weight: 800;
+  color: var(--hfi-electric);
+  margin-bottom: var(--hfi-space-5);
+  padding-bottom: var(--hfi-space-3);
+  border-bottom: 3px solid var(--hfi-electric);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--hfi-space-3);
+}
+
+.hfi-optimized .template-section h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    var(--hfi-electric) 0%, 
+    transparent 100%);
+}
+
+/* Elite Card System - Information Containers */
+.hfi-optimized .template-card {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(51, 65, 85, 0.9) 100%);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 12px;
+  padding: var(--hfi-space-5);
+  margin-bottom: var(--hfi-space-5);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+  box-shadow: var(--hfi-shadow-subtle);
+}
+
+.hfi-optimized .template-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    var(--hfi-electric) 0%, 
+    var(--hfi-authority) 50%, 
+    var(--hfi-success) 100%);
+}
+
+.hfi-optimized .template-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--hfi-electric);
+  box-shadow: var(--hfi-shadow-glow);
+}
+
+/* Elite Skill Badges - Instant Recognition */
+.hfi-optimized .skill-badge {
+  background: linear-gradient(135deg, 
+    var(--hfi-electric) 0%, 
+    var(--hfi-authority) 100%);
+  color: #0F172A;
+  font-weight: 700;
+  font-size: var(--hfi-small);
+  padding: var(--hfi-space-2) var(--hfi-space-4);
+  border-radius: 20px;
+  border: none;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-bounce);
+  box-shadow: var(--hfi-shadow-medium);
+  position: relative;
+  overflow: hidden;
+}
+
+.hfi-optimized .skill-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.3) 50%, 
+    transparent 100%);
+  transition: left 0.5s ease;
+}
+
+.hfi-optimized .skill-badge:hover {
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: var(--hfi-shadow-strong);
+}
+
+.hfi-optimized .skill-badge:hover::before {
+  left: 100%;
+}
+
+/* Elite Action Buttons - Call to Action Optimization */
+.hfi-optimized .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hfi-space-3);
+  margin-top: var(--hfi-space-6);
+}
+
+.hfi-optimized .primary-action {
+  background: linear-gradient(135deg, 
+    var(--hfi-electric) 0%, 
+    var(--hfi-success) 100%);
+  color: #0F172A;
+  border: none;
+  font-weight: 700;
+  padding: var(--hfi-space-3) var(--hfi-space-5);
+  border-radius: 8px;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+  box-shadow: var(--hfi-shadow-medium);
+  position: relative;
+  overflow: hidden;
+}
+
+.hfi-optimized .primary-action::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  transform: translate(-50%, -50%);
+}
+
+.hfi-optimized .primary-action:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hfi-shadow-strong);
+}
+
+.hfi-optimized .primary-action:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.hfi-optimized .secondary-action {
+  background: transparent;
+  color: var(--hfi-electric);
+  border: 2px solid var(--hfi-electric);
+  font-weight: 600;
+  padding: var(--hfi-space-3) var(--hfi-space-5);
+  border-radius: 8px;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+}
+
+.hfi-optimized .secondary-action:hover {
+  background: var(--hfi-electric);
+  color: #0F172A;
+  transform: translateY(-1px);
+  box-shadow: var(--hfi-shadow-medium);
+}
+
+/* Elite GitHub Stats - Professional Metrics */
+.hfi-optimized .github-stats {
+  background: linear-gradient(135deg, 
+    rgba(0, 217, 255, 0.1) 0%, 
+    rgba(124, 58, 237, 0.1) 100%);
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  border-radius: 12px;
+  padding: var(--hfi-space-5);
+  backdrop-filter: blur(10px);
+}
+
+.hfi-optimized .stat-item {
+  text-align: center;
+  padding: var(--hfi-space-2);
+  position: relative;
+}
+
+.hfi-optimized .stat-value {
+  font-size: var(--hfi-large);
+  font-weight: 800;
+  color: var(--hfi-electric);
+  display: block;
+  text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+.hfi-optimized .stat-label {
+  font-size: var(--hfi-tiny);
+  color: var(--hfi-authority);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  margin-top: var(--hfi-space-1);
+}
+
+/* Elite Experience Cards - Career Progression */
+.hfi-optimized .experience-card {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(51, 65, 85, 0.9) 100%);
+  border-left: 4px solid var(--hfi-electric);
+  padding: var(--hfi-space-5);
+  margin-bottom: var(--hfi-space-5);
+  border-radius: 0 12px 12px 0;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+}
+
+.hfi-optimized .experience-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    var(--hfi-electric) 0%, 
+    var(--hfi-success) 100%);
+}
+
+.hfi-optimized .experience-card:hover {
+  transform: translateX(4px);
+  box-shadow: var(--hfi-shadow-medium);
+}
+
+.hfi-optimized .position-title {
+  font-size: var(--hfi-large);
+  font-weight: 800;
+  color: var(--hfi-electric);
+  margin-bottom: var(--hfi-space-2);
+}
+
+.hfi-optimized .company-name {
+  font-size: var(--hfi-medium);
+  color: var(--hfi-authority);
+  font-weight: 700;
+  margin-bottom: var(--hfi-space-2);
+}
+
+.hfi-optimized .duration {
+  font-size: var(--hfi-small);
+  color: var(--hfi-success);
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.1);
+  padding: var(--hfi-space-1) var(--hfi-space-2);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Elite Project Cards - Portfolio Showcase */
+.hfi-optimized .project-card {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(51, 65, 85, 0.9) 100%);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 12px;
+  padding: var(--hfi-space-5);
+  margin-bottom: var(--hfi-space-5);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+}
+
+.hfi-optimized .project-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    var(--hfi-electric) 0%, 
+    var(--hfi-authority) 50%, 
+    var(--hfi-success) 100%);
+}
+
+.hfi-optimized .project-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--hfi-electric);
+  box-shadow: var(--hfi-shadow-glow);
+}
+
+.hfi-optimized .project-title {
+  font-size: var(--hfi-large);
+  font-weight: 800;
+  color: var(--hfi-electric);
+  margin-bottom: var(--hfi-space-3);
+}
+
+/* Elite Contact Information - Professional Networking */
+.hfi-optimized .contact-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hfi-space-3);
+  margin-top: var(--hfi-space-5);
+  align-items: center;
+}
+
+.hfi-optimized .contact-info a {
+  display: flex;
+  align-items: center;
+  gap: var(--hfi-space-2);
+  color: var(--hfi-electric);
+  text-decoration: none;
+  font-weight: 600;
+  padding: var(--hfi-space-2) var(--hfi-space-3);
+  background: linear-gradient(135deg, 
+    rgba(0, 217, 255, 0.1) 0%, 
+    rgba(124, 58, 237, 0.1) 100%);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+  backdrop-filter: blur(5px);
+  white-space: nowrap;
+}
+
+.hfi-optimized .contact-info a:hover {
+  background: var(--hfi-electric);
+  color: #0F172A;
+  transform: translateY(-1px);
+  box-shadow: var(--hfi-shadow-medium);
+}
+
+/* Fix contact info alignment in header */
+.hfi-optimized .tier-1-critical-assessment .contact-info {
+  margin-top: var(--hfi-space-3);
+  justify-content: flex-start;
+}
+
+/* TIER 3: DETAILED EVALUATION - Comprehensive Information */
+.hfi-optimized .tier-3-detailed-evaluation {
+  padding: var(--hfi-space-6) 0;
+  background: linear-gradient(180deg, 
+    rgba(30, 41, 59, 0.8) 0%, 
+    rgba(15, 23, 42, 0.9) 100%);
+}
+
+/* Elite Tab Navigation - Information Architecture */
+.hfi-optimized .tab-navigation {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 12px;
+  padding: var(--hfi-space-2);
+  margin-bottom: var(--hfi-space-6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+.hfi-optimized .tab-button {
+  background: transparent;
+  color: var(--hfi-authority);
+  border: none;
+  padding: var(--hfi-space-3) var(--hfi-space-5);
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all var(--hfi-scan-speed) var(--hfi-ease-out);
+  position: relative;
+}
+
+.hfi-optimized .tab-button.active {
+  background: linear-gradient(135deg, 
+    var(--hfi-electric) 0%, 
+    var(--hfi-authority) 100%);
+  color: #0F172A;
+  box-shadow: var(--hfi-shadow-medium);
+}
+
+.hfi-optimized .tab-button:hover:not(.active) {
+  background: rgba(0, 217, 255, 0.1);
+  color: var(--hfi-electric);
+}
+
+/* Responsive Elite Optimizations */
+@media (max-width: 768px) {
+  .hfi-optimized {
+    --hfi-hero: 32px;
+    --hfi-xl: 24px;
+    --hfi-large: 20px;
+    --hfi-space-8: 2rem;
+    --hfi-space-6: 1.5rem;
+    --hfi-space-5: 1.25rem;
+  }
+  
+  .hfi-optimized .tier-1-critical-assessment h1 {
+    font-size: var(--hfi-xl);
+    text-align: center;
+  }
+  
+  .hfi-optimized .tier-1-critical-assessment h2 {
+    text-align: center;
+    padding-left: 0;
+  }
+  
+  .hfi-optimized .tier-1-critical-assessment h2::before {
+    display: none;
+  }
+  
+  .hfi-optimized .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .hfi-optimized .contact-info {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .hfi-optimized .tier-1-critical-assessment .flex {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .hfi-optimized .tier-1-critical-assessment .lg\\:col-span-1 {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .hfi-optimized .tier-1-critical-assessment .lg\\:col-span-1 > div {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* Print Optimization for ATS */
+@media print {
+  .hfi-optimized {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .hfi-optimized * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .hfi-optimized .template-card {
+    border: 1px solid #333 !important;
+    break-inside: avoid;
+  }
+  
+  .hfi-optimized .skill-badge {
+    background: #f0f0f0 !important;
+    color: black !important;
+    border: 1px solid #333 !important;
+  }
+}
+/* A
+dditional alignment fixes for template consistency */
+.hfi-optimized .template-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.hfi-optimized .template-grid {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Ensure all sections have consistent alignment */
+.hfi-optimized .tier-1-critical-assessment,
+.hfi-optimized .tier-2-qualification-review,
+.hfi-optimized .tier-3-detailed-evaluation {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Fix grid container alignment */
+.hfi-optimized .grid {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Ensure proper spacing between elements */
+.hfi-optimized .tier-1-critical-assessment .grid > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Fix avatar and text alignment */
+.hfi-optimized .tier-1-critical-assessment .flex-shrink-0 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hfi-optimized .tier-1-critical-assessment .flex-1 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 120px;
+}
+
+/* Ensure buttons are properly aligned */
+.hfi-optimized .tier-1-critical-assessment button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Fix text alignment in identity section */
+.hfi-optimized .tier-1-critical-assessment h1,
+.hfi-optimized .tier-1-critical-assessment h2 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Ensure consistent spacing in contact info */
+.hfi-optimized .tier-1-critical-assessment .contact-info a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+}

@@ -1,0 +1,535 @@
+/* HFI ELITE STRUCTURAL LAYOUT - Advanced Information Architecture */
+/* Implementing F-Pattern, Z-Pattern, and Gutenberg Diagram principles */
+
+.hfi-elite-structure {
+  /* Advanced Grid System - Golden Ratio Based */
+  --hfi-grid-main: 1.618fr 1fr;           /* Golden ratio main content split */
+  --hfi-grid-sidebar: 300px;              /* Fixed sidebar for consistency */
+  --hfi-grid-header: auto;                /* Auto-sizing header */
+  --hfi-grid-footer: auto;                /* Auto-sizing footer */
+  
+  /* F-Pattern Layout Zones */
+  --hfi-zone-primary: 0 0 100% 61.8%;     /* Primary attention zone (golden ratio) */
+  --hfi-zone-secondary: 0 61.8% 100% 38.2%; /* Secondary information zone */
+  --hfi-zone-tertiary: 61.8% 0 38.2% 100%; /* Supporting information zone */
+  
+  /* Advanced Spacing Matrix - Fibonacci Sequence */
+  --hfi-space-micro: 2px;                 /* Micro spacing */
+  --hfi-space-xs: 4px;                    /* Extra small */
+  --hfi-space-sm: 8px;                    /* Small */
+  --hfi-space-md: 13px;                   /* Medium (Fibonacci) */
+  --hfi-space-lg: 21px;                   /* Large (Fibonacci) */
+  --hfi-space-xl: 34px;                   /* Extra large (Fibonacci) */
+  --hfi-space-2xl: 55px;                  /* 2X large (Fibonacci) */
+  --hfi-space-3xl: 89px;                  /* 3X large (Fibonacci) */
+  
+  /* Information Density Zones */
+  --hfi-density-critical: 0.6;            /* Ultra-compact for critical info */
+  --hfi-density-important: 0.75;          /* Compact for important info */
+  --hfi-density-standard: 1.0;            /* Standard for regular info */
+  --hfi-density-relaxed: 1.25;            /* Relaxed for supporting info */
+}
+
+/* ELITE LAYOUT CONTAINER - Master Grid */
+.hfi-elite-layout {
+  display: grid;
+  grid-template-areas: 
+    "header header header"
+    "primary secondary sidebar"
+    "tertiary tertiary sidebar"
+    "footer footer footer";
+  grid-template-columns: 1.618fr 1fr 300px;
+  grid-template-rows: auto 1fr auto auto;
+  min-height: 100vh;
+  gap: var(--hfi-space-lg);
+  padding: var(--hfi-space-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* HEADER ZONE - Maximum Impact Area */
+.hfi-header-zone {
+  grid-area: header;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: var(--hfi-space-xl);
+  padding: var(--hfi-space-lg) 0;
+  border-bottom: 2px solid var(--hfi-electric);
+  position: relative;
+}
+
+.hfi-header-zone::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 61.8%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--hfi-electric), var(--hfi-authority));
+}
+
+/* IDENTITY SECTION - Left side of header */
+.hfi-identity-section {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--hfi-space-lg);
+  align-items: center;
+  width: 100%;
+}
+
+.hfi-avatar-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.hfi-identity-info {
+  display: grid;
+  gap: var(--hfi-space-sm);
+  align-content: center;
+}
+
+.hfi-name {
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.hfi-title {
+  font-size: clamp(16px, 2.5vw, 24px);
+  font-weight: 700;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.hfi-tagline {
+  font-size: clamp(14px, 1.5vw, 16px);
+  font-weight: 500;
+  margin: 0;
+  opacity: 0.8;
+  max-width: 400px;
+}
+
+/* METRICS SECTION - Right side of header */
+.hfi-metrics-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--hfi-space-md);
+  text-align: center;
+  min-width: 280px;
+  align-self: start;
+  justify-self: end;
+}
+
+.hfi-metric-item {
+  display: grid;
+  gap: var(--hfi-space-xs);
+}
+
+.hfi-metric-value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.hfi-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+/* PRIMARY ZONE - Main content area (F-Pattern top horizontal) */
+.hfi-primary-zone {
+  grid-area: primary;
+  display: grid;
+  gap: var(--hfi-space-xl);
+}
+
+.hfi-summary-card {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.05), rgba(124, 58, 237, 0.05));
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 16px;
+  padding: var(--hfi-space-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.hfi-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--hfi-electric), var(--hfi-authority));
+}
+
+.hfi-summary-text {
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* SECONDARY ZONE - Skills/Tech stack (F-Pattern middle horizontal) */
+.hfi-secondary-zone {
+  grid-area: secondary;
+  display: grid;
+  gap: var(--hfi-space-lg);
+}
+
+.hfi-skills-grid {
+  display: grid;
+  gap: var(--hfi-space-lg);
+}
+
+.hfi-skill-category {
+  display: grid;
+  gap: var(--hfi-space-md);
+}
+
+.hfi-skill-category-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.hfi-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hfi-space-sm);
+}
+
+.hfi-skill-badge {
+  background: linear-gradient(135deg, var(--hfi-electric), var(--hfi-authority));
+  color: #0F172A;
+  font-size: 13px;
+  font-weight: 700;
+  padding: var(--hfi-space-sm) var(--hfi-space-md);
+  border-radius: 20px;
+  border: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.hfi-skill-badge:hover {
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+}
+
+/* SIDEBAR ZONE - Supporting information (F-Pattern vertical) */
+.hfi-sidebar-zone {
+  grid-area: sidebar;
+  display: grid;
+  gap: var(--hfi-space-lg);
+  align-content: start;
+}
+
+.hfi-contact-card,
+.hfi-stats-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6));
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 12px;
+  padding: var(--hfi-space-lg);
+  backdrop-filter: blur(10px);
+}
+
+.hfi-contact-list {
+  display: grid;
+  gap: var(--hfi-space-md);
+}
+
+.hfi-contact-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hfi-space-sm);
+  padding: var(--hfi-space-sm) var(--hfi-space-md);
+  background: rgba(0, 217, 255, 0.1);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.hfi-contact-item:hover {
+  background: var(--hfi-electric);
+  color: #0F172A;
+  transform: translateX(4px);
+}
+
+/* TERTIARY ZONE - Experience/Projects (F-Pattern bottom scan) */
+.hfi-tertiary-zone {
+  grid-area: tertiary;
+  display: grid;
+  gap: var(--hfi-space-xl);
+  margin-top: var(--hfi-space-xl);
+}
+
+.hfi-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--hfi-space-md);
+  margin-bottom: var(--hfi-space-lg);
+}
+
+.hfi-section-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+  background: linear-gradient(135deg, var(--hfi-electric), var(--hfi-authority));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hfi-section-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--hfi-electric), transparent);
+}
+
+/* EXPERIENCE TIMELINE - Vertical flow optimization */
+.hfi-experience-timeline {
+  display: grid;
+  gap: var(--hfi-space-xl);
+  position: relative;
+}
+
+.hfi-experience-timeline::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--hfi-electric), var(--hfi-authority), var(--hfi-success));
+}
+
+.hfi-experience-item {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: var(--hfi-space-lg);
+  position: relative;
+}
+
+.hfi-experience-marker {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, var(--hfi-electric), var(--hfi-authority));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #0F172A;
+  font-size: 14px;
+  position: relative;
+  z-index: 2;
+}
+
+.hfi-experience-content {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6));
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 12px;
+  padding: var(--hfi-space-lg);
+  position: relative;
+}
+
+.hfi-experience-content::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 20px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid rgba(0, 217, 255, 0.2);
+}
+
+.hfi-job-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 var(--hfi-space-sm) 0;
+  color: var(--hfi-electric);
+}
+
+.hfi-company-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 var(--hfi-space-sm) 0;
+  color: var(--hfi-authority);
+}
+
+.hfi-job-duration {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--hfi-success);
+  background: rgba(16, 185, 129, 0.1);
+  padding: var(--hfi-space-xs) var(--hfi-space-sm);
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: var(--hfi-space-md);
+}
+
+.hfi-job-description {
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* PROJECTS GRID - Portfolio showcase */
+.hfi-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: var(--hfi-space-lg);
+}
+
+.hfi-project-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(51, 65, 85, 0.6));
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 12px;
+  padding: var(--hfi-space-lg);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.hfi-project-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--hfi-electric), var(--hfi-authority), var(--hfi-success));
+}
+
+.hfi-project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 217, 255, 0.2);
+  border-color: var(--hfi-electric);
+}
+
+.hfi-project-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 var(--hfi-space-sm) 0;
+  color: var(--hfi-electric);
+}
+
+.hfi-project-description {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 var(--hfi-space-md) 0;
+  opacity: 0.9;
+}
+
+.hfi-project-tech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hfi-space-xs);
+}
+
+.hfi-tech-tag {
+  background: rgba(0, 217, 255, 0.1);
+  color: var(--hfi-electric);
+  font-size: 12px;
+  font-weight: 600;
+  padding: var(--hfi-space-xs) var(--hfi-space-sm);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+}
+
+/* RESPONSIVE BREAKPOINTS - Mobile-first approach */
+@media (max-width: 1200px) {
+  .hfi-elite-layout {
+    grid-template-areas: 
+      "header header"
+      "primary sidebar"
+      "secondary sidebar"
+      "tertiary tertiary"
+      "footer footer";
+    grid-template-columns: 1fr 280px;
+    gap: var(--hfi-space-md);
+    padding: var(--hfi-space-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .hfi-elite-layout {
+    grid-template-areas: 
+      "header"
+      "primary"
+      "secondary"
+      "sidebar"
+      "tertiary"
+      "footer";
+    grid-template-columns: 1fr;
+    gap: var(--hfi-space-md);
+    padding: var(--hfi-space-md);
+  }
+  
+  .hfi-header-zone {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--hfi-space-md);
+    align-items: center;
+  }
+  
+  .hfi-identity-section {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--hfi-space-md);
+    justify-items: center;
+    width: 100%;
+  }
+  
+  .hfi-metrics-section {
+    grid-template-columns: repeat(3, 1fr);
+    min-width: auto;
+    justify-self: center;
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .hfi-experience-item {
+    grid-template-columns: 1fr;
+    gap: var(--hfi-space-md);
+  }
+  
+  .hfi-experience-timeline::before {
+    display: none;
+  }
+  
+  .hfi-projects-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .hfi-elite-layout {
+    padding: var(--hfi-space-sm);
+    gap: var(--hfi-space-sm);
+  }
+  
+  .hfi-metrics-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .hfi-avatar-container {
+    width: 80px;
+    height: 80px;
+  }
+}

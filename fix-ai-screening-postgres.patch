@@ -1,0 +1,30 @@
+The aiScreening.ts file has SQLite code (db.get(), db.run()) that needs to be replaced with PostgreSQL (db.query()).
+
+Issues to fix:
+1. Line ~75: db.get() -> db.query() with $1 placeholder
+2. Line ~89: db.get() -> db.query() with $1 placeholder  
+3. Line ~107: db.run() -> db.query() with $1-$5 placeholders and add expires_at
+4. Line ~195: db.get() -> db.query() with $1 placeholder
+5. Line ~209: db.get() -> db.query() with $1 placeholder
+6. Line ~227: db.run() -> db.query() with $1-$5 placeholders and add expires_at
+
+The pattern to replace (appears twice in the file):
+- Change: const resume = await db.get('SELECT ... WHERE user_id = ?', [candidate.userId])
+- To: const resumeResult = await db.query('SELECT ... WHERE user_id = $1', [candidate.userId])
+- Then: const resume = resumeResult.rows[0]
+- Check: if (resumeResult.rows.length === 0) instead of if (!resume)
+
+- Change: let shareToken = await db.get('SELECT ... WHERE resume_id = ?', [resume.id])
+- To: const shareTokenResult = await db.query('SELECT ... WHERE resume_id = $1', [resume.id])
+- Then: let shareToken: string;
+- Check: if (shareTokenResult.rows.length === 0) instead of if (!shareToken)
+
+- Change: await db.run('INSERT INTO resume_shares ... VALUES (?, ?, ?, ?)', [resume.id, candidate.userId, slug, true])
+- To: const expiresAt = new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000);
+       await db.query('INSERT INTO resume_shares ... VALUES ($1, $2, $3, $4, $5)', [resume.id, candidate.userId, slug, true, expiresAt])
+
+- Change: shareToken = { share_token: slug };
+- To: shareToken = slug;
+
+- Change: resumeUrl: `/shared/resume/${shareToken.share_token}`
+- To: resumeUrl: `/shared/resume/${shareToken}`

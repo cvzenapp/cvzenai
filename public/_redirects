@@ -1,0 +1,5 @@
+# API routes go to serverless functions
+/api/*  /.netlify/functions/api/:splat  200
+
+# SPA fallback - all other routes serve the React app
+/*  /index.html  200

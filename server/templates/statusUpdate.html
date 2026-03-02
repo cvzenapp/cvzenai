@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referral Status Update</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        .status-update {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-contacted { background: #dbeafe; color: #1e40af; }
+        .status-interviewed { background: #e0e7ff; color: #3730a3; }
+        .status-hired { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-expired { background: #f3f4f6; color: #374151; }
+        .status-declined { background: #fef2f2; color: #7f1d1d; }
+        .referral-details {
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .detail-value {
+            color: #6b7280;
+        }
+        .next-steps {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 14px;
+            color: #6b7280;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">CVZen</div>
+            <h1 class="title">Referral Status Update</h1>
+        </div>
+
+        <div class="status-update">
+            <p>Your referral status has been updated to:</p>
+            <span class="status-badge status-{{status}}">{{statusDisplay}}</span>
+        </div>
+
+        <div class="referral-details">
+            <div class="detail-row">
+                <span class="detail-label">Referee:</span>
+                <span class="detail-value">{{refereeName}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Position:</span>
+                <span class="detail-value">{{positionTitle}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Company:</span>
+                <span class="detail-value">{{companyName}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Referral Date:</span>
+                <span class="detail-value">{{referralDate}}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Last Updated:</span>
+                <span class="detail-value">{{lastUpdated}}</span>
+            </div>
+        </div>
+
+        {{#if statusMessage}}
+        <div class="next-steps">
+            <strong>What's Next:</strong><br>
+            {{statusMessage}}
+        </div>
+        {{/if}}
+
+        {{#if showRewardInfo}}
+        <div class="next-steps">
+            <strong>Reward Information:</strong><br>
+            {{#if rewardEarned}}
+            Congratulations! You've earned ${{rewardAmount}} for this successful referral. The reward will be processed and added to your account within 2-3 business days.
+            {{else}}
+            Potential reward: ${{rewardAmount}} (earned upon successful hire)
+            {{/if}}
+        </div>
+        {{/if}}
+
+        <div style="text-align: center;">
+            <a href="{{dashboardLink}}" class="cta-button">View Referral Dashboard</a>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for participating in CVZen's referral program!</p>
+            <p><a href="{{unsubscribeLink}}">Unsubscribe from status updates</a></p>
+        </div>
+    </div>
+</body>
+</html>

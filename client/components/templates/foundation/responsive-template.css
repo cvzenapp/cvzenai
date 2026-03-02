@@ -1,0 +1,392 @@
+/**
+ * Responsive Template System CSS
+ * Provides responsive behavior, touch optimization, and print styles
+ */
+
+/* Responsive Template Wrapper Base Styles */
+.responsive-template-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  transition: all var(--animation-duration, 0.3s) ease;
+}
+
+/* Breakpoint-specific styles */
+.responsive-template-wrapper.breakpoint-mobile {
+  --template-spacing: 12px;
+  --template-font-size: 14px;
+  --template-line-height: 1.5;
+  --template-border-radius: 6px;
+}
+
+.responsive-template-wrapper.breakpoint-tablet {
+  --template-spacing: 16px;
+  --template-font-size: 15px;
+  --template-line-height: 1.6;
+  --template-border-radius: 8px;
+}
+
+.responsive-template-wrapper.breakpoint-desktop {
+  --template-spacing: 20px;
+  --template-font-size: 16px;
+  --template-line-height: 1.6;
+  --template-border-radius: 8px;
+}
+
+.responsive-template-wrapper.breakpoint-wide {
+  --template-spacing: 24px;
+  --template-font-size: 16px;
+  --template-line-height: 1.7;
+  --template-border-radius: 10px;
+}
+
+/* Layout-specific styles */
+.responsive-template-wrapper.layout-single-column {
+  --template-columns: 1;
+  --template-max-width: 100%;
+}
+
+.responsive-template-wrapper.layout-two-column {
+  --template-columns: 2;
+  --template-max-width: 1024px;
+}
+
+.responsive-template-wrapper.layout-three-column {
+  --template-columns: 3;
+  --template-max-width: 1200px;
+}
+
+.responsive-template-wrapper.layout-sidebar {
+  --template-columns: 2;
+  --template-max-width: 1200px;
+  --template-sidebar-width: 300px;
+}
+
+/* Header style variations */
+.responsive-template-wrapper.header-compact .template-header {
+  padding: calc(var(--template-spacing) * 0.75);
+  font-size: calc(var(--template-font-size) * 0.9);
+}
+
+.responsive-template-wrapper.header-standard .template-header {
+  padding: var(--template-spacing);
+  font-size: var(--template-font-size);
+}
+
+.responsive-template-wrapper.header-expanded .template-header {
+  padding: calc(var(--template-spacing) * 1.5);
+  font-size: calc(var(--template-font-size) * 1.1);
+}
+
+/* Navigation style variations */
+.responsive-template-wrapper.nav-tabs .template-navigation {
+  display: flex;
+  border-bottom: 1px solid var(--template-border-color, #e5e7eb);
+}
+
+.responsive-template-wrapper.nav-accordion .template-navigation {
+  display: block;
+}
+
+.responsive-template-wrapper.nav-sidebar .template-navigation {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: var(--template-sidebar-width, 300px);
+  background: var(--template-background-color, #ffffff);
+  border-right: 1px solid var(--template-border-color, #e5e7eb);
+  z-index: 1000;
+}
+
+.responsive-template-wrapper.nav-hidden .template-navigation {
+  display: none;
+}
+
+/* Card density variations */
+.responsive-template-wrapper.density-compact .template-card {
+  padding: calc(var(--template-spacing) * 0.75);
+  margin-bottom: calc(var(--template-spacing) * 0.5);
+}
+
+.responsive-template-wrapper.density-standard .template-card {
+  padding: var(--template-spacing);
+  margin-bottom: var(--template-spacing);
+}
+
+.responsive-template-wrapper.density-spacious .template-card {
+  padding: calc(var(--template-spacing) * 1.5);
+  margin-bottom: calc(var(--template-spacing) * 1.5);
+}
+
+/* Touch device optimizations */
+.responsive-template-wrapper.touch-device {
+  --touch-target-size: 44px;
+}
+
+.responsive-template-wrapper.touch-device .template-button,
+.responsive-template-wrapper.touch-device .template-link,
+.responsive-template-wrapper.touch-device .template-tab {
+  min-height: var(--touch-target-size);
+  min-width: var(--touch-target-size);
+  padding: 12px 16px;
+}
+
+.responsive-template-wrapper.touch-device .template-card {
+  border-radius: calc(var(--template-border-radius) * 1.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* No-touch (mouse) device optimizations */
+.responsive-template-wrapper.no-touch .template-button:hover,
+.responsive-template-wrapper.no-touch .template-link:hover,
+.responsive-template-wrapper.no-touch .template-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all var(--hover-transition, 0.2s ease);
+}
+
+/* Hover capability styles */
+.responsive-template-wrapper.has-hover .template-interactive {
+  transition: all var(--hover-transition, 0.2s ease);
+}
+
+.responsive-template-wrapper.no-hover .template-interactive {
+  transition: none;
+}
+
+/* Animation preferences */
+.responsive-template-wrapper.reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.responsive-template-wrapper.animations-disabled * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Touch-optimized component styles */
+.touch-optimized {
+  position: relative;
+  display: inline-block;
+  border-radius: var(--template-border-radius, 8px);
+  transition: all var(--animation-duration, 0.3s) ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.touch-optimized.touch-device {
+  min-height: var(--touch-target-size, 44px);
+  min-width: var(--touch-target-size, 44px);
+}
+
+.touch-optimized.pressed {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.touch-optimized.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.touch-optimized:focus-visible {
+  outline: 2px solid var(--template-primary-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Print optimization styles */
+@media print {
+  .responsive-template-wrapper {
+    --template-font-size: 12pt;
+    --template-line-height: 1.4;
+    --template-spacing: 12pt;
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .hide-in-print,
+  .template-button,
+  .template-navigation,
+  .template-interactive {
+    display: none !important;
+  }
+
+  .template-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+  }
+
+  .template-header {
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  /* Ensure good contrast for print */
+  .template-text {
+    color: #000000 !important;
+  }
+
+  .template-background {
+    background: white !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .responsive-template-wrapper {
+    --template-border-color: #000000;
+    --text-slate-700: #000000;
+    --template-background-color: #ffffff;
+  }
+
+  .template-card {
+    border: 2px solid var(--template-border-color) !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .responsive-template-wrapper {
+    --template-background-color: #1f2937;
+    --text-slate-700: #f9fafb;
+    --template-border-color: #374151;
+  }
+}
+
+/* Responsive breakpoint utilities */
+@media (max-width: 767px) {
+  .responsive-template-wrapper {
+    padding: calc(var(--template-spacing) * 0.75);
+  }
+
+  .template-grid {
+    grid-template-columns: 1fr !important;
+    gap: calc(var(--template-spacing) * 0.75) !important;
+  }
+
+  .template-sidebar {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--template-border-color) !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .responsive-template-wrapper {
+    padding: var(--template-spacing);
+  }
+
+  .template-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--template-spacing) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-template-wrapper {
+    padding: calc(var(--template-spacing) * 1.25);
+  }
+
+  .template-grid {
+    grid-template-columns: repeat(var(--template-columns, 3), 1fr) !important;
+    gap: calc(var(--template-spacing) * 1.25) !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-template-wrapper {
+    padding: calc(var(--template-spacing) * 1.5);
+  }
+
+  .template-grid {
+    gap: calc(var(--template-spacing) * 1.5) !important;
+  }
+}
+
+/* Connection speed optimizations */
+.responsive-template-wrapper[data-connection="slow"] .template-image {
+  background-color: var(--template-border-color, #e5e7eb);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.responsive-template-wrapper[data-connection="slow"] .template-image::before {
+  content: "Loading...";
+  color: var(--text-slate-700, #6b7280);
+}
+
+/* Screen density optimizations */
+.responsive-template-wrapper[style*="--screen-density: 2"] .template-image,
+.responsive-template-wrapper[style*="--screen-density: 3"] .template-image {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Accessibility enhancements */
+.responsive-template-wrapper:focus-within {
+  outline: 2px solid var(--template-primary-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+.responsive-template-wrapper [role="button"]:focus,
+.responsive-template-wrapper [role="tab"]:focus,
+.responsive-template-wrapper [role="link"]:focus {
+  outline: 2px solid var(--template-primary-color, #3b82f6);
+  outline-offset: 2px;
+  border-radius: var(--template-border-radius, 8px);
+}
+
+/* Loading states for progressive enhancement */
+.template-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.template-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--template-border-color, #e5e7eb);
+  border-top-color: var(--template-primary-color, #3b82f6);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error states */
+.template-error {
+  border: 2px solid #ef4444;
+  background-color: #fef2f2;
+  color: #dc2626;
+  padding: var(--template-spacing);
+  border-radius: var(--template-border-radius);
+  text-align: center;
+}
+
+.template-error::before {
+  content: "⚠️";
+  display: block;
+  font-size: 2em;
+  margin-bottom: 0.5em;
+}

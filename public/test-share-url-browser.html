@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Share URL Generation</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { 
+            padding: 10px 15px; 
+            margin: 5px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+        }
+        button:hover { background: #0056b3; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Test Share URL Generation</h1>
+        
+        <div class="step info">
+            <h3>📋 Current Environment</h3>
+            <p><strong>Current URL:</strong> <span id="currentUrl"></span></p>
+            <p><strong>Current Host:</strong> <span id="currentHost"></span></p>
+            <p><strong>Current Protocol:</strong> <span id="currentProtocol"></span></p>
+        </div>
+
+        <div class="step">
+            <h3>Step 1: Test Share URL Generation</h3>
+            <p>This will test the share URL generation and show what URL is being generated.</p>
+            <button onclick="testShareUrl()">Test Share URL Generation</button>
+            <div id="shareResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Manual Test</h3>
+            <p>Visit a resume page and try the share functionality:</p>
+            <a href="/resume/32" target="_blank" style="display: inline-block; padding: 10px 15px; background: #28a745; color: white; text-decoration: none; border-radius: 4px;">
+                📄 Open Resume Page
+            </a>
+            <p><small>Click the share button on the resume page and check the generated URL.</small></p>
+        </div>
+    </div>
+
+    <script>
+        // Display current environment info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('currentHost').textContent = window.location.host;
+        document.getElementById('currentProtocol').textContent = window.location.protocol;
+
+        async function testShareUrl() {
+            const resultDiv = document.getElementById('shareResult');
+            
+            try {
+                resultDiv.innerHTML = '<div class="status info">🔄 Testing share URL generation...</div>';
+                
+                // Try to generate a share URL (this will likely fail without auth, but we can see the request)
+                const response = await fetch('/api/resume-sharing/generate/32', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+                
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    
+                    if (data.success && data.data && data.data.shareUrl) {
+                        const shareUrl = data.data.shareUrl;
+                        const isCorrectPort = shareUrl.includes(window.location.host);
+                        
+                        resultDiv.innerHTML = `
+                            <div class="status ${isCorrectPort ? 'success' : 'error'}">
+                                <h4>${isCorrectPort ? '✅' : '❌'} Share URL Generated</h4>
+                                <p><strong>Generated URL:</strong> ${shareUrl}</p>
+                                <p><strong>Expected Host:</strong> ${window.location.host}</p>
+                                <p><strong>Status:</strong> ${isCorrectPort ? 'Correct port used!' : 'Wrong port used!'}</p>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        `;
+                    } else if (data.error) {
+                        resultDiv.innerHTML = `
+                            <div class="status error">
+                                <h4>❌ Share URL Generation Failed</h4>
+                                <p><strong>Error:</strong> ${data.error}</p>
+                                <p><strong>Message:</strong> ${data.message || 'No additional message'}</p>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="status error">
+                                <h4>❌ Unexpected Response Format</h4>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                } else {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `
+                        <div class="status error">
+                            <h4>❌ Non-JSON Response</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Response:</strong></p>
+                            <pre>${text}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

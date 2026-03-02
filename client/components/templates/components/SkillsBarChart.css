@@ -1,0 +1,38 @@
+/* Skills Bar Chart Component */
+
+.skills-bar-chart {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  transition: box-shadow 0.3s ease;
+}
+
+.skills-bar-chart:hover {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Chart animations */
+.skills-bar-chart .bar {
+  animation: barGrow 0.7s ease-out;
+}
+
+@keyframes barGrow {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--bar-height);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .skills-bar-chart {
+    padding: 1rem;
+  }
+  
+  .skills-bar-chart .bar {
+    max-width: 60px;
+  }
+}

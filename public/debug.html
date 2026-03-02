@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>API Debug Tool</h1>
+    
+    <button onclick="testPing()">Test /api/ping</button>
+    <button onclick="testHealth()">Test /api/health</button>
+    <button onclick="testLogin()">Test /api/test-login</button>
+    <button onclick="testAuthTest()">Test /api/auth/test</button>
+    <div id="results"></div>
+
+    <script>
+        async function makeRequest(endpoint) {
+            const url = window.location.origin + endpoint;
+            console.log('Testing:', url);
+            
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                
+                let result = {
+                    status: response.status,
+                    url: url,
+                    rawText: text.substring(0, 200)
+                };
+                
+                try {
+                    result.json = JSON.parse(text);
+                } catch (e) {
+                    result.parseError = 'Not JSON';
+                    result.isHtml = text.includes('<!DOCTYPE');
+                }
+                
+                return result;
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+        
+        function displayResult(result) {
+            const div = document.createElement('div');
+            div.className = 'result ' + (result.error ? 'error' : 'success');
+            div.textContent = JSON.stringify(result, null, 2);
+            document.getElementById('results').appendChild(div);
+        }
+        
+        async function testPing() {
+            const result = await makeRequest('/api/ping');
+            displayResult(result);
+        }
+        
+        async function testHealth() {
+            const result = await makeRequest('/api/health');
+            displayResult(result);
+        }
+        
+        async function testLogin() {
+            const result = await fetch(window.location.origin + '/api/test-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'test@example.com', password: 'test123' })
+            });
+            const text = await result.text();
+            displayResult({ status: result.status, text: text.substring(0, 200) });
+        }
+        
+        async function testAuthTest() {
+            const result = await fetch(window.location.origin + '/api/auth/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'test@example.com', password: 'test123' })
+            });
+            const text = await result.text();
+            displayResult({ status: result.status, text: text.substring(0, 200) });
+        }
+    </script>
+</body>
+</html>

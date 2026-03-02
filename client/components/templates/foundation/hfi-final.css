@@ -1,0 +1,624 @@
+/* HFI FINAL ELITE TOUCHES - The Last 40% to Perfection */
+/* Advanced Micro-Interactions, Psychological Triggers, and Recruiter Psychology */
+
+.hfi-elite-structure {
+  /* Advanced Psychological Triggers */
+  --hfi-urgency-pulse: 2s ease-in-out infinite;
+  --hfi-attention-glow: 3s ease-in-out infinite alternate;
+  --hfi-success-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --hfi-premium-shimmer: 2s linear infinite;
+
+  /* Micro-Interaction Timings */
+  --hfi-micro-fast: 0.1s;
+  --hfi-micro-medium: 0.2s;
+  --hfi-micro-slow: 0.3s;
+
+  /* Advanced Depth System */
+  --hfi-depth-1: 0 1px 3px rgba(0, 217, 255, 0.12), 0 1px 2px rgba(0, 217, 255, 0.24);
+  --hfi-depth-2: 0 3px 6px rgba(0, 217, 255, 0.16), 0 3px 6px rgba(0, 217, 255, 0.23);
+  --hfi-depth-3: 0 10px 20px rgba(0, 217, 255, 0.19), 0 6px 6px rgba(0, 217, 255, 0.23);
+  --hfi-depth-4: 0 14px 28px rgba(0, 217, 255, 0.25), 0 10px 10px rgba(0, 217, 255, 0.22);
+  --hfi-depth-5: 0 19px 38px rgba(0, 217, 255, 0.30), 0 15px 12px rgba(0, 217, 255, 0.22);
+}
+
+/* ELITE NAME ANIMATION - Maximum Impact */
+.hfi-name {
+  position: relative;
+  overflow: hidden;
+  animation: nameReveal 1s ease-out;
+}
+
+.hfi-name::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(0, 217, 255, 0.4) 50%,
+      transparent 100%);
+  animation: nameShimmer 3s ease-in-out infinite;
+}
+
+@keyframes nameReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nameShimmer {
+  0% {
+    left: -100%;
+  }
+
+  50% {
+    left: 100%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+/* ELITE AVATAR ENHANCEMENTS */
+.hfi-avatar-container {
+  position: relative;
+  animation: avatarFloat 4s ease-in-out infinite;
+}
+
+.hfi-avatar-container::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: conic-gradient(from 0deg, var(--hfi-electric), var(--hfi-authority), var(--hfi-success), var(--hfi-electric));
+  border-radius: 50%;
+  animation: avatarRotate 8s linear infinite;
+  z-index: -1;
+}
+
+.hfi-avatar-container::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--template-background-color);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+@keyframes avatarFloat {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes avatarRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ELITE METRICS ANIMATIONS */
+.hfi-metric-item {
+  animation: metricSlideIn 0.8s ease-out;
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+}
+
+.hfi-metric-value {
+  position: relative;
+  overflow: hidden;
+}
+
+.hfi-metric-value::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%);
+  animation: metricShine 2s ease-in-out infinite;
+  animation-delay: calc(var(--index, 0) * 0.5s);
+}
+
+@keyframes metricSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes metricShine {
+  0% {
+    left: -100%;
+  }
+
+  50% {
+    left: 100%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+/* ELITE SKILL BADGES - Advanced Interactions */
+.hfi-skill-badge {
+  position: relative;
+  overflow: hidden;
+  transform-origin: center;
+  animation: skillAppear 0.6s ease-out;
+  animation-delay: calc(var(--index, 0) * 0.05s);
+  animation-fill-mode: both;
+}
+
+.hfi-skill-badge::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.4s ease;
+}
+
+.hfi-skill-badge:hover::before {
+  width: 200px;
+  height: 200px;
+}
+
+.hfi-skill-badge:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: var(--hfi-depth-3);
+  animation: skillPulse 0.6s ease-out;
+}
+
+@keyframes skillAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(-5deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes skillPulse {
+  0% {
+    transform: translateY(-2px) scale(1.05);
+  }
+
+  50% {
+    transform: translateY(-4px) scale(1.08);
+  }
+
+  100% {
+    transform: translateY(-2px) scale(1.05);
+  }
+}
+
+/* ELITE EXPERIENCE TIMELINE - Advanced Animations */
+.hfi-experience-timeline::before {
+  animation: timelineGrow 2s ease-out;
+  background: linear-gradient(180deg,
+      var(--hfi-electric) 0%,
+      var(--hfi-authority) 30%,
+      var(--hfi-success) 60%,
+      var(--hfi-premium) 100%);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+@keyframes timelineGrow {
+  0% {
+    height: 0;
+    opacity: 0;
+  }
+
+  100% {
+    height: 100%;
+    opacity: 1;
+  }
+}
+
+.hfi-experience-marker {
+  animation: markerPop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation-delay: calc(var(--index, 0) * 0.2s);
+  animation-fill-mode: both;
+  position: relative;
+  overflow: hidden;
+}
+
+.hfi-experience-marker::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: conic-gradient(from 0deg, var(--hfi-electric), var(--hfi-authority), var(--hfi-electric));
+  border-radius: 50%;
+  animation: markerRotate 4s linear infinite;
+  z-index: -1;
+}
+
+.hfi-experience-marker::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+@keyframes markerPop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(180deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes markerRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.hfi-experience-content {
+  animation: contentSlideIn 1s ease-out;
+  animation-delay: calc(var(--index, 0) * 0.2s + 0.3s);
+  animation-fill-mode: both;
+  transition: all var(--hfi-micro-medium) ease;
+}
+
+.hfi-experience-content:hover {
+  transform: translateX(8px) translateY(-2px);
+  box-shadow: var(--hfi-depth-4);
+  border-color: var(--hfi-electric);
+}
+
+@keyframes contentSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ELITE PROJECT CARDS - Advanced Hover States */
+.hfi-project-card {
+  animation: projectReveal 0.8s ease-out;
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+  position: relative;
+  overflow: hidden;
+}
+
+.hfi-project-card::before {
+  background: linear-gradient(90deg,
+      var(--hfi-electric) 0%,
+      var(--hfi-authority) 33%,
+      var(--hfi-success) 66%,
+      var(--hfi-premium) 100%);
+  animation: projectBorderFlow 3s linear infinite;
+}
+
+.hfi-project-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(0, 217, 255, 0.1) 50%,
+      transparent 100%);
+  transition: left 0.6s ease;
+}
+
+.hfi-project-card:hover::after {
+  left: 100%;
+}
+
+.hfi-project-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: var(--hfi-depth-5);
+}
+
+@keyframes projectReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) rotateX(15deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateX(0deg);
+  }
+}
+
+@keyframes projectBorderFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ELITE CONTACT ITEMS - Magnetic Hover Effect */
+.hfi-contact-item {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--hfi-micro-medium) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hfi-contact-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      var(--hfi-electric) 50%,
+      transparent 100%);
+  transition: left 0.4s ease;
+  z-index: -1;
+}
+
+.hfi-contact-item:hover::before {
+  left: 100%;
+}
+
+.hfi-contact-item:hover {
+  transform: translateX(6px) scale(1.02);
+  box-shadow: var(--hfi-depth-2);
+}
+
+/* ELITE ACTION BUTTONS - Psychological Triggers */
+.primary-action {
+  position: relative;
+  overflow: hidden;
+  animation: buttonPulse var(--hfi-urgency-pulse);
+}
+
+.primary-action::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.4s ease;
+}
+
+.primary-action:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.primary-action:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: var(--hfi-depth-4);
+  animation: buttonSuccess var(--hfi-success-bounce);
+}
+
+@keyframes buttonPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 217, 255, 0);
+  }
+}
+
+@keyframes buttonSuccess {
+  0% {
+    transform: translateY(-3px) scale(1.05);
+  }
+
+  50% {
+    transform: translateY(-5px) scale(1.08);
+  }
+
+  100% {
+    transform: translateY(-3px) scale(1.05);
+  }
+}
+
+.secondary-action {
+  position: relative;
+  transition: all var(--hfi-micro-medium) ease;
+}
+
+.secondary-action:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hfi-depth-2);
+  background: var(--hfi-electric);
+  color: var(--template-background-color);
+}
+
+/* ELITE SECTION HEADERS - Dynamic Underlines */
+.hfi-section-title {
+  position: relative;
+  animation: titleReveal 1s ease-out;
+}
+
+.hfi-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--hfi-electric), var(--hfi-authority));
+  animation: underlineGrow 1.5s ease-out 0.5s forwards;
+}
+
+@keyframes titleReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes underlineGrow {
+  0% {
+    width: 0;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+/* ELITE STATS COUNTERS - Number Animation */
+.hfi-metric-value,
+.stat-value {
+  animation: countUp 2s ease-out;
+}
+
+@keyframes countUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ELITE LOADING STATES - Skeleton Animations */
+.hfi-loading-skeleton {
+  background: linear-gradient(90deg,
+      rgba(0, 217, 255, 0.1) 0%,
+      rgba(0, 217, 255, 0.2) 50%,
+      rgba(0, 217, 255, 0.1) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ELITE SCROLL ANIMATIONS - Intersection Observer Ready */
+.hfi-animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease-out;
+}
+
+.hfi-animate-on-scroll.hfi-in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ELITE FOCUS STATES - Accessibility Enhanced */
+.hfi-focus-enhanced:focus {
+  outline: 3px solid var(--hfi-electric);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(0, 217, 255, 0.2);
+}
+
+/* ELITE PRINT OPTIMIZATIONS */
+@media print {
+  .hfi-elite-structure * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .hfi-name {
+    color: #000 !important;
+    font-size: 24pt !important;
+  }
+
+  .hfi-skill-badge {
+    background: #f0f0f0 !important;
+    color: #000 !important;
+    border: 1px solid #ccc !important;
+  }
+}
+
+/* ELITE REDUCED MOTION - Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .hfi-elite-structure * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

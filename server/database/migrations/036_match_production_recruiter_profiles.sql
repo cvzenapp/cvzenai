@@ -1,0 +1,29 @@
+-- Add missing columns to match production recruiter_profiles table structure
+-- This migration adds all the company-related fields we need
+
+ALTER TABLE recruiter_profiles 
+ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS company_website VARCHAR(255),
+ADD COLUMN IF NOT EXISTS position VARCHAR(255),
+ADD COLUMN IF NOT EXISTS job_title VARCHAR(255),
+ADD COLUMN IF NOT EXISTS phone VARCHAR(255),
+ADD COLUMN IF NOT EXISTS linkedin_url TEXT,
+ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS candidate_updates BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS interview_reminders BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
+ADD COLUMN IF NOT EXISTS cover_image_position VARCHAR(50) DEFAULT 'center',
+ADD COLUMN IF NOT EXISTS logo_url TEXT,
+ADD COLUMN IF NOT EXISTS website VARCHAR(255),
+ADD COLUMN IF NOT EXISTS industry VARCHAR(100),
+ADD COLUMN IF NOT EXISTS location VARCHAR(255),
+ADD COLUMN IF NOT EXISTS description TEXT,
+ADD COLUMN IF NOT EXISTS founded_year INTEGER,
+ADD COLUMN IF NOT EXISTS employee_count INTEGER,
+ADD COLUMN IF NOT EXISTS company_type VARCHAR(50),
+ADD COLUMN IF NOT EXISTS size_range VARCHAR(50),
+ADD COLUMN IF NOT EXISTS work_environment VARCHAR(50),
+ADD COLUMN IF NOT EXISTS company_values TEXT,
+ADD COLUMN IF NOT EXISTS social_links JSONB,
+ADD COLUMN IF NOT EXISTS specialties JSONB,
+ADD COLUMN IF NOT EXISTS benefits JSONB;

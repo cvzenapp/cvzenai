@@ -1,0 +1,29 @@
+[build]
+  command = "npm run build"
+  publish = "dist/spa"
+  
+[build.processing]
+  skip_processing = false
+  
+[build.environment]
+  NODE_VERSION = "18"
+  NODE_OPTIONS = "--max-old-space-size=8192"
+  NPM_FLAGS = "--silent --no-audit --no-fund"
+
+
+[functions]
+  external_node_modules = ["express", "pg", "bcryptjs", "jsonwebtoken", "better-sqlite3", "openai", "axios"]
+  node_bundler = "esbuild"
+  included_files = ["server/database/**", "server/services/**"]
+  
+[[redirects]]
+  force = true
+  from = "/api/*"
+  status = 200
+  to = "/.netlify/functions/api/:splat"
+
+# SPA fallback - serve index.html for all non-API routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
