@@ -47,6 +47,7 @@ import { atsApi } from "@/services/atsApi";
 import { FakeJobDetector } from "@/components/dashboard/FakeJobDetector";
 import { JobSeekerSubscriptionDashboard } from "@/components/subscription/JobSeekerSubscriptionDashboard";
 import { JobSeekerPlanSelector } from "@/components/subscription/JobSeekerPlanSelector";
+import { JobSeekerUsageTracker } from "@/components/subscription/JobSeekerUsageTracker";
 import { subscriptionApi } from "@/services/subscriptionApi";
 import type { UserSubscription } from "@shared/subscription";
 import { CreateReferralRequest } from "@shared/referrals";
@@ -1159,6 +1160,22 @@ export default function Dashboard() {
             
             <button
               onClick={() => {
+                setActiveTab('subscription');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+                activeTab === 'subscription'
+                  ? 'bg-brand-background text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              title={isSidebarCollapsed ? "Subscription" : ""}
+            >
+              <CreditCard className="h-5 w-5 flex-shrink-0" />
+              {!isSidebarCollapsed && <span className="font-normal">Subscription</span>}
+            </button>
+            
+            <button
+              onClick={() => {
                 setActiveTab('settings');
                 setIsMobileSidebarOpen(false);
               }}
@@ -1504,6 +1521,124 @@ export default function Dashboard() {
                   
                   return <InterviewsDashboard userType={userType} />;
                 })()}
+              </div>
+            )}
+
+            {activeTab === 'subscription' && (
+              <div className="space-y-6">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold mb-2">Subscription & Billing</h2>
+                  <p className="text-gray-600">
+                    Manage your subscription, track usage, and view billing history
+                  </p>
+                </div>
+
+                {!subscription ? (
+                  <div className="space-y-6">
+                    <Card className="border-blue-200 bg-blue-50">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-3">
+                          <Package className="w-5 h-5 text-blue-600 mt-0.5" />
+                          <div>
+                            <h3 className="font-semibold text-blue-900">Choose Your Plan</h3>
+                            <p className="text-sm text-blue-700 mt-1">
+                              Select a subscription plan to unlock premium features and accelerate your job search.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <JobSeekerPlanSelector 
+                      onSelectPlan={async (planId: string, billingCycle: 'monthly' | 'yearly') => {
+                        try {
+                          const result = await subscriptionApi.createUserSubscription({
+                            userId: currentUser.id,
+                            planId,
+                            billingCycle
+                          });
+                          
+                          if (result.paymentUrl) {
+                            window.location.href = result.paymentUrl;
+                          } else if (result.subscription) {
+                            setSubscription(result.subscription);
+                            toast.success('Subscription activated successfully!');
+                          }
+                        } catch (error) {
+                          console.error('Error selecting plan:', error);
+                          toast.error('Failed to create subscription. Please try again.');
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <Tabs defaultValue="overview" className="space-y-6">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="overview" className="flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        Overview
+                      </TabsTrigger>
+                      <TabsTrigger value="usage" className="flex items-center gap-2">
+                        <Activity className="w-4 h-4" />
+                        Usage
+                      </TabsTrigger>
+                      <TabsTrigger value="billing" className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Billing
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="space-y-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Current Subscription</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                              <div>
+                                <h3 className="font-semibold text-lg">{subscription.plan?.displayName}</h3>
+                                <p className="text-sm text-gray-600">
+                                  {subscription.billingCycle === 'monthly' ? 'Monthly' : 'Yearly'} billing
+                                </p>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => {
+                                  // Show plan selector in a modal or switch to a different view
+                                  toast.info('Plan change feature coming soon!');
+                                }}
+                              >
+                                Change Plan
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="usage">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Usage Analytics</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <JobSeekerUsageTracker 
+                            subscription={subscription} 
+                            usage={[]} 
+                          />
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="billing">
+                      <JobSeekerSubscriptionDashboard 
+                        userId={currentUser.id.toString()} 
+                        subscription={subscription} 
+                      />
+                    </TabsContent>
+                  </Tabs>
+                )}
               </div>
             )}
 

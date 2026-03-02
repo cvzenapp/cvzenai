@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   CreditCard, 
   FileText, 
+  Calendar, 
   AlertCircle, 
   Download,
   CheckCircle,
@@ -168,6 +169,7 @@ export function JobSeekerSubscriptionDashboard({
 
   return (
     <div className="space-y-6">
+      {/* Subscription Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -255,6 +257,7 @@ export function JobSeekerSubscriptionDashboard({
         </Card>
       </div>
 
+      {/* Cancelled Subscription Warning */}
       {subscription.status === 'cancelled' && subscription.cancelledAt && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6">
@@ -272,6 +275,7 @@ export function JobSeekerSubscriptionDashboard({
         </Card>
       )}
 
+      {/* Tabs for Payment History and Invoices */}
       <Tabs defaultValue="payments" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="payments" className="flex items-center gap-2">
@@ -288,7 +292,9 @@ export function JobSeekerSubscriptionDashboard({
           <Card>
             <CardHeader>
               <CardTitle>Payment History</CardTitle>
-              <CardDescription>View all your payment transactions</CardDescription>
+              <CardDescription>
+                View all your payment transactions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {paymentHistory.length === 0 ? (
@@ -346,7 +352,9 @@ export function JobSeekerSubscriptionDashboard({
           <Card>
             <CardHeader>
               <CardTitle>Invoices</CardTitle>
-              <CardDescription>Download and view your invoices</CardDescription>
+              <CardDescription>
+                Download and view your invoices
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {invoices.length === 0 ? (
@@ -402,6 +410,7 @@ export function JobSeekerSubscriptionDashboard({
         </TabsContent>
       </Tabs>
 
+      {/* Cancel Subscription Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

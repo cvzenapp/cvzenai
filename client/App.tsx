@@ -30,6 +30,7 @@ import RecruiterForgotPassword from "./pages/RecruiterForgotPassword";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import RecruiterSubscription from "./pages/RecruiterSubscription";
 import RecruiterSubscriptionPlans from "./pages/RecruiterSubscriptionPlans";
+import JobSeekerSubscription from "./pages/JobSeekerSubscription";
 import JobSeekerSubscriptionPlans from "./pages/JobSeekerSubscriptionPlans";
 import RefereeResponse from "./pages/RefereeResponse";
 import CompanyProfile from "./pages/CompanyProfile";
@@ -99,6 +100,7 @@ const App = () => {
               <Route path="/recruiter/subscription/plans" element={<RecruiterSubscriptionPlans />} />
               
               {/* Job Seeker Subscription */}
+              <Route path="/subscription" element={<JobSeekerSubscription />} />
               <Route path="/subscription/plans" element={<JobSeekerSubscriptionPlans />} />
 
               {/* Recruiter Legal Pages */}
