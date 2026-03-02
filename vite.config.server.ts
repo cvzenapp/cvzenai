@@ -22,9 +22,13 @@ export default defineConfig({
         // External dependencies that should not be bundled
         "express", "cors", "bcrypt", "bcryptjs", "jsonwebtoken", "dotenv",
         "better-sqlite3", "sqlite3", "pg", "@supabase/supabase-js",
-        "stripe", "node-fetch", "serverless-http",
+        "stripe", "node-fetch", "serverless-http", "multer", "nodemailer",
+        "mammoth", "pdf-parse", "openai", "groq-sdk", "axios",
+        "@langchain/community", "@langchain/core", "@ax-llm/ax",
+        "livekit-server-sdk", "@e2b/code-interpreter", "@tavily/core",
         // All node_modules should be external for server builds
         /^node:.*/,
+        /^@.*/,
       ],
       output: {
         format: "es",
