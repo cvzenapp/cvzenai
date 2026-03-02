@@ -29,9 +29,6 @@ const app = createServer();
 const port = process.env.PORT || 3000;
 
 // In production, serve the built SPA files
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 console.log('🔍 Debug path info:');
 console.log('  import.meta.url:', import.meta.url);
 console.log('  __filename:', __filename);
