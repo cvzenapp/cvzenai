@@ -39,11 +39,17 @@ export interface GroqResponse {
 }
 
 class GroqService {
-  private groq: Groq;
+  private groq: Groq | null = null;
   private defaultModel: string;
   private isAvailable: boolean = true;
 
   constructor() {
+    this.defaultModel = 'llama-3.1-8b-instant'; // Faster model with higher rate limits
+  }
+
+  private initialize() {
+    if (this.groq) return; // Already initialized
+
     const apiKey = process.env.GROQ_API_KEY;
     
     if (!apiKey) {
@@ -52,7 +58,6 @@ class GroqService {
     }
     
     this.groq = new Groq({ apiKey });
-    this.defaultModel = 'llama-3.1-8b-instant'; // Faster model with higher rate limits
     console.log('🚀 Groq service initialized with model:', this.defaultModel);
   }
 
@@ -203,6 +208,8 @@ Provide helpful career and professional development advice. Be conversational an
       };
     }
   ): Promise<GroqResponse | { success: boolean; response: string }> {
+    this.initialize(); // Ensure groq client is initialized
+    
     const startTime = Date.now();
     let responseText = '';
     let responseStatus: 'success' | 'error' | 'timeout' | 'rate_limited' = 'success';
