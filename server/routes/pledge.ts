@@ -11,9 +11,10 @@ const emailService = new WaitlistEmailService();
  * Submit sustainability pledge
  */
 router.post('/', async (req: Request, res: Response) => {
-  const client = await initializeDatabase();
+  let client;
   
   try {
+    client = await initializeDatabase();
     const submission: PledgeSubmission = req.body;
 
     // Validate required fields
@@ -76,12 +77,22 @@ router.post('/', async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Pledge submission error:', error);
+    
+    if (error.message.includes('Database not available')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Service temporarily unavailable. Please try again later.',
+      } as PledgeResponse);
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to process pledge submission',
     } as PledgeResponse);
   } finally {
-    await closeDatabase(client);
+    if (client) {
+      await closeDatabase(client);
+    }
   }
 });
 
@@ -90,9 +101,10 @@ router.post('/', async (req: Request, res: Response) => {
  * Get total number of pledges taken
  */
 router.get('/count', async (req: Request, res: Response) => {
-  const client = await initializeDatabase();
+  let client;
   
   try {
+    client = await initializeDatabase();
     const result = await client.query(
       'SELECT COUNT(*) as count FROM sustainability_pledges WHERE status = $1',
       ['active']
@@ -106,12 +118,22 @@ router.get('/count', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching pledge count:', error);
+    
+    if (error.message.includes('Database not available')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Service temporarily unavailable. Please try again later.',
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to fetch pledge count',
     });
   } finally {
-    await closeDatabase(client);
+    if (client) {
+      await closeDatabase(client);
+    }
   }
 });
 
