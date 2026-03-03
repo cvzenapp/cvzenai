@@ -42,10 +42,13 @@ class JobPostingsApiService extends BaseApiClient {
     super('/api/recruiter/jobs');
   }
 
-  async getJobPostings(): Promise<{ success: boolean; jobs: JobPosting[] }> {
+  async getJobPostings(): Promise<{ success: boolean; jobPostings: JobPosting[] }> {
     const response = await this.get<{ success: boolean; jobs: JobPosting[] }>('');
     if (response.success && response.data) {
-      return response.data;
+      return {
+        success: response.data.success,
+        jobPostings: response.data.jobs
+      };
     }
     throw new Error(response.error as string || 'Failed to fetch job postings');
   }

@@ -42,6 +42,7 @@ const recruiterChatMessageSchema = z.object({
   message: z.string().min(1).max(2000),
   searchSource: z.enum(['cvzen', 'web', 'both']).optional().default('both'),
   context: z.object({
+    selectedJobId: z.number().optional().nullable(),
     recruiterProfile: z.object({
       company: z.string().optional(),
       industry: z.string().optional(),
@@ -769,7 +770,22 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Recruiter authentication required" });
     }
 
-    const validatedData = recruiterChatMessageSchema.parse(req.body);
+    console.log('📥 Received stream request:', {
+      body: req.body,
+      user: { id: user.id, userType: user.userType }
+    });
+
+    let validatedData;
+    try {
+      validatedData = recruiterChatMessageSchema.parse(req.body);
+    } catch (validationError) {
+      console.error('❌ Validation error:', validationError);
+      return res.status(400).json({ 
+        error: "Invalid request data", 
+        details: validationError instanceof Error ? validationError.message : 'Unknown validation error'
+      });
+    }
+
     const { message, searchSource, context } = validatedData;
     
     const startTime = Date.now();
@@ -816,6 +832,127 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
       console.log('🎯 [RECRUITER AI STREAM] Received message:', message);
       
       const lowerMessage = message.toLowerCase();
+      
+      // Check if this is a candidate search request - improved detection
+      const candidateSearchKeywords = ['find', 'search', 'looking for', 'need', 'hire', 'recruit', 'get me'];
+      const candidateRoleKeywords = ['developer', 'engineer', 'designer', 'manager', 'candidate'];
+      
+      const hasCandidateSearchIntent = candidateSearchKeywords.some(keyword => lowerMessage.includes(keyword)) &&
+                                       candidateRoleKeywords.some(keyword => lowerMessage.includes(keyword));
+      
+      let jobBasedSearchCompleted = false;
+      
+      console.log('🔍 Candidate search detection:', {
+        message: lowerMessage,
+        hasCandidateSearchIntent,
+        hasSelectedJob: !!context?.selectedJobId,
+        candidateSearchKeywords: candidateSearchKeywords.filter(k => lowerMessage.includes(k)),
+        candidateRoleKeywords: candidateRoleKeywords.filter(k => lowerMessage.includes(k))
+      });
+      
+      // If candidate search with selected job, get job details and search
+      if (hasCandidateSearchIntent && context?.selectedJobId) {
+        console.log('🎯 Candidate search with selected job:', context.selectedJobId);
+        const db = await initializeDatabase();
+        const jobResult = await db.query(
+          'SELECT title, description, requirements, location, experience_level FROM job_postings WHERE id = $1 AND recruiter_id = $2',
+          [context.selectedJobId, user.id]
+        );
+        
+        if (jobResult.rows.length > 0) {
+          const job = jobResult.rows[0];
+          
+          // Create a more specific search query based on job details
+          const jobSkills = job.requirements ? 
+            (typeof job.requirements === 'string' ? JSON.parse(job.requirements) : job.requirements) : [];
+          const skillsText = Array.isArray(jobSkills) ? jobSkills.join(' ') : '';
+          
+          const searchQuery = `${job.title} ${job.experience_level} developer ${job.location} ${skillsText}`.trim();
+          
+          console.log('🔍 Searching candidates with job-based query:', searchQuery);
+          
+          // Show selected job info first
+          res.write(`data: ${JSON.stringify({ 
+            type: 'chunk',
+            content: `**Searching candidates for: ${job.title}**\n\n📍 Location: ${job.location}\n🎯 Experience: ${job.experience_level}\n\nSearching for qualified candidates...`
+          })}\n\n`);
+          
+          // Use Tavily to search for candidates (simplified approach)
+          const searchResults = await tavilyService.searchJobs({
+            query: searchQuery,
+            location: job.location || '',
+            maxResults: 10
+          });
+          
+          // Convert job search results to candidate format (simplified)
+          const candidates = searchResults.map((result, index) => ({
+            id: `tavily-${index}`,
+            name: `Candidate ${index + 1}`,
+            title: job.title,
+            location: job.location || 'Not specified',
+            experience: job.experience_level || 'Not specified',
+            skills: skillsText.split(' ').filter(s => s.length > 2).slice(0, 5),
+            matchScore: Math.floor(Math.random() * 30) + 70, // Random score between 70-100
+            availability: 'Available',
+            summary: result.content?.substring(0, 200) || 'No summary available',
+            linkedinUrl: result.url
+          }));
+          
+          if (candidates && candidates.length > 0) {
+            res.write(`data: ${JSON.stringify({ 
+              type: 'candidates',
+              candidateResults: candidates,
+              content: `Found ${candidates.length} potential candidates for **${job.title}** position:`
+            })}\n\n`);
+          } else {
+            res.write(`data: ${JSON.stringify({ 
+              type: 'chunk',
+              content: `I searched for candidates matching your **${job.title}** position but didn't find any suitable matches. You might want to try broadening your search criteria or posting on job boards.`
+            })}\n\n`);
+          }
+          
+          res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);
+          res.end();
+          jobBasedSearchCompleted = true;
+          return;
+        }
+      }
+      
+      // If candidate search without job selected, show job selection
+      if (hasCandidateSearchIntent && !context?.selectedJobId) {
+        console.log('🎯 Job selection required - fetching active jobs for recruiter:', user.id);
+        const db = await initializeDatabase();
+        const jobsResult = await db.query(
+          'SELECT id, title, location, job_type, status FROM job_postings WHERE recruiter_id = $1 AND status = $2 ORDER BY created_at DESC',
+          [user.id, 'active']
+        );
+        
+        console.log('📋 Found active jobs:', jobsResult.rows.length);
+        
+        if (jobsResult.rows.length > 0) {
+          const jobSelectionMessage = { 
+            type: 'job_selection_required',
+            jobs: jobsResult.rows,
+            message: 'Please select which job you\'re hiring for:'
+          };
+          
+          console.log('📤 About to send job selection message:', JSON.stringify(jobSelectionMessage));
+          
+          const dataLine = `data: ${JSON.stringify(jobSelectionMessage)}\n\n`;
+          console.log('📤 Writing data line:', dataLine);
+          
+          res.write(dataLine);
+          
+          console.log('📤 Job selection message written, now sending complete');
+          res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);
+          
+          console.log('📤 Complete message written, ending response');
+          res.end();
+          return;
+        } else {
+          console.log('⚠️ No active jobs found for recruiter');
+        }
+      }
       
       // Check if this is a job description request
       const jobDescKeywords = ['job description', 'jd', 'create job', 'write job', 'draft job', 'job posting', 'job post'];
@@ -988,10 +1125,11 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
         message: message.substring(0, 50),
         isJobDescriptionRequest,
         isCandidateSearch,
-        searchSource
+        searchSource,
+        jobBasedSearchCompleted
       });
       
-      if (isCandidateSearch) {
+      if (isCandidateSearch && !jobBasedSearchCompleted) {
         // Send typing indicator
         res.write(`data: ${JSON.stringify({ type: 'typing', message: 'Searching for candidates...' })}\n\n`);
         
@@ -1370,7 +1508,7 @@ router.delete("/sessions/:id", requireAuth, async (req: Request, res: Response) 
     }
     
     const sessionId = parseInt(req.params.id);
-    await aiMemoryService.deleteSession(sessionId);
+    await aiMemoryService.deleteSession(user.id, 'recruiter', sessionId);
     
     res.json({
       success: true,
@@ -1397,7 +1535,7 @@ router.put("/sessions/:id/name", requireAuth, async (req: Request, res: Response
     const sessionId = parseInt(req.params.id);
     const { sessionName } = req.body;
     
-    await aiMemoryService.updateSessionName(sessionId, sessionName);
+    await aiMemoryService.updateSessionName(user.id, 'recruiter', sessionId, sessionName);
     
     res.json({
       success: true

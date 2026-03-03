@@ -67,10 +67,18 @@ interface Message {
     type: string;
     size: number;
   };
+  jobSelectionRequired?: boolean;
+  availableJobs?: Array<{
+    id: number;
+    title: string;
+    location: string;
+    employment_type: string;
+    status: string;
+  }>;
 }
 
 const QUICK_ACTIONS = [
-  { icon: Search, label: 'Find Candidates', query: 'Find me React developers with 3+ years experience in San Francisco', type: 'candidate_search' },
+  { icon: Search, label: 'Find Candidates', query: '', type: 'candidate_search' },
   { icon: FileText, label: 'Job Description', query: 'Create a job description for a Senior Frontend Developer position', type: 'job_posting' },
   { icon: Users, label: 'HR Advice', query: 'Best practices for conducting technical interviews', type: 'hr_guidance' },
   { icon: TrendingUp, label: 'Hiring Strategy', query: 'How to improve our hiring process and reduce time-to-hire?', type: 'process_improvement' },
@@ -235,6 +243,59 @@ export default function RecruiterChatInterface() {
   const [savingJobPosting, setSavingJobPosting] = useState(false);
   const [requirementInput, setRequirementInput] = useState('');
   const [benefitInput, setBenefitInput] = useState('');
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [pendingSearchMessage, setPendingSearchMessage] = useState<string>('');
+  const [showJobSelectionModal, setShowJobSelectionModal] = useState(false);
+  const [availableJobs, setAvailableJobs] = useState<any[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+
+  const handleJobSelection = async (jobId: number) => {
+    if (!pendingSearchMessage) return;
+    
+    setSelectedJobId(jobId);
+    setShowJobSelectionModal(false);
+    
+    // Send message with job context
+    await sendMessage(pendingSearchMessage, { selectedJobId: jobId });
+    setPendingSearchMessage('');
+  };
+
+  const fetchActiveJobs = async () => {
+    try {
+      setLoadingJobs(true);
+      const response = await jobPostingsApi.getJobPostings();
+      if (response.success && response.jobPostings) {
+        const activeJobs = response.jobPostings.filter(job => job.isActive);
+        setAvailableJobs(activeJobs);
+        return activeJobs;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      return [];
+    } finally {
+      setLoadingJobs(false);
+    }
+  };
+
+  const handleCandidateSearchClick = async () => {
+    const jobs = await fetchActiveJobs();
+    if (jobs.length === 0) {
+      // No jobs, show message to create one first
+      const noJobsMessage: Message = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: "You don't have any active job postings yet. Please create a job posting first before searching for candidates.",
+        timestamp: new Date(),
+        suggestions: ['Create a job description']
+      };
+      setMessages(prev => [...prev, noJobsMessage]);
+      return;
+    }
+    
+    setPendingSearchMessage('Find candidates for the selected job');
+    setShowJobSelectionModal(true);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -613,7 +674,7 @@ export default function RecruiterChatInterface() {
     });
   };
 
-  const generateResponse = async (userMessage: string, messageType?: string): Promise<Message> => {
+  const generateResponse = async (userMessage: string, messageType?: string, context?: { selectedJobId?: number }): Promise<Message> => {
     return new Promise((resolve, reject) => {
       console.log('🤖 Starting streaming recruiter AI request:', { message: userMessage });
       
@@ -649,6 +710,7 @@ export default function RecruiterChatInterface() {
           message: messageWithFile,
           searchSource: searchSource,
           context: {
+            ...(context?.selectedJobId && { selectedJobId: context.selectedJobId }),
             recruiterProfile: {
               // Add recruiter context if available
             }
@@ -678,6 +740,25 @@ export default function RecruiterChatInterface() {
                 ? { ...msg, content: fullResponse, candidateResults: msg.candidateResults || responseData.candidateResults }
                 : msg
             ));
+          },
+          
+          onJobSelectionRequired: (jobs, message) => {
+            console.log('🎯 Job selection required callback triggered:', { jobs, message });
+            console.log('🎯 Setting pending search message:', userMessage);
+            setPendingSearchMessage(userMessage);
+            setMessages(prev => {
+              console.log('🎯 Updating message with job selection UI');
+              return prev.map(msg => 
+                msg.id === streamingMessageId 
+                  ? { 
+                      ...msg, 
+                      content: message,
+                      jobSelectionRequired: true,
+                      availableJobs: jobs
+                    }
+                  : msg
+              );
+            });
           },
           
           onCandidates: (candidates) => {
@@ -840,6 +921,28 @@ export default function RecruiterChatInterface() {
     setUploadedFile(null);
   };
 
+  const sendMessage = async (message: string, context?: { selectedJobId?: number }) => {
+    if (!message.trim() || isLoading) return;
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: message,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      await generateResponse(message, undefined, context);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async (messageType?: string) => {
     if ((!inputValue.trim() && !uploadedFile) || isLoading) return;
     
@@ -876,7 +979,7 @@ export default function RecruiterChatInterface() {
       }
       
       // generateResponse already adds and updates the message in state via streaming
-      await generateResponse(messageWithFile, messageType);
+      await generateResponse(messageWithFile, messageType, { selectedJobId });
       
       // Auto-update session name if this is the first user message
       if (currentSessionId && messages.filter(m => m.type === 'user').length === 0) {
@@ -905,6 +1008,10 @@ export default function RecruiterChatInterface() {
   };
 
   const handleQuickAction = (query: string, type?: string) => {
+    if (type === 'candidate_search') {
+      handleCandidateSearchClick();
+      return;
+    }
     if (type === 'file_upload') {
       setShowFileUpload(true);
       return;
@@ -1517,6 +1624,25 @@ export default function RecruiterChatInterface() {
                   )}
                 </div>
                 
+                {/* Job Selection UI */}
+                {message.jobSelectionRequired && message.availableJobs && (
+                  <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-900 mb-3">Select a job to search candidates for:</h4>
+                    <div className="space-y-2">
+                      {message.availableJobs.map((job) => (
+                        <button
+                          key={job.id}
+                          onClick={() => handleJobSelection(job.id)}
+                          className="w-full text-left p-3 bg-white rounded border hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                        >
+                          <div className="font-medium text-gray-900">{job.title}</div>
+                          <div className="text-sm text-gray-600">{job.location} • {job.job_type}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Candidate Results */}
                 {message.candidateResults && (
                   <div className="mt-3 space-y-3">
@@ -2058,6 +2184,42 @@ export default function RecruiterChatInterface() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Job Selection Modal */}
+      <Dialog open={showJobSelectionModal} onOpenChange={setShowJobSelectionModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select Job for Candidate Search</DialogTitle>
+          </DialogHeader>
+          
+          {loadingJobs ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="ml-2">Loading jobs...</span>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {availableJobs.map((job) => (
+                <button
+                  key={job.id}
+                  onClick={() => handleJobSelection(job.id)}
+                  className="w-full text-left p-4 border rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="font-medium text-gray-900">{job.title}</div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {job.location} • {job.jobType} • {job.experienceLevel}
+                  </div>
+                  {job.description && (
+                    <div className="text-sm text-gray-500 mt-2 line-clamp-2">
+                      {job.description.substring(0, 150)}...
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

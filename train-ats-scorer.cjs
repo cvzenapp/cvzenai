@@ -167,7 +167,7 @@ function generateATSScoringPrompt(examples) {
   const fewShotExamples = [];
   
   // Sample from different sources for diversity
-  const atsScoreExamples = examples.filter(ex => ex.source === 'dataset_ats_score').slice(0, 20);
+  // const atsScoreExamples = examples.filter(ex => ex.source === 'dataset_ats_score').slice(0, 20);
   const resume500Examples = examples.filter(ex => ex.source === 'resume_500').slice(0, 15);
   const resume1200Examples = examples.filter(ex => ex.source === 'resume_dataset_1200').slice(0, 15);
   
@@ -179,14 +179,15 @@ function generateATSScoringPrompt(examples) {
   let fewShotSection = '\n\nFEW-SHOT EXAMPLES FROM TRAINING DATA:\n\n';
   
   fewShotExamples.forEach((example, idx) => {
-    if (example.source === 'dataset_ats_score') {
-      fewShotSection += `Example ${idx + 1} (${example.role}):\n`;
-      fewShotSection += `Resume: ${example.resume.substring(0, 500)}...\n`;
-      fewShotSection += `Job Description: ${example.jobDescription.substring(0, 300)}...\n`;
-      fewShotSection += `Hiring Decision: ${example.decision}\n`;
-      fewShotSection += `Reason: ${example.reason.substring(0, 200)}...\n`;
-      fewShotSection += `NOTE: ATS score measures resume QUALITY, not job fit. A well-written resume can still be rejected if not matching the role.\n\n`;
-    } else if (example.source === 'resume_500') {
+    // if (example.source === 'dataset_ats_score') {
+    //   fewShotSection += `Example ${idx + 1} (${example.role}):\n`;
+    //   fewShotSection += `Resume: ${example.resume.substring(0, 500)}...\n`;
+    //   fewShotSection += `Job Description: ${example.jobDescription.substring(0, 300)}...\n`;
+    //   fewShotSection += `Hiring Decision: ${example.decision}\n`;
+    //   fewShotSection += `Reason: ${example.reason.substring(0, 200)}...\n`;
+    //   fewShotSection += `NOTE: ATS score measures resume QUALITY, not job fit. A well-written resume can still be rejected if not matching the role.\n\n`;
+    // } else 
+      if (example.source === 'resume_500') {
       fewShotSection += `Example ${idx + 1} (Resume Text):\n`;
       fewShotSection += `${example.resume.substring(0, 400)}...\n\n`;
     } else if (example.source === 'resume_dataset_1200') {
@@ -310,9 +311,9 @@ async function trainATSScorer() {
   console.log('\n🎯 Starting ATS Scorer Training...\n');
   
   // Load all datasets
-  const atsScoreData = loadATSScoreDataset();
-  const atsTrainData = loadATSTrainData();
-  const resume500Data = loadResume500();
+  // const atsScoreData = loadATSScoreDataset();
+  // const atsTrainData = loadATSTrainData();
+  // const resume500Data = loadResume500();
   const resume1200Data = loadResumeDataset1200();
   
   // Combine all examples
@@ -358,9 +359,10 @@ async function trainATSScorer() {
       let userPrompt = '';
       
       // Build prompt based on data source
-      if (example.source === 'dataset_ats_score') {
-        userPrompt = `Score this resume for ATS compatibility:\n\nRESUME:\n${example.resume.substring(0, 2000)}\n\nJOB DESCRIPTION:\n${example.jobDescription.substring(0, 1000)}\n\nExpected Decision: ${example.decision}\n\nReturn ONLY valid JSON with the scoring.`;
-      } else if (example.source === 'resume_500') {
+      // if (example.source === 'dataset_ats_score') {
+      //   userPrompt = `Score this resume for ATS compatibility:\n\nRESUME:\n${example.resume.substring(0, 2000)}\n\nJOB DESCRIPTION:\n${example.jobDescription.substring(0, 1000)}\n\nExpected Decision: ${example.decision}\n\nReturn ONLY valid JSON with the scoring.`;
+      // } else
+         if (example.source === 'resume_500') {
         userPrompt = `Score this resume for ATS compatibility:\n\nRESUME:\n${example.resume.substring(0, 2000)}\n\nReturn ONLY valid JSON with the scoring.`;
       } else if (example.source === 'resume_dataset_1200') {
         userPrompt = `Score this resume for ATS compatibility:\n\nNAME: ${example.name}\nEDUCATION: ${example.education} in ${example.field}\nEXPERIENCE: ${example.experience} years\nCURRENT JOB: ${example.currentJob}\nSKILLS: ${example.skills}\nCERTIFICATIONS: ${example.certifications}\nTARGET JOB: ${example.targetJob}\n\nReturn ONLY valid JSON with the scoring.`;
@@ -452,7 +454,7 @@ async function trainATSScorer() {
     systemPrompt: systemPrompt,
     trainingDataSize: allExamples.length,
     trainingDataSources: {
-      dataset_ats_score: atsScoreData.length,
+      // dataset_ats_score: atsScoreData.length,
       ats_train_data: atsTrainData.length,
       resume_500: resume500Data.length,
       resume_dataset_1200: resume1200Data.length

@@ -1,5 +1,5 @@
 export interface RecruiterStreamingChatMessage {
-  type: 'connected' | 'typing' | 'chunk' | 'complete' | 'error' | 'candidates' | 'job_description' | 'hr_advice' | 'screening_progress';
+  type: 'connected' | 'typing' | 'chunk' | 'complete' | 'error' | 'candidates' | 'job_description' | 'hr_advice' | 'screening_progress' | 'job_selection_required';
   content?: string;
   message?: string;
   isComplete?: boolean;
@@ -11,12 +11,14 @@ export interface RecruiterStreamingChatMessage {
   progress?: number;
   batchNumber?: number;
   totalBatches?: number;
+  jobs?: any[];
 }
 
 export interface RecruiterStreamingChatRequest {
   message: string;
   searchSource?: 'cvzen' | 'web' | 'both';
   context?: {
+    selectedJobId?: number;
     recruiterProfile?: any;
   };
 }
@@ -26,6 +28,7 @@ export interface RecruiterStreamingCallbacks {
   onTyping?: (message: string) => void;
   onChunk?: (content: string) => void;
   onCandidates?: (candidates: any[]) => void;
+  onJobSelectionRequired?: (jobs: any[], message: string) => void;
   onJobDescription?: (jobDescription: any) => void;
   onHRAdvice?: (hrAdvice: any) => void;
   onScreeningProgress?: (progress: number, batchNumber: number, totalBatches: number) => void;
@@ -63,6 +66,12 @@ class RecruiterAIChatStreamingService {
     }
 
     try {
+      console.log('🔍 Sending request to recruiter AI chat:', {
+        message: request.message,
+        searchSource: request.searchSource,
+        context: request.context
+      });
+      
       const response = await fetch(`${this.baseUrl}/api/recruiter-ai-chat/stream`, {
         method: 'POST',
         headers: {
@@ -73,7 +82,13 @@ class RecruiterAIChatStreamingService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Stream request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
       }
 
       const reader = response.body?.getReader();
@@ -103,10 +118,13 @@ class RecruiterAIChatStreamingService {
             // Parse Server-Sent Events format
             if (line.startsWith('data: ')) {
               try {
-                const data: RecruiterStreamingChatMessage = JSON.parse(line.slice(6));
+                const dataStr = line.slice(6);
+                console.log('📨 Raw stream data:', dataStr);
+                const data: RecruiterStreamingChatMessage = JSON.parse(dataStr);
+                console.log('📦 Parsed stream message:', data);
                 this.handleStreamMessage(data, callbacks);
               } catch (parseError) {
-                console.error('Error parsing stream data:', parseError);
+                console.error('Error parsing stream data:', parseError, 'Raw line:', line);
               }
             }
           }
@@ -148,6 +166,16 @@ class RecruiterAIChatStreamingService {
         }
         if (data.content) {
           callbacks.onChunk?.(data.content);
+        }
+        break;
+      
+      case 'job_selection_required':
+        console.log('🎯 Job selection required received:', data);
+        if (data.jobs) {
+          console.log('📋 Calling onJobSelectionRequired with', data.jobs.length, 'jobs');
+          callbacks.onJobSelectionRequired?.(data.jobs, data.message || '');
+        } else {
+          console.warn('⚠️ No jobs in job_selection_required message');
         }
         break;
         
