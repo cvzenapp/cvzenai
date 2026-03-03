@@ -5,23 +5,42 @@ dotenv.config();
 let db: Client | null = null;
 
 export async function initializeDatabase(): Promise<Client> {
-  // In serverless environments, create a new connection each time
-  if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  // Railway and other cloud environments - Railway sets RAILWAY_STATIC_URL or NODE_ENV=production
+  if (process.env.RAILWAY_STATIC_URL || process.env.NODE_ENV === 'production' || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
     if (!connectionString) {
       throw new Error("Database connection string not found in environment variables");
     }
     
-    const client = new Client({ 
-      connectionString,
-      // Add connection timeout for serverless
-      connectionTimeoutMillis: 5000,
-      query_timeout: 10000,
-      // SSL configuration for production databases
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    console.log("🚀 [PRODUCTION] Connecting to database...");
+    console.log("🔍 [DEBUG] Connection string:", connectionString);
+    
+    // Parse the connection string manually to avoid parsing issues
+    const url = new URL(connectionString);
+    
+    const client = new Client({
+      host: url.hostname,
+      port: parseInt(url.port) || 5432,
+      database: url.pathname.slice(1), // Remove leading slash
+      user: url.username,
+      password: url.password,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+      query_timeout: 30000,
+    });
+    
+    // Set max listeners to prevent memory leak warnings
+    client.setMaxListeners(20);
+    
+    console.log("🔍 [DEBUG] Parsed connection:", {
+      host: url.hostname,
+      port: url.port,
+      database: url.pathname.slice(1),
+      user: url.username
     });
     
     await client.connect();
+    console.log("✅ [PRODUCTION] Database connected successfully");
     return client;
   }
 
@@ -57,6 +76,9 @@ export async function initializeDatabase(): Promise<Client> {
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000
   });
+  
+  // Set max listeners to prevent memory leak warnings
+  db.setMaxListeners(20);
   
   await db.connect();
   

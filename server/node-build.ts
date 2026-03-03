@@ -34,7 +34,7 @@ console.log('  import.meta.url:', import.meta.url);
 console.log('  __filename:', __filename);
 console.log('  __dirname:', __dirname);
 
-const distPath = path.join(__dirname, "../dist");
+const distPath = path.join(__dirname, "../spa");
 console.log('  distPath:', distPath);
 
 // Serve static files
