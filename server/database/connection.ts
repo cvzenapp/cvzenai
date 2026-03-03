@@ -47,7 +47,7 @@ export async function initializeDatabase(): Promise<Client> {
     throw new Error("Database connection string not found in environment variables");
   }
   
-  console.log("Initializing database connection...");
+  console.log("Initializing database connection...", connectionString);
   db = new Client({ 
     connectionString,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
