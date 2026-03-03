@@ -21,11 +21,15 @@ export async function connectDatabase(): Promise<void> {
     if (process.env.DATABASE_URL) {
       pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ...config
+        min: parseInt(process.env.DB_POOL_MIN || '2'),
+        max: parseInt(process.env.DB_POOL_MAX || '10'),
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
       });
     } else {
       pool = new Pool(config);
     }
+
 
     // Test connection
     const client = await pool.connect();
@@ -73,7 +77,7 @@ export async function withTransaction<T>(
 
 // Helper function for safe queries
 export async function query<T = any>(
-  text: string, 
+  text: string,
   params?: any[]
 ): Promise<{ rows: T[]; rowCount: number }> {
   const client = await pool.connect();

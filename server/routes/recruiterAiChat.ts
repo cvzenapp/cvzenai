@@ -828,6 +828,9 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
     // Variable to accumulate the full response for saving
     let fullResponse = '';
 
+    // Variable to track if job-based search was completed
+    let jobBasedSearchCompleted = false;
+
     try {
       console.log('🎯 [RECRUITER AI STREAM] Received message:', message);
       
@@ -839,8 +842,6 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
       
       const hasCandidateSearchIntent = candidateSearchKeywords.some(keyword => lowerMessage.includes(keyword)) &&
                                        candidateRoleKeywords.some(keyword => lowerMessage.includes(keyword));
-      
-      let jobBasedSearchCompleted = false;
       
       console.log('🔍 Candidate search detection:', {
         message: lowerMessage,
@@ -914,6 +915,7 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
           res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);
           res.end();
           jobBasedSearchCompleted = true;
+          console.log('✅ Job-based search completed, setting flag to true');
           return;
         }
       }
@@ -1130,6 +1132,7 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
       });
       
       if (isCandidateSearch && !jobBasedSearchCompleted) {
+        console.log('🎯 Starting generic candidate search (job-based search not completed)');
         // Send typing indicator
         res.write(`data: ${JSON.stringify({ type: 'typing', message: 'Searching for candidates...' })}\n\n`);
         
