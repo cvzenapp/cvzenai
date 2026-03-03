@@ -1,99 +1,71 @@
-import { Client } from "pg";
+import { Client, Pool } from "pg";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-let db: Client | null = null;
+let pool: Pool | null = null;
 
 export async function initializeDatabase(): Promise<Client> {
-  // Railway and other cloud environments - Railway sets RAILWAY_STATIC_URL or NODE_ENV=production
+  // Railway and other cloud environments - use connection pooling
   if (process.env.RAILWAY_STATIC_URL || process.env.NODE_ENV === 'production' || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
     if (!connectionString) {
       throw new Error("Database connection string not found in environment variables");
     }
     
-    console.log("🚀 [PRODUCTION] Connecting to database...");
-    console.log("🔍 [DEBUG] Connection string:", connectionString);
+    // Create pool if it doesn't exist
+    if (!pool) {
+      console.log("🚀 [PRODUCTION] Creating database pool...");
+      
+      const url = new URL(connectionString);
+      
+      pool = new Pool({
+        host: url.hostname,
+        port: parseInt(url.port) || 5432,
+        database: url.pathname.slice(1),
+        user: url.username,
+        password: url.password,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 10, // Maximum number of clients in the pool
+        min: 2,  // Minimum number of clients in the pool
+      });
+      
+      console.log("✅ [PRODUCTION] Database pool created");
+    }
     
-    // Parse the connection string manually to avoid parsing issues
-    const url = new URL(connectionString);
-    
-    const client = new Client({
-      host: url.hostname,
-      port: parseInt(url.port) || 5432,
-      database: url.pathname.slice(1), // Remove leading slash
-      user: url.username,
-      password: url.password,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 10000,
-      query_timeout: 30000,
-    });
-    
-    // Set max listeners to prevent memory leak warnings
-    client.setMaxListeners(20);
-    
-    console.log("🔍 [DEBUG] Parsed connection:", {
-      host: url.hostname,
-      port: url.port,
-      database: url.pathname.slice(1),
-      user: url.username
-    });
-    
-    await client.connect();
-    console.log("✅ [PRODUCTION] Database connected successfully");
+    // Get a client from the pool
+    const client = await pool.connect();
     return client;
   }
 
-  // For local development, use persistent connection with better error handling
-  if (db && db._connected) {
-    // Test the connection before returning it
-    try {
-      await db.query('SELECT 1');
-      return db;
-    } catch (error) {
-      console.warn('⚠️ Existing database connection is stale, creating new one...');
-      try {
-        await db.end();
-      } catch (closeError) {
-        // Ignore close errors
-      }
-      db = null;
+  // For local development, use connection pool as well
+  if (!pool) {
+    const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+    if (!connectionString) {
+      throw new Error("Database connection string not found in environment variables");
     }
+    
+    console.log("Initializing database pool...");
+    pool = new Pool({
+      connectionString,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 10,
+      min: 2,
+    });
+    
+    pool.on('error', (err) => {
+      console.error('Database pool error:', err);
+    });
+    
+    console.log("✅ Database pool initialized");
   }
-
-  const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
-  if (!connectionString) {
-    throw new Error("Database connection string not found in environment variables");
-  }
   
-  console.log("Initializing database connection...", connectionString);
-  db = new Client({ 
-    connectionString,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    // Add connection timeout and keep-alive for local development
-    connectionTimeoutMillis: 10000,
-    query_timeout: 30000,
-    keepAlive: true,
-    keepAliveInitialDelayMillis: 10000
-  });
-  
-  // Set max listeners to prevent memory leak warnings
-  db.setMaxListeners(20);
-  
-  await db.connect();
-  
-  // Set up error handlers to detect connection issues
-  db.on('error', (err) => {
-    console.error('Database connection error:', err);
-    db = null; // Force reconnection on next request
-  });
-  
-  db.on('end', () => {
-    console.log('Database connection ended');
-    db = null; // Force reconnection on next request
-  });
-  
-  return db;
+  // Get a client from the pool
+  const client = await pool.connect();
+  return client;
 }
 
 export async function getDatabase(): Promise<Client> {
@@ -102,10 +74,15 @@ export async function getDatabase(): Promise<Client> {
 
 export async function closeDatabase(client?: Client): Promise<void> {
   if (client) {
-    await client.end();
-  } else if (db) {
-    await db.end();
-    db = null;
+    // Release the client back to the pool instead of ending it
+    client.release();
+  }
+}
+
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }
 

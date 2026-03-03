@@ -14,7 +14,7 @@
     "dev": "vite",
     "dev:api": "tsx server/standalone.ts",
     "dev:full": "concurrently \"npm run dev:api\" \"npm run dev\"",
-    "build": "rm -rf dist && npm run build:server && npm run build:client",
+    "build": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\" && npm run build:server && npm run build:client",
     "build:client": "vite build --mode production",
     "build:server": "vite build --config vite.config.server.ts",
     "start": "node -r dotenv/config dist/server/node-build.mjs",

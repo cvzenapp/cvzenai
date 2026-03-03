@@ -564,7 +564,7 @@ export function createServer() {
         return next();
       }
       // Serve index.html for client-side routing
-      res.sendFile(path.join(__dirname, '../index.html'));
+      res.sendFile(path.join(__dirname, '../spa/index.html'));
     });
   }
 
