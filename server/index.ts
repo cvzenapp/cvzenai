@@ -63,6 +63,7 @@ import paymentHistoryRouter from "./routes/paymentHistory";
 import coverLetterRouter from "./routes/coverLetter.js";
 import jobMatchingRouter from "./routes/jobMatching.js";
 import resumeOptimizationRouter from "./routes/resumeOptimization.js";
+import aiSummaryRouter from "./routes/aiSummary.js";
 import { requireAuth } from "./middleware/unifiedAuth";
 import { getDatabase, initializeDatabase, closeDatabase } from "./database/connection";
 import { seedDatabase } from "./database/seedData";
@@ -320,6 +321,9 @@ export function createServer() {
 
   // Resume optimization routes
   app.use("/api/resume-optimization", resumeOptimizationRouter);
+
+  // AI summary generation routes
+  app.use("/api/ai", aiSummaryRouter);
 
   // Remove catch-all route for static file serving (handled by Netlify)
   // In development, Vite handles client-side routing

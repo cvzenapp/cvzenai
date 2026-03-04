@@ -794,3 +794,139 @@ export const setActiveResume = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Update specific resume sections (PATCH endpoint)
+export const updateResumeSection = async (req: AuthRequest, res: Response) => {
+  try {
+    const resumeId = req.params.id;
+    const updates = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "Authentication required"
+      });
+    }
+
+    const { getDatabase } = await import('../database/connection.js');
+    const db = await getDatabase();
+
+    // Check if resume exists and belongs to user
+    const existingResult = await db.query(`
+      SELECT * FROM resumes WHERE id = $1 AND user_id = $2
+    `, [resumeId, userId]);
+
+    if (existingResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Resume not found"
+      });
+    }
+
+    const existingResume = existingResult.rows[0];
+
+    // Build dynamic update query based on provided fields
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    if (updates.summary !== undefined) {
+      updateFields.push(`summary = $${paramIndex++}`);
+      updateValues.push(updates.summary);
+    }
+
+    if (updates.objective !== undefined) {
+      updateFields.push(`objective = $${paramIndex++}`);
+      updateValues.push(updates.objective);
+    }
+
+    if (updates.personalInfo !== undefined) {
+      updateFields.push(`personal_info = $${paramIndex++}`);
+      updateValues.push(JSON.stringify(updates.personalInfo));
+    }
+
+    if (updates.skills !== undefined) {
+      updateFields.push(`skills = $${paramIndex++}`);
+      updateValues.push(JSON.stringify(updates.skills));
+    }
+
+    if (updates.experiences !== undefined) {
+      updateFields.push(`experience = $${paramIndex++}`);
+      updateValues.push(JSON.stringify(updates.experiences));
+    }
+
+    if (updates.education !== undefined) {
+      updateFields.push(`education = $${paramIndex++}`);
+      updateValues.push(JSON.stringify(updates.education));
+    }
+
+    if (updates.projects !== undefined) {
+      updateFields.push(`projects = $${paramIndex++}`);
+      updateValues.push(JSON.stringify(updates.projects));
+    }
+
+    if (updates.certifications !== undefined) {
+      updateFields.push(`certifications = $${paramIndex++}`);
+      updateValues.push(JSON.stringify(updates.certifications));
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "No valid fields to update"
+      });
+    }
+
+    // Add updated_at timestamp
+    updateFields.push(`updated_at = NOW()`);
+
+    // Add WHERE clause parameters
+    updateValues.push(resumeId, userId);
+
+    const updateQuery = `
+      UPDATE resumes 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex++} AND user_id = $${paramIndex++}
+      RETURNING id, title, personal_info, summary, objective, skills, experience, education, projects, certifications, template_id, created_at, updated_at
+    `;
+
+    const updateResult = await db.query(updateQuery, updateValues);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Resume not found"
+      });
+    }
+
+    const updatedResume = updateResult.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        id: updatedResume.id,
+        title: updatedResume.title,
+        personalInfo: typeof updatedResume.personal_info === 'string' ? JSON.parse(updatedResume.personal_info) : (updatedResume.personal_info || {}),
+        summary: updatedResume.summary,
+        objective: updatedResume.objective,
+        skills: parseSkills(updatedResume.skills),
+        experience: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
+        education: typeof updatedResume.education === 'string' ? JSON.parse(updatedResume.education) : (updatedResume.education || []),
+        projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : (updatedResume.projects || []),
+        certifications: typeof updatedResume.certifications === 'string' ? JSON.parse(updatedResume.certifications) : (updatedResume.certifications || []),
+        templateId: updatedResume.template_id,
+        createdAt: updatedResume.created_at,
+        updatedAt: updatedResume.updated_at
+      },
+      message: "Resume section updated successfully"
+    });
+
+  } catch (error) {
+    console.error("❌ Error updating resume section:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
+};
