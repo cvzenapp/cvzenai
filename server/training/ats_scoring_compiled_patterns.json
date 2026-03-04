@@ -1,0 +1,925 @@
+{
+  "systemPrompt": "You are an expert ATS (Applicant Tracking System) scorer. Your job is to evaluate resume quality and return a JSON score.\n\nSCORING CRITERIA (0-100 each):\n- completeness: How complete is the resume (contact info, experience, education, skills)\n- formatting: How well structured and readable is the resume\n- keywords: Presence of relevant industry keywords and technical terms\n- experience: Quality and relevance of work experience descriptions\n- education: Education background completeness and relevance\n- skills: Technical and professional skills listed\n\n\n\nEXAMPLES OF RESUME CONTENT TO LEARN FROM:\n\nExample 1 (Resume Text):\nmeta\tothers\tJitesh Vishwakarma\r\nmeta\tothers\tE-mail-Id: - jvishwakarma123@gmail.com\r\nmeta\tothers\tContact Number: - 9960902548\r\nheader\texperience\tPROFESSIONAL SUMMARY:\r\ncontent\texperience\t· 4 years of technical experience in implementation, customization, integration and support of business applicatio...\n\nExample 2 (Resume Text):\nmeta\tothers\tNANDKUMAR SALUNKHE\r\nmeta\tothers\tLAXMI BALU NIGHOT\r\nmeta\tothers\tAshtyavinayak Soc.,\r\nmeta\tothers\tRoom no: 2, Bldg.:60, Sector 10\r\nmeta\tothers\tSanpada, Navi Mumbai 400-705\r\nmeta\tothers\tMobile: 8652145727/8356073731\r\nmeta\tothers\tEmail: nighot67@gmail.com\r\nheader\texperience\tPROFILE SUMMARY\r\n...\n\nExample 3 (Resume Text):\nheader\tothers\tRESUME\r\nmeta\tothers\tCURRICULUM VITAE\r\nmeta\tothers\tKAKOLI ROY\r\nmeta\tothers\te-mail : kakoliroy7@gmail.com\r\nmeta\tothers\tMobile No: 9007305067/8961764835\r\nheader\tothers\tObjective:\r\ncontent\tothers\tLooking for a challenging position in an organization, which will allow me to apply the best o...\n\n\n\nIMPORTANT: You must return ONLY valid JSON in this exact format:\n{\n  \"overallScore\": 75,\n  \"scores\": {\n    \"completeness\": 80,\n    \"formatting\": 70,\n    \"keywords\": 75,\n    \"experience\": 80,\n    \"education\": 70,\n    \"skills\": 75\n  },\n  \"suggestions\": [\"Add more technical keywords\", \"Improve formatting consistency\"],\n  \"strengths\": [\"Strong work experience\", \"Clear education background\"]\n}\n\nReturn ONLY the JSON, no explanations or additional text.",
+  "trainingDataSize": 1699,
+  "trainingDataSources": {
+    "resume_500": 499,
+    "resume_dataset_1200": 1200
+  },
+  "model": "llama3.2:3b",
+  "trainedAt": "2026-03-04T00:01:40.073Z",
+  "trainingResults": {
+    "total": 1699,
+    "successful": 1699,
+    "failed": 0,
+    "successRate": "100.0%"
+  },
+  "sampleResults": [
+    {
+      "index": 0,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 90,
+          "experience": 95,
+          "education": 60,
+          "skills": 90
+        },
+        "suggestions": [
+          "Add more education background details"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Relevant technical skills"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 65,
+          "education": 30,
+          "skills": 50
+        },
+        "suggestions": [
+          "Add more specific details about work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 2,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 60,
+          "education": 45,
+          "skills": 55
+        },
+        "suggestions": [
+          "Add more specific work experience details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 3,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 80,
+          "experience": 95,
+          "education": 85,
+          "skills": 80
+        },
+        "suggestions": [
+          "Add more technical keywords",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 4,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 45,
+          "education": 60,
+          "skills": 55
+        },
+        "suggestions": [
+          "Add more work experience details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 5,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 80,
+          "skills": 85
+        },
+        "suggestions": [
+          "Consider adding more specific technical skills"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 6,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 60,
+          "skills": 85
+        },
+        "suggestions": [
+          "Add more education details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear analytical skills"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 7,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 65,
+          "formatting": 50,
+          "keywords": 70,
+          "experience": 60,
+          "education": 55,
+          "skills": 65
+        },
+        "suggestions": [
+          "Add more work experience details",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 8,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 60,
+          "experience": 0,
+          "education": 85,
+          "skills": 60
+        },
+        "suggestions": [
+          "Add more technical keywords",
+          "Include relevant work experience"
+        ],
+        "strengths": [
+          "Clear education background",
+          "Complete contact information"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 9,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 45,
+          "education": 50,
+          "skills": 55
+        },
+        "suggestions": [
+          "Add more specific job titles and achievements",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 10,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 95,
+          "experience": 90,
+          "education": 60,
+          "skills": 90
+        },
+        "suggestions": [
+          "Add more education background",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Relevant technical keywords"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 11,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 65,
+          "education": 45,
+          "skills": 50
+        },
+        "suggestions": [
+          "Add more specific details about work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 12,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 45,
+          "education": 30,
+          "skills": 50
+        },
+        "suggestions": [
+          "Add more technical keywords",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 13,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 65,
+          "education": 30,
+          "skills": 45
+        },
+        "suggestions": [
+          "Add more specific job titles and company names",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 14,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 65,
+          "formatting": 50,
+          "keywords": 70,
+          "experience": 75,
+          "education": 55,
+          "skills": 65
+        },
+        "suggestions": [
+          "Add more specific job areas and achievements",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear objective statement",
+          "Relevant work experience"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 15,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 60,
+          "skills": 85
+        },
+        "suggestions": [
+          "Add more education details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear technical skills"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 16,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 45,
+          "education": 50,
+          "skills": 55
+        },
+        "suggestions": [
+          "Add more technical keywords",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 17,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 90,
+          "education": 60,
+          "skills": 85
+        },
+        "suggestions": [
+          "Add more education background details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear technical skills"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 18,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 60,
+          "skills": 85
+        },
+        "suggestions": [
+          "Add more education details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear career profile"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 19,
+      "source": "resume_500",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 65,
+          "education": 45,
+          "skills": 50
+        },
+        "suggestions": [
+          "Add more specific details about experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 1679,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 45,
+          "experience": 55,
+          "education": 40,
+          "skills": 50
+        },
+        "suggestions": [
+          "Add more relevant experience details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1680,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 90,
+          "education": 80,
+          "skills": 85
+        },
+        "suggestions": [
+          "Add more specific financial analysis keywords"
+        ],
+        "strengths": [
+          "Clear experience summary",
+          "Comprehensive skill set"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1681,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 65,
+        "scores": {
+          "completeness": 60,
+          "formatting": 50,
+          "keywords": 70,
+          "experience": 75,
+          "education": 40,
+          "skills": 80
+        },
+        "suggestions": [
+          "Add more education details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear skills listed",
+          "Relevant work experience"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1682,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 65,
+          "experience": 50,
+          "education": 30,
+          "skills": 70
+        },
+        "suggestions": [
+          "Add more relevant work experience",
+          "Improve education background completeness"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 1683,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 65,
+        "scores": {
+          "completeness": 60,
+          "formatting": 50,
+          "keywords": 70,
+          "experience": 55,
+          "education": 40,
+          "skills": 75
+        },
+        "suggestions": [
+          "Add more work experience details",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear skills listed"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1684,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 90,
+          "education": 85,
+          "skills": 85
+        },
+        "suggestions": [
+          "Consider adding more technical skills for a broader range of job opportunities"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1685,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 65,
+          "experience": 30,
+          "education": 55,
+          "skills": 70
+        },
+        "suggestions": [
+          "Add more work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 1686,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 65,
+          "experience": 30,
+          "education": 55,
+          "skills": 70
+        },
+        "suggestions": [
+          "Add more work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": [
+          "Clear education background",
+          "Listed relevant technical skills"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1687,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 80,
+          "skills": 85
+        },
+        "suggestions": [
+          "Consider adding more specific technical keywords"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1688,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 65,
+          "experience": 30,
+          "education": 55,
+          "skills": 70
+        },
+        "suggestions": [
+          "Add more work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 1689,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 82,
+        "scores": {
+          "completeness": 85,
+          "formatting": 60,
+          "keywords": 80,
+          "experience": 85,
+          "education": 70,
+          "skills": 80
+        },
+        "suggestions": [
+          "Improve formatting consistency",
+          "Add more specific technical keywords"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1690,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 55,
+          "experience": 30,
+          "education": 45,
+          "skills": 65
+        },
+        "suggestions": [
+          "Add more work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 1691,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 80,
+          "skills": 85
+        },
+        "suggestions": [
+          "Consider adding specific job titles and company names to experience section"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1692,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 90,
+          "education": 80,
+          "skills": 85
+        },
+        "suggestions": [
+          "Consider adding more specific technical skills"
+        ],
+        "strengths": [
+          "Clear education background",
+          "Strong work experience"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1693,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 82,
+        "scores": {
+          "completeness": 85,
+          "formatting": 60,
+          "keywords": 80,
+          "experience": 85,
+          "education": 70,
+          "skills": 80
+        },
+        "suggestions": [
+          "Improve formatting consistency",
+          "Add more technical keywords"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1694,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 80,
+          "skills": 90
+        },
+        "suggestions": [
+          "Consider adding more specific technical keywords"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1695,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 82,
+        "scores": {
+          "completeness": 85,
+          "formatting": 60,
+          "keywords": 80,
+          "experience": 90,
+          "education": 70,
+          "skills": 85
+        },
+        "suggestions": [
+          "Improve formatting consistency",
+          "Consider adding more technical keywords"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1696,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 65,
+          "experience": 30,
+          "education": 55,
+          "skills": 70
+        },
+        "suggestions": [
+          "Add more work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    },
+    {
+      "index": 1697,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 80,
+          "keywords": 85,
+          "experience": 95,
+          "education": 80,
+          "skills": 85
+        },
+        "suggestions": [
+          "Consider adding more technical experience details"
+        ],
+        "strengths": [
+          "Strong work experience",
+          "Clear education background"
+        ]
+      },
+      "success": true
+    },
+    {
+      "index": 1698,
+      "source": "resume_dataset_1200",
+      "scoring": {
+        "overallScore": 60,
+        "scores": {
+          "completeness": 50,
+          "formatting": 40,
+          "keywords": 30,
+          "experience": 20,
+          "education": 50,
+          "skills": 40
+        },
+        "suggestions": [
+          "Add more work experience",
+          "Improve formatting consistency"
+        ],
+        "strengths": []
+      },
+      "success": true
+    }
+  ]
+}
