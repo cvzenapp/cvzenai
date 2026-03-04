@@ -34,11 +34,27 @@ export default function RecruiterAppHeader({ children, onSettingsClick }: Recrui
     }
   }, []);
 
-  const handleLogout = () => {
-    // Clear recruiter auth data
-    localStorage.removeItem('recruiterToken');
-    localStorage.removeItem('recruiter');
-    navigate('/recruiter/login');
+  const handleLogout = async () => {
+    try {
+      // Call logout API if available
+      const token = localStorage.getItem('recruiterToken');
+      if (token) {
+        await fetch('/api/recruiter/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      // Clear recruiter auth data
+      localStorage.removeItem('recruiterToken');
+      localStorage.removeItem('recruiter');
+      navigate('/');
+    }
   };
 
   const handleSettings = () => {
@@ -53,16 +69,10 @@ export default function RecruiterAppHeader({ children, onSettingsClick }: Recrui
   return (
     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/recruiter/dashboard" className="flex items-center gap-3">
-            <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={true} />
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-px bg-slate-600"></div>
-              <span className="text-lg font-semibold text-slate-200">
-                Recruiter Portal
-              </span>
-            </div>
+          <Link to="/recruiter/dashboard" className="flex flex-col items-start gap-1">
+            <CVZenLogo className="h-10 sm:h-12 md:h-14 w-auto" showCaption={true} />
           </Link>
 
           {/* Middle content slot */}

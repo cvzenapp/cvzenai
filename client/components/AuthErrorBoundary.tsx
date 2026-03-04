@@ -104,11 +104,11 @@ export class AuthErrorBoundary extends Component<Props, State> {
       const currentPath = window.location.pathname;
       if (currentPath !== '/login' && currentPath !== '/register') {
         // Store current path for redirect after login
-        localStorage.setItem('redirectAfterLogin', currentPath);
+        // localStorage.setItem('redirectAfterLogin', currentPath);
         
         // Small delay to allow error display before redirect
         setTimeout(() => {
-          window.location.href = '/login';
+          window.location.href = '/';
         }, 2000);
       }
     }
@@ -212,7 +212,7 @@ const DefaultAuthErrorFallback: React.FC<DefaultAuthErrorFallbackProps> = ({ err
                   You will be redirected to login in a moment...
                 </p>
                 <button
-                  onClick={() => window.location.href = '/login'}
+                  onClick={() => window.location.href = '/'}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   Go to Login

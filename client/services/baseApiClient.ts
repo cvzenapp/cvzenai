@@ -707,7 +707,7 @@ export class BaseApiClient {
         console.log('🔐 Session expired or invalid. You have been logged out.');
         console.log('💡 If your password was recently changed, please log in with your new password.');
 
-        window.location.href = '/login';
+        window.location.href = '/';
       } catch (error) {
         // Ignore navigation errors in test environment
         console.log('Navigation not available in test environment');

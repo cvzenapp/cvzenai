@@ -171,7 +171,7 @@ Please optimize this resume for the job posting. Return only the JSON object.`;
     const updateResult = await db.query(updateQuery, updateValues);
     const updatedResume = updateResult.rows[0];
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         optimizedResume: {
@@ -206,7 +206,7 @@ Please optimize this resume for the job posting. Return only the JSON object.`;
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to optimize resume",
     });

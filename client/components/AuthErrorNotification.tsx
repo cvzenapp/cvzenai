@@ -145,7 +145,7 @@ export const AuthErrorNotification: React.FC<AuthErrorNotificationProps> = ({
               
               {requiresReauth && (
                 <button
-                  onClick={() => window.location.href = '/login'}
+                  onClick={() => window.location.href = '/'}
                   className="text-sm font-medium underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-current rounded"
                 >
                   Go to Login

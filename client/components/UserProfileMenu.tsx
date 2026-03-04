@@ -36,12 +36,12 @@ export default function UserProfileMenu({ userName, className = "" }: UserProfil
   const handleLogout = async () => {
     try {
       await unifiedAuthService.logout();
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error("Logout error:", error);
       // Force logout even if API call fails
       localStorage.clear();
-      navigate('/login');
+      navigate('/');
     }
   };
 

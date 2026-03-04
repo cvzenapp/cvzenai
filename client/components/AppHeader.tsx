@@ -32,11 +32,11 @@ export default function AppHeader({ children, onToggleSidebar, showToggle = fals
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Navigate to login
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Logout error:', error);
       // Still navigate even if there's an error
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     } finally {
       setIsLoggingOut(false);
     }
@@ -59,7 +59,7 @@ export default function AppHeader({ children, onToggleSidebar, showToggle = fals
               </button>
             )}
             <Link to="/" className="flex items-center space-x-2">
-              <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={false} />
+              <CVZenLogo className="h-8 sm:h-9 md:h-10 w-auto" showCaption={true} />
             </Link>
             {children}
           </div>

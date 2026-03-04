@@ -128,35 +128,35 @@ class RecruiterAuthApiService {
     }
   }
 
-  async logout(): Promise<void> {
-    try {
-      await this.request("/logout", {
-        method: "POST",
-      });
-    } catch (error) {
-      console.error("Recruiter logout error:", error);
-    } finally {
-      // Clear local state regardless of API response
-      this.token = null;
-      this.recruiter = null;
+  // async logout(): Promise<void> {
+  //   try {
+  //     await this.request("/logout", {
+  //       method: "POST",
+  //     });
+  //   } catch (error) {
+  //     console.error("Recruiter logout error:", error);
+  //   } finally {
+  //     // Clear local state regardless of API response
+  //     this.token = null;
+  //     this.recruiter = null;
       
-      // Clear ALL possible recruiter auth keys (various naming conventions used over time)
-      localStorage.removeItem("recruiter_token");
-      localStorage.removeItem("recruiter_user");
-      localStorage.removeItem("recruiterAuthToken");
-      localStorage.removeItem("recruiterUser");
+  //     // Clear ALL possible recruiter auth keys (various naming conventions used over time)
+  //     localStorage.removeItem("recruiter_token");
+  //     localStorage.removeItem("recruiter_user");
+  //     localStorage.removeItem("recruiterAuthToken");
+  //     localStorage.removeItem("recruiterUser");
       
-      // Clear job seeker auth (in case of mixed sessions)
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("user");
+  //     // Clear job seeker auth (in case of mixed sessions)
+  //     localStorage.removeItem("authToken");
+  //     localStorage.removeItem("user");
       
-      // Clear redirect path
-      localStorage.removeItem("redirectAfterLogin");
+  //     // Clear redirect path
+  //     localStorage.removeItem("redirectAfterLogin");
       
-      // Clear notification settings
-      localStorage.removeItem("recruiterNotificationSettings");
-    }
-  }
+  //     // Clear notification settings
+  //     localStorage.removeItem("recruiterNotificationSettings");
+  //   }
+  // }
 
   async forgotPassword(
     data: RecruiterPasswordResetRequest,

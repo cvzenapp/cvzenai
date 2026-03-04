@@ -15,7 +15,7 @@ export default function JobSeekerSubscriptionPlans() {
   const handleSelectPlan = async (planId: string, billingCycle: 'monthly' | 'yearly') => {
     if (!user?.id) {
       alert('Please log in to subscribe');
-      navigate('/login');
+      navigate('/');
       return;
     }
 

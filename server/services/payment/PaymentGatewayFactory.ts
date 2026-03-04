@@ -1,6 +1,8 @@
 import type { PaymentGateway } from '@shared/payment';
 import { PaymentGatewayAdapter } from './PaymentGatewayAdapter';
 import { PhonePeAdapter } from './PhonePeAdapter';
+import { StripeAdapter } from './StripeAdapter';
+import { RazorpayAdapter } from './RazorpayAdapter';
 
 /**
  * Payment Gateway Factory
@@ -20,12 +22,10 @@ export class PaymentGatewayFactory {
         return new PhonePeAdapter();
       
       case 'razorpay':
-        // TODO: Implement RazorpayAdapter
-        throw new Error('Razorpay gateway not implemented yet');
+        return new RazorpayAdapter();
       
       case 'stripe':
-        // TODO: Implement StripeAdapter
-        throw new Error('Stripe gateway not implemented yet');
+        return new StripeAdapter();
       
       default:
         throw new Error(`Unsupported payment gateway: ${selectedGateway}`);
@@ -44,5 +44,12 @@ export class PaymentGatewayFactory {
    */
   static setDefaultGateway(gateway: PaymentGateway): void {
     this.defaultGateway = gateway;
+  }
+
+  /**
+   * Get available gateways
+   */
+  static getAvailableGateways(): PaymentGateway[] {
+    return ['phonepe', 'razorpay', 'stripe'];
   }
 }

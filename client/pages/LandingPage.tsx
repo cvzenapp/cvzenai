@@ -8,8 +8,6 @@ import {
   CheckCircle,
   FileText,
   Briefcase,
-  GraduationCap,
-  Award,
   Eye,
   Share2,
   Zap,
@@ -17,12 +15,8 @@ import {
   Sparkles,
   Menu,
   X,
-  Play,
-  ChevronRight,
-  Globe,
   Target,
   TrendingUp,
-  Heart,
   Upload,
   Leaf,
 } from "lucide-react";
@@ -65,7 +59,7 @@ interface Stat {
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [pledgeModalOpen, setPledgeModalOpen] = useState(false);
+  const [pledgeModalOpen, setPledgeModalOpen] = useState(true);
   const [quickSignupModalOpen, setQuickSignupModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
@@ -220,10 +214,10 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-brand-background border-b border-brand-main/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
-              <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={true} />
+              <CVZenLogo className="h-10 sm:h-12 md:h-14 w-auto" showCaption={true} />
             </Link>
 
             {/* Desktop Navigation */}
@@ -247,6 +241,14 @@ export default function LandingPage() {
                 <Leaf className="h-4 w-4" />
                 Take Pledge
               </button>
+              {isAuthenticated && (
+                <Link
+                  to="/dashboard"
+                  className="text-brand-auxiliary-1 hover:text-brand-main transition-colors font-normal"
+                >
+                  Dashboard
+                </Link>
+              )}
               {!isAuthenticated && (
                 <>
                   <button
@@ -268,14 +270,9 @@ export default function LandingPage() {
             {/* Action Buttons */}
             <div className="hidden md:flex items-center gap-3">
               {isAuthenticated ? (
-                <>
-                  <Link to="/builder">
-                    <Button variant="outline" className="border-brand-main/30 text-brand-auxiliary-1 hover:bg-brand-main/10">Resume Builder</Button>
-                  </Link>
-                  <Link to="/dashboard">
-                    <Button className="bg-brand-main hover:bg-brand-main/90">Dashboard</Button>
-                  </Link>
-                </>
+                <Link to="/dashboard">
+                  <Button className="bg-brand-main hover:bg-brand-main/90">Dashboard</Button>
+                </Link>
               ) : (
                 <>
                   <Button 
@@ -323,6 +320,15 @@ export default function LandingPage() {
                 >
                   Pricing
                 </Link>
+                {isAuthenticated && (
+                  <Link
+                    to="/dashboard"
+                    className="text-brand-auxiliary-1 hover:text-brand-main transition-colors font-normal"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                )}
                 {!isAuthenticated && (
                   <>
                     <button
@@ -396,7 +402,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-brand-background">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-background via-brand-background to-brand-main/20" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
@@ -418,24 +424,34 @@ export default function LandingPage() {
                   Rebuilding hiring with structured digital profiles that at every step of the hire                </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  onClick={handleGetStarted}
-                  className="group h-12 px-8 bg-brand-main hover:bg-brand-main/90 text-white"
-                >
-                  Start for Free
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setPledgeModalOpen(true)}
-                  className="h-12 px-8 group border-brand-main text-brand-background hover:bg-brand-main/10"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Join Early Access
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex flex-col">
+                  <div className="bg-brand-auxiliary-1 text-brand-background px-4 py-1 rounded-t-lg text-sm font-medium text-center">
+                    Get Digital CV
+                  </div>
+                  <Button
+                    size="lg"
+                    onClick={handleGetStarted}
+                    className="group h-12 px-8 bg-brand-main hover:bg-brand-main/90 text-white rounded-t-none border-t-0"
+                  >
+                    Start for Free
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </div>
+                <div className="flex flex-col">
+                  <div className="bg-green-600 text-white px-4 py-1 rounded-t-lg text-sm font-medium text-center">
+                    I DON'T print CV
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setPledgeModalOpen(true)}
+                    className="h-12 px-8 group border-brand-main text-brand-background hover:bg-brand-main/10 hover:text-brand-auxiliary-1 rounded-t-none border-t-0"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Take the Pledge
+                  </Button>
+                </div>
               </div>
 
               {/* Stats */}
@@ -472,12 +488,7 @@ export default function LandingPage() {
               </div>
               */}
 
-              {/* Ambient Background Orbs */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-24 -right-24 w-96 h-96 bg-brand-main/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-brand-auxiliary-1/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-brand-main/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-              </div>
+              {/* Ambient Background Orbs - Removed */}
               
               {/* Modern Floating Workflow Cards */}
               <div className="relative z-10 space-y-8">
@@ -673,13 +684,10 @@ export default function LandingPage() {
 
                 {/* Bottom Badge - Modern */}
                 <div className="flex justify-center pt-8">
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-brand-main/40 to-brand-main/20 rounded-full blur-2xl group-hover:blur-3xl transition-all duration-500" />
-                    <Badge className="relative bg-gradient-to-r from-brand-main to-brand-main/90 text-white border-0 px-8 py-4 text-lg shadow-2xl shadow-brand-main/40 hover:scale-105 transition-transform duration-300">
-                      <Zap className="h-5 w-5 mr-2" />
-                      End-to-End Hiring Automation
-                    </Badge>
-                  </div>
+                  <Badge className="bg-gradient-to-r from-brand-main to-brand-main/90 text-white border-0 px-8 py-4 text-lg shadow-2xl shadow-brand-main/40 hover:scale-105 transition-transform duration-300">
+                    <Zap className="h-5 w-5 mr-2" />
+                    End-to-End Hiring Automation
+                  </Badge>
                 </div>
 
                 {/* Remove old background circles - now using ambient orbs */}
@@ -902,7 +910,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-5 gap-8">
             <div className="space-y-4">
               <Link to="/" className="flex items-center gap-2">
-                <CVZenLogo className="h-8 sm:h-9 md:h-10 w-auto" />
+                <CVZenLogo className="h-6 sm:h-7 md:h-8 w-auto" showCaption={true} />
               </Link>
               <p className="text-brand-auxiliary-1">
                 AI-powered platform for building professional resumes and accelerating your career.

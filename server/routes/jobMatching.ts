@@ -147,7 +147,7 @@ Calculate the ATS match score and provide analysis.`;
       };
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         score: Math.min(100, Math.max(0, matchData.score || 75)),
@@ -174,7 +174,7 @@ Calculate the ATS match score and provide analysis.`;
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to calculate match score",
     });

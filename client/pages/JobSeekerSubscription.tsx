@@ -23,7 +23,7 @@ export default function JobSeekerSubscription() {
 
   useEffect(() => {
     if (!userId) {
-      navigate('/login');
+      navigate('/');
       return;
     }
     loadSubscriptionData();

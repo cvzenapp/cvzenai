@@ -120,7 +120,7 @@ export default function Dashboard() {
       console.log('🧹 Detected invalid token on dashboard load, clearing auth');
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      navigate('/login');
+      navigate('/');
       return;
     }
   }, [navigate]);

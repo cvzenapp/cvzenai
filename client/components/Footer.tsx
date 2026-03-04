@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-5 gap-8">
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={true} />
+              <CVZenLogo className="h-6 sm:h-7 md:h-8 w-auto" showCaption={true} />
             </Link>
             <p className="text-slate-400">
               Build professional resumes that get you hired faster.

@@ -92,11 +92,15 @@ export function SustainabilityPledgeModal({ isOpen, onClose }: SustainabilityPle
                 <X className="w-4 h-4" />
               </button>
 
-              <Leaf className="w-10 h-10 mb-3" />
-              <h2 className="text-2xl font-normal mb-1">I DON'T print CV</h2>
-              <p className="text-green-50 text-sm font-normal">
-                Join the pledge for sustainable, paperless hiring.
-              </p>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <Leaf className="w-8 h-8" />
+                  <h2 className="text-2xl font-normal">I DON'T print CV</h2>
+                </div>
+                <p className="text-green-50 text-sm font-normal">
+                  Join the pledge for sustainable, paperless hiring.
+                </p>
+              </div>
             </div>
 
             {/* Content */}

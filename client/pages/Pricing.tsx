@@ -8,35 +8,64 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
+import RecruiterAuthModal from '@/components/RecruiterAuthModal';
+import CVZenLogo from '@/components/CVZenLogo';
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<'candidate' | 'recruiter'>('candidate');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showRecruiterAuthModal, setShowRecruiterAuthModal] = useState(false);
   const [selectedPlanForAuth, setSelectedPlanForAuth] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check for user without using auth context
+    const token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('user');
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Failed to parse user data:', error);
+      }
+    }
     loadPlans();
   }, [userType]);
 
   const loadPlans = async () => {
     try {
       setLoading(true);
-      const data = await subscriptionApi.getPlans(userType);
       
-      // Sort plans: for recruiters, put Enterprise last
-      if (userType === 'recruiter') {
-        const sortedPlans = data.sort((a, b) => {
-          if (a.name === 'enterprise') return 1;
-          if (b.name === 'enterprise') return -1;
-          return a.priceMonthly - b.priceMonthly;
-        });
-        setPlans(sortedPlans);
+      const response = await fetch('/api/subscriptions/plans', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const allPlans = data.success ? data.data : data;
+        
+        // Filter plans by userType on frontend
+        const filteredPlans = allPlans.filter(plan => plan.userType === userType);
+        
+        // Sort plans: for recruiters, put Enterprise last
+        if (userType === 'recruiter') {
+          const sortedPlans = filteredPlans.sort((a, b) => {
+            if (a.name === 'enterprise') return 1;
+            if (b.name === 'enterprise') return -1;
+            return a.priceMonthly - b.priceMonthly;
+          });
+          setPlans(sortedPlans);
+        } else {
+          setPlans(filteredPlans);
+        }
       } else {
-        setPlans(data);
+        console.error('Failed to load plans:', response.status);
       }
     } catch (error) {
       console.error('Failed to load plans:', error);
@@ -52,9 +81,13 @@ export default function Pricing() {
 
   const handleSelectPlan = async (planName: string) => {
     if (!user) {
-      // Store the selected plan and show auth modal
+      // Store the selected plan and show appropriate auth modal
       setSelectedPlanForAuth(planName);
-      setShowAuthModal(true);
+      if (userType === 'recruiter') {
+        setShowRecruiterAuthModal(true);
+      } else {
+        setShowAuthModal(true);
+      }
       return;
     }
     
@@ -100,8 +133,9 @@ export default function Pricing() {
   };
 
   const handleAuthSuccess = () => {
-    // Close modal
+    // Close modals
     setShowAuthModal(false);
+    setShowRecruiterAuthModal(false);
     
     // Proceed with the selected plan if one was stored
     if (selectedPlanForAuth) {
@@ -113,15 +147,11 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-brand-background">
       {/* Public Header */}
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
+      <header className="bg-brand-background border-b border-brand-main/20 sticky top-0 z-40">
         <div className="w-full px-4 sm:px-6">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <Link to="/" className="flex items-center space-x-2">
-              <img 
-                src="/assets/cvzen_cap.svg" 
-                alt="CVZen Logo" 
-                className="h-8 sm:h-9 md:h-10 w-auto"
-              />
+            <CVZenLogo className="h-10 sm:h-12 md:h-14 w-auto" showCaption={true} />
             </Link>
 
             <div className="flex items-center space-x-4">
@@ -142,13 +172,25 @@ export default function Pricing() {
                 <>
                   <Button 
                     variant="ghost" 
-                    onClick={() => setShowAuthModal(true)}
+                    onClick={() => {
+                      if (userType === 'recruiter') {
+                        setShowRecruiterAuthModal(true);
+                      } else {
+                        setShowAuthModal(true);
+                      }
+                    }}
                     className="text-white hover:text-brand-main"
                   >
                     Sign In
                   </Button>
                   <Button 
-                    onClick={() => setShowAuthModal(true)}
+                    onClick={() => {
+                      if (userType === 'recruiter') {
+                        setShowRecruiterAuthModal(true);
+                      } else {
+                        setShowAuthModal(true);
+                      }
+                    }}
                     className="bg-brand-main hover:bg-blue-700 text-white"
                   >
                     Get Started
@@ -164,10 +206,10 @@ export default function Pricing() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-normal text-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-jakarta font-semibold text-white mb-4">
             Choose Your Plan
           </h1>
-          <p className="text-lg text-brand-auxiliary-1 mb-8">
+          <p className="text-lg md:text-xl font-jakarta text-brand-auxiliary-1 mb-8">
             Select the perfect plan for your needs
           </p>
 
@@ -175,7 +217,7 @@ export default function Pricing() {
           <div className="inline-flex rounded-lg border border-brand-main/30 p-1 bg-white/10 backdrop-blur-sm">
             <button
               onClick={() => setUserType('candidate')}
-              className={`px-6 py-2 rounded-md transition-colors ${
+              className={`px-6 py-3 rounded-md transition-colors font-jakarta font-medium ${
                 userType === 'candidate'
                   ? 'bg-brand-main text-white'
                   : 'text-brand-auxiliary-1 hover:text-white'
@@ -185,7 +227,7 @@ export default function Pricing() {
             </button>
             <button
               onClick={() => setUserType('recruiter')}
-              className={`px-6 py-2 rounded-md transition-colors ${
+              className={`px-6 py-3 rounded-md transition-colors font-jakarta font-medium ${
                 userType === 'recruiter'
                   ? 'bg-brand-main text-white'
                   : 'text-brand-auxiliary-1 hover:text-white'
@@ -235,14 +277,14 @@ export default function Pricing() {
                   )}
 
                   <div className="text-center mb-4">
-                    <h3 className="text-xl font-normal text-brand-background mb-2">
+                    <h3 className="text-xl md:text-2xl font-jakarta font-semibold text-brand-background mb-2">
                       {plan.displayName}
                     </h3>
-                    <div className="text-3xl font-normal text-brand-main mb-1">
+                    <div className="text-3xl md:text-4xl font-jakarta font-bold text-brand-main mb-1">
                       {formatPrice(plan.priceMonthly)}
                     </div>
                     {!isFree && !isEnterprise && (
-                      <div className="text-slate-500 text-xs">/month</div>
+                      <div className="text-slate-500 text-sm font-jakarta">/month</div>
                     )}
                   </div>
 
@@ -252,7 +294,7 @@ export default function Pricing() {
                     {userType === 'recruiter' && plan.limits.job_postings && (
                       <li className="flex items-start gap-2">
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-slate-700 text-xs leading-tight">
+                        <span className="text-slate-700 text-sm font-jakarta leading-tight">
                           {plan.limits.job_postings === -1 ? 'Unlimited' : plan.limits.job_postings} active job postings
                         </span>
                       </li>
@@ -260,7 +302,7 @@ export default function Pricing() {
                     {userType === 'recruiter' && plan.limits.ai_screening_monthly && (
                       <li className="flex items-start gap-2">
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-slate-700 text-xs leading-tight">
+                        <span className="text-slate-700 text-sm font-jakarta leading-tight">
                           {plan.limits.ai_screening_monthly === -1 ? 'Unlimited' : `${plan.limits.ai_screening_monthly} candidates/mo`} AI screening
                         </span>
                       </li>
@@ -268,7 +310,7 @@ export default function Pricing() {
                     {userType === 'recruiter' && plan.limits.jd_generation_monthly !== undefined && (
                       <li className="flex items-start gap-2">
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-slate-700 text-xs leading-tight">
+                        <span className="text-slate-700 text-sm font-jakarta leading-tight">
                           {plan.limits.jd_generation_monthly === -1 ? 'Unlimited' : `${plan.limits.jd_generation_monthly} JDs/mo`} job descriptions
                         </span>
                       </li>
@@ -276,7 +318,7 @@ export default function Pricing() {
                     {userType === 'recruiter' && plan.limits.resume_parsing_monthly && (
                       <li className="flex items-start gap-2">
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-slate-700 text-xs leading-tight">
+                        <span className="text-slate-700 text-sm font-jakarta leading-tight">
                           {plan.limits.resume_parsing_monthly === -1 ? 'Unlimited' : `${plan.limits.resume_parsing_monthly}/mo`} resume parsing
                         </span>
                       </li>
@@ -298,7 +340,7 @@ export default function Pricing() {
                         return (
                           <li key={key} className="flex items-start gap-2">
                             <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                            <span className="text-slate-700 text-xs leading-tight capitalize">
+                            <span className="text-slate-700 text-sm font-jakarta leading-tight capitalize">
                               {displayName}
                             </span>
                           </li>
@@ -310,7 +352,7 @@ export default function Pricing() {
 
                   <Button
                     onClick={() => handleSelectPlan(plan.name)}
-                    className={`w-full text-sm py-2 ${
+                    className={`w-full text-sm font-jakarta font-medium py-3 ${
                       isPopular
                         ? 'bg-brand-main hover:bg-blue-700'
                         : 'bg-brand-background hover:bg-slate-800'
@@ -329,15 +371,15 @@ export default function Pricing() {
         {userType === 'recruiter' && (
           <div className="mt-12 text-center">
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 max-w-2xl mx-auto">
-              <h3 className="text-2xl font-normal text-brand-background mb-4">
+              <h3 className="text-2xl md:text-3xl font-jakarta font-semibold text-brand-background mb-4">
                 Need Enterprise Features?
               </h3>
-              <p className="text-slate-600 mb-6">
+              <p className="text-slate-600 font-jakarta text-base mb-6">
                 Private deployment, custom integrations, SLA, and dedicated support
               </p>
               <Button
                 onClick={() => navigate('/contact')}
-                className="bg-brand-main hover:bg-blue-700 text-white"
+                className="bg-brand-main hover:bg-blue-700 text-white font-jakarta font-medium"
               >
                 Contact Sales
               </Button>
@@ -349,11 +391,21 @@ export default function Pricing() {
       {/* Footer */}
       <Footer />
 
-      {/* Auth Modal */}
+      {/* Auth Modals */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => {
           setShowAuthModal(false);
+          setSelectedPlanForAuth(null);
+        }}
+        onSuccess={handleAuthSuccess}
+        defaultMode="signup"
+      />
+
+      <RecruiterAuthModal
+        isOpen={showRecruiterAuthModal}
+        onClose={() => {
+          setShowRecruiterAuthModal(false);
           setSelectedPlanForAuth(null);
         }}
         onSuccess={handleAuthSuccess}

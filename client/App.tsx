@@ -79,12 +79,8 @@ const App = () => {
               <Route path="/interview-demo" element={<InterviewDemo />} />
               <Route path="/streaming-chat-demo" element={<StreamingChatDemo />} />
               <Route path="/features" element={<Features />} />
-              <Route path="/templates" element={<Templates />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route
-                path="/examples"
-                element={<Navigate to="/templates" replace />}
-              />
+              
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

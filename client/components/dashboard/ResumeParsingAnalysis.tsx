@@ -230,11 +230,11 @@ export default function ResumeParsingAnalysis({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+      <div className="space-y-3">
         {analysis.map((item, index) => (
           <div
             key={index}
-            className={`p-2 rounded-lg border ${
+            className={`flex items-center gap-3 p-2 rounded-lg border ${
               item.status === 'complete'
                 ? 'bg-green-50 border-green-200'
                 : item.status === 'incomplete'
@@ -242,12 +242,10 @@ export default function ResumeParsingAnalysis({
                 : 'bg-gray-50 border-gray-200'
             }`}
           >
-            <div className="flex items-start gap-2">
-              {item.icon}
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-xs">{item.field}</div>
-                <div className="text-xs text-gray-600 mt-0.5 leading-tight">{item.message}</div>
-              </div>
+            {item.icon}
+            <div className="flex-1">
+              <div className="font-medium text-sm">{item.field}</div>
+              <div className="text-xs text-gray-600 mt-0.5">{item.message}</div>
             </div>
           </div>
         ))}

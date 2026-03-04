@@ -876,10 +876,32 @@ body:has([data-radix-dialog-overlay]) {
   }
 }
 
+/* Document scanning animation */
+@keyframes scan-down {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
 
 .animate-shimmer-slide {
   animation: shimmer-slide 2s infinite;
+}
+
+.animate-scan-down {
+  animation: scan-down 3s infinite;
 }

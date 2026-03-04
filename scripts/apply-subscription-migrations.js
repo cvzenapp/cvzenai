@@ -27,6 +27,7 @@ async function applyMigrations() {
     // Migration files to apply
     const migrations = [
       '051_subscription_system.sql',
+      '052_add_reset_token_columns.sql',
       '053_payment_history_invoices.sql'
     ];
 

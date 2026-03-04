@@ -52,7 +52,7 @@ export const useAuthState = (): UseAuthStateReturn => {
    * Redirect to login page with current location
    */
   const redirectToLogin = useCallback((): void => {
-    navigate('/login', { 
+    navigate('/', { 
       state: { from: location },
       replace: true 
     });

@@ -13,24 +13,22 @@ export class SubscriptionService {
   /**
    * Get all active subscription plans
    */
-  static async getPlans(userType?: 'candidate' | 'recruiter'): Promise<SubscriptionPlan[]> {
-    const db = await getDatabase();
+  static async getPlans(): Promise<SubscriptionPlan[]> {
+    let db;
     try {
-      let query = 'SELECT * FROM subscription_plans WHERE is_active = true';
-      const params: any[] = [];
+      db = await getDatabase();
+      const query = 'SELECT * FROM subscription_plans WHERE is_active = true ORDER BY price_monthly ASC';
       
-      if (userType) {
-        query += ' AND user_type = $1';
-        params.push(userType);
-      }
+      console.log('🔍 Executing subscription plans query:', { query });
+      const result = await db.query(query);
+      console.log('✅ Subscription plans result:', { rowCount: result.rows.length });
       
-      query += ' ORDER BY price_monthly ASC';
-      
-      const result = await db.query(query, params);
       return result.rows.map(this.mapPlanFromDb);
-    } finally {
-      db.release();
+    } catch (error) {
+      console.error('❌ Error fetching subscription plans:', error);
+      throw error;
     }
+    // Don't close the connection for local development - it's reused
   }
 
   /**

@@ -36,7 +36,7 @@ export const InterviewJoinPage: React.FC = () => {
       const userTypeFromTokens = hasRecruiterToken ? 'recruiter' : 'job_seeker';
       
       if (!hasRecruiterToken && !hasAuthToken) {
-        navigate('/login');
+        navigate('/');
         return;
       }
 

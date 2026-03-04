@@ -76,7 +76,7 @@ export default function ResumeUploadModal({
       
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = '/';
       }, 2000);
       
       return;
@@ -118,7 +118,7 @@ export default function ResumeUploadModal({
           localStorage.removeItem('user');
           setError('Your session has expired. Redirecting to login...');
           setTimeout(() => {
-            window.location.href = '/login';
+            window.location.href = '/';
           }, 1500);
           return;
         }

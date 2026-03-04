@@ -13,6 +13,7 @@ export const CVZenLogo: React.FC<CVZenLogoProps> = ({
   height,
   showCaption = true
 }) => {
+  console.log('CVZenLogo showCaption:', showCaption); // Debug log
   return (
     <div className="flex flex-col items-center gap-1">
       <img 
@@ -23,7 +24,7 @@ export const CVZenLogo: React.FC<CVZenLogoProps> = ({
         height={height}
       />
       {showCaption && (
-        <span className="text-xs sm:text-sm text-brand-auxiliary-1 font-jakarta font-normal tracking-wide">
+        <span className="text-xs sm:text-xs text-white font-jakarta font-normal tracking-wide">
           Intelligent Hiring Enzen
         </span>
       )}

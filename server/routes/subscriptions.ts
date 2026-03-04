@@ -11,8 +11,8 @@ const router = Router();
  */
 router.get('/plans', async (req: Request, res: Response) => {
   try {
-    const userType = req.query.userType as 'candidate' | 'recruiter' | undefined;
-    const plans = await SubscriptionService.getPlans(userType);
+    // Get all plans without filtering by user type
+    const plans = await SubscriptionService.getPlans();
     
     res.json({
       success: true,

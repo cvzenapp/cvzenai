@@ -236,12 +236,6 @@ class UnifiedAuthService extends BaseApiClient {
       }
     });
 
-    // Also listen for focus events to refresh state when user returns to tab
-    // window.addEventListener('focus', () => {
-    //   if (this.currentState.isAuthenticated) {
-    //     this.validateTokenInBackground();
-    //   }
-    // });
   }
 
   /**

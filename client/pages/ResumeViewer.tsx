@@ -546,7 +546,7 @@ export default function ResumeViewer() {
         
         if (!isAuth && !hasTokenInStorage) {
           console.log("❌ User is not properly authenticated - redirecting to login");
-          window.location.href = '/login';
+          window.location.href = '/';
           return;
         }
         
@@ -560,7 +560,7 @@ export default function ResumeViewer() {
             // Continue with localStorage fallback instead of redirecting
           } catch (e) {
             console.log("❌ Could not parse stored user data - redirecting to login");
-            window.location.href = '/login';
+            window.location.href = '/';
             return;
           }
         }
