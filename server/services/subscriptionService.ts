@@ -15,19 +15,22 @@ export class SubscriptionService {
    */
   static async getPlans(userType?: 'candidate' | 'recruiter'): Promise<SubscriptionPlan[]> {
     const db = await getDatabase();
-    
-    let query = 'SELECT * FROM subscription_plans WHERE is_active = true';
-    const params: any[] = [];
-    
-    if (userType) {
-      query += ' AND user_type = $1';
-      params.push(userType);
+    try {
+      let query = 'SELECT * FROM subscription_plans WHERE is_active = true';
+      const params: any[] = [];
+      
+      if (userType) {
+        query += ' AND user_type = $1';
+        params.push(userType);
+      }
+      
+      query += ' ORDER BY price_monthly ASC';
+      
+      const result = await db.query(query, params);
+      return result.rows.map(this.mapPlanFromDb);
+    } finally {
+      db.release();
     }
-    
-    query += ' ORDER BY price_monthly ASC';
-    
-    const result = await db.query(query, params);
-    return result.rows.map(this.mapPlanFromDb);
   }
 
   /**

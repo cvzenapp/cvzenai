@@ -108,7 +108,7 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
       console.log('✅ JobMatchingDashboard - Returning data:', responseData);
       return responseData;
     },
-    enabled: !!userId, // Only run if userId is available
+    enabled: true, // Always enabled for debugging - remove !!userId condition
     retry: false, // Don't retry to avoid multiple calls
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     refetchOnWindowFocus: false, // Don't refetch when window gains focus

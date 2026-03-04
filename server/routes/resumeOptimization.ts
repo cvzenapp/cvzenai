@@ -1,188 +1,216 @@
-import { RequestHandler } from 'express';
-import { AuthRequest } from '../middleware/unifiedAuth.js';
-import { resumeOptimizer } from '../services/dspy/resumeOptimizer.js';
-import { atsScorer } from '../services/dspy/atsScorer.js';
+import { Router, Request, Response } from "express";
+import { z } from "zod";
+import jwt from "jsonwebtoken";
+import { initializeDatabase } from "../database/connection.js";
+import { groqService } from "../services/groqService.js";
 
-/**
- * Optimize resume content for better ATS score
- * POST /api/resume/optimize/:id
- */
-export const optimizeResume: RequestHandler = async (req: AuthRequest, res) => {
+const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+function verifyToken(token: string): any {
   try {
-    const resumeId = req.params.id;
-    const userId = req.user?.id;
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
+}
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
+// Validation schema for resume optimization
+const resumeOptimizationSchema = z.object({
+  resumeId: z.string(),
+  jobTitle: z.string(),
+  jobDescription: z.string(),
+  jobRequirements: z.array(z.string()).optional(),
+  companyName: z.string(),
+});
 
-    // Get resume from database
-    const { getDatabase } = await import('../database/connection.js');
-    const db = await getDatabase();
+// POST /api/resume-optimization/optimize - Optimize resume for specific job
+router.post("/optimize", async (req: Request, res: Response) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
 
-    const resumeResult = await db.query(
-      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2',
-      [resumeId, userId]
-    );
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+  }
 
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
+  }
+
+  const userId = decoded.userId;
+  let db;
+
+  try {
+    const validatedData = resumeOptimizationSchema.parse(req.body);
+    db = await initializeDatabase();
+
+    // Get current resume data
+    const resumeQuery = `
+      SELECT *
+      FROM resumes 
+      WHERE id = $1 AND user_id = $2
+    `;
+    const resumeResult = await db.query(resumeQuery, [validatedData.resumeId, userId]);
+    
     if (resumeResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: 'Resume not found'
+        message: "Resume not found",
       });
     }
 
-    const resume = resumeResult.rows[0];
+    const currentResume = resumeResult.rows[0];
 
-    // Parse resume data
-    const originalData = {
-      personalInfo: typeof resume.personal_info === 'string' 
-        ? JSON.parse(resume.personal_info) 
-        : resume.personal_info,
-      summary: resume.summary || '',
-      objective: resume.objective || '',
-      skills: typeof resume.skills === 'string' 
-        ? JSON.parse(resume.skills) 
-        : (resume.skills || []),
-      experience: typeof resume.experience === 'string' 
-        ? JSON.parse(resume.experience) 
-        : (resume.experience || []),
-      education: typeof resume.education === 'string' 
-        ? JSON.parse(resume.education) 
-        : (resume.education || []),
-      projects: typeof resume.projects === 'string' 
-        ? JSON.parse(resume.projects) 
-        : (resume.projects || []),
-      certifications: resume.certifications || [],
-      languages: resume.languages || []
+    // Prepare current resume data for AI
+    const resumeData = {
+      summary: currentResume.summary || '',
+      careerObjective: currentResume.career_objective || '',
+      skills: currentResume.skills || [],
+      experience: currentResume.experience || [],
+      education: currentResume.education || [],
+      projects: currentResume.projects || [],
+      certifications: currentResume.certifications || []
     };
 
-    // Calculate original ATS score
-    console.log('📊 Calculating original ATS score...');
-    const originalScore = await atsScorer.calculateScore(originalData);
+    // Generate optimized resume using Groq AI
+    const systemPrompt = `You are an expert resume optimizer and ATS specialist. Optimize the provided resume for the specific job posting to maximize ATS compatibility and relevance.
 
-    // Optimize resume
-    console.log('🎯 Optimizing resume content...');
-    const optimization = await resumeOptimizer.optimizeResume(originalData);
+CRITICAL: Return ONLY a valid JSON object with this exact structure:
+{
+  "summary": "optimized professional summary text",
+  "careerObjective": "compelling career objective statement",
+  "skills": ["skill1", "skill2", "skill3"],
+  "experience": [
+    {
+      "title": "Job Title",
+      "company": "Company Name", 
+      "duration": "2020-2023",
+      "description": "Optimized bullet points with quantified achievements"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Enhanced project description with relevant keywords",
+      "technologies": ["tech1", "tech2"]
+    }
+  ]
+}
 
-    // Calculate optimized ATS score
-    console.log('📊 Calculating optimized ATS score...');
-    const optimizedScore = await atsScorer.calculateScore(optimization.optimizedData);
+Optimization Guidelines:
+- Add relevant keywords from job description naturally
+- Quantify achievements with numbers/percentages where possible
+- Enhance project descriptions to match job requirements
+- Create compelling professional summary if missing
+- Maintain truthfulness while optimizing presentation
+- Focus on skills and experience that match the job posting
+- Use action verbs and industry terminology`;
 
-    // Calculate actual score increase
-    const actualScoreIncrease = optimizedScore.overallScore - originalScore.overallScore;
+    const userPrompt = `Job Title: ${validatedData.jobTitle}
+Company: ${validatedData.companyName}
+
+Job Description:
+${validatedData.jobDescription}
+
+${validatedData.jobRequirements ? `Job Requirements: ${validatedData.jobRequirements.join(', ')}` : ''}
+
+Current Resume Data:
+${JSON.stringify(resumeData, null, 2)}
+
+Please optimize this resume for the job posting. Return only the JSON object.`;
+
+    const optimizationResponse = await groqService.generateResponse(systemPrompt, userPrompt, {
+      temperature: 0.4,
+      maxTokens: 1500
+    });
+
+    console.log('✅ Resume optimization response:', optimizationResponse);
+
+    // Parse the optimized resume data
+    let optimizedData;
+    try {
+      const responseText = optimizationResponse.response || optimizationResponse;
+      optimizedData = JSON.parse(responseText.trim());
+    } catch (parseError) {
+      console.error('Failed to parse optimization response:', parseError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to parse optimization results",
+      });
+    }
+
+    // Update the resume in database
+    const updateQuery = `
+      UPDATE resumes SET
+        summary = $1,
+        career_objective = $2,
+        skills = $3,
+        experience = $4,
+        projects = $5,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6 AND user_id = $7
+      RETURNING *
+    `;
+
+    const updateValues = [
+      optimizedData.summary || currentResume.summary,
+      optimizedData.careerObjective || currentResume.career_objective,
+      JSON.stringify(optimizedData.skills || currentResume.skills),
+      JSON.stringify(optimizedData.experience || currentResume.experience),
+      JSON.stringify(optimizedData.projects || currentResume.projects),
+      validatedData.resumeId,
+      userId
+    ];
+
+    const updateResult = await db.query(updateQuery, updateValues);
+    const updatedResume = updateResult.rows[0];
 
     res.json({
       success: true,
       data: {
-        original: {
-          data: originalData,
-          atsScore: originalScore
+        optimizedResume: {
+          id: updatedResume.id,
+          title: updatedResume.title,
+          summary: updatedResume.summary,
+          careerObjective: updatedResume.career_objective,
+          skills: typeof updatedResume.skills === 'string' ? JSON.parse(updatedResume.skills) : updatedResume.skills,
+          experience: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : updatedResume.experience,
+          projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : updatedResume.projects,
+          updatedAt: updatedResume.updated_at
         },
-        optimized: {
-          data: optimization.optimizedData,
-          atsScore: optimizedScore
-        },
-        improvements: optimization.improvements,
-        scoreIncrease: actualScoreIncrease
-      }
+        message: "Resume optimized successfully"
+      },
     });
 
   } catch (error) {
-    console.error('❌ Resume optimization failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to optimize resume',
-      details: error.message
-    });
-  }
-};
+    console.error("❌ Resume optimization error:", error);
 
-/**
- * Apply optimized resume (replace original with optimized version)
- * POST /api/resume/apply-optimization/:id
- */
-export const applyOptimization: RequestHandler = async (req: AuthRequest, res) => {
-  try {
-    const resumeId = req.params.id;
-    const userId = req.user?.id;
-    const { optimizedData, atsScore } = req.body;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
+    if (error instanceof z.ZodError) {
+      const errors: Record<string, string> = {};
+      error.errors.forEach((err) => {
+        if (err.path.length > 0) {
+          errors[err.path.join('.')] = err.message;
+        }
       });
-    }
 
-    if (!optimizedData || !atsScore) {
       return res.status(400).json({
         success: false,
-        error: 'Optimized data and ATS score are required'
+        message: "Validation failed",
+        errors,
       });
     }
 
-    // Update resume in database
-    const { getDatabase } = await import('../database/connection.js');
-    const db = await getDatabase();
-
-    await db.query(
-      `UPDATE resumes SET
-        personal_info = $1,
-        summary = $2,
-        objective = $3,
-        skills = $4,
-        experience = $5,
-        education = $6,
-        projects = $7,
-        ats_score = $8,
-        ats_score_completeness = $9,
-        ats_score_formatting = $10,
-        ats_score_keywords = $11,
-        ats_score_experience = $12,
-        ats_score_education = $13,
-        ats_score_skills = $14,
-        ats_suggestions = $15,
-        ats_strengths = $16,
-        ats_scored_at = NOW(),
-        updated_at = NOW()
-      WHERE id = $17 AND user_id = $18`,
-      [
-        JSON.stringify(optimizedData.personalInfo),
-        optimizedData.summary || '',
-        optimizedData.objective || '',
-        JSON.stringify(optimizedData.skills || []),
-        JSON.stringify(optimizedData.experience || []),
-        JSON.stringify(optimizedData.education || []),
-        JSON.stringify(optimizedData.projects || []),
-        atsScore.overallScore,
-        atsScore.scores.completeness,
-        atsScore.scores.formatting,
-        atsScore.scores.keywords,
-        atsScore.scores.experience,
-        atsScore.scores.education,
-        atsScore.scores.skills,
-        JSON.stringify(atsScore.suggestions),
-        JSON.stringify(atsScore.strengths),
-        resumeId,
-        userId
-      ]
-    );
-
-    res.json({
-      success: true,
-      message: 'Optimized resume applied successfully'
-    });
-
-  } catch (error) {
-    console.error('❌ Failed to apply optimization:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to apply optimization',
-      details: error.message
+      message: "Failed to optimize resume",
     });
   }
-};
+});
+
+export default router;

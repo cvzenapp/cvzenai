@@ -226,9 +226,9 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Get Started Free</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-brand-background">Get Started Free</DialogTitle>
           <DialogDescription className="text-slate-600">
             Create your account in seconds and start building your professional resume
           </DialogDescription>
@@ -237,10 +237,10 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
         {step === "form" && (
           <>
             {/* Trust Indicators */}
-            <div className="grid grid-cols-3 gap-3 py-4 border-y border-slate-200">
+            <div className="grid grid-cols-3 gap-3 py-4 border-y border-brand-main/20">
               <div className="flex flex-col items-center text-center">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mb-2">
-                  <Zap className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 rounded-full bg-brand-main/10 flex items-center justify-center mb-2">
+                  <Zap className="h-5 w-5 text-brand-main" />
                 </div>
                 <p className="text-xs text-slate-600">Instant Setup</p>
               </div>
@@ -251,8 +251,8 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
                 <p className="text-xs text-slate-600">Secure & Private</p>
               </div>
               <div className="flex flex-col items-center text-center">
-                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center mb-2">
-                  <FileText className="h-5 w-5 text-purple-600" />
+                <div className="h-10 w-10 rounded-full bg-brand-auxiliary-1/30 flex items-center justify-center mb-2">
+                  <FileText className="h-5 w-5 text-brand-main" />
                 </div>
                 <p className="text-xs text-slate-600">AI-Powered</p>
               </div>
@@ -272,7 +272,7 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
                   onChange={(e) => setFullName(e.target.value)}
                   onBlur={() => setTouched(prev => ({ ...prev, fullName: true }))}
                   disabled={loading}
-                  className={validationErrors.fullName && touched.fullName ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={validationErrors.fullName && touched.fullName ? "border-red-500 focus-visible:ring-red-500" : "border-brand-main/20 focus-visible:ring-brand-main"}
                   aria-invalid={!!validationErrors.fullName && touched.fullName}
                   aria-describedby={validationErrors.fullName && touched.fullName ? "fullName-error" : undefined}
                 />
@@ -297,7 +297,7 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
                   disabled={loading}
-                  className={validationErrors.email && touched.email ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={validationErrors.email && touched.email ? "border-red-500 focus-visible:ring-red-500" : "border-brand-main/20 focus-visible:ring-brand-main"}
                   aria-invalid={!!validationErrors.email && touched.email}
                   aria-describedby={validationErrors.email && touched.email ? "email-error" : undefined}
                   autoComplete="email"
@@ -324,15 +324,15 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
                         accept=".pdf,.doc,.docx"
                         onChange={handleFileChange}
                         disabled={loading}
-                        className={`cursor-pointer ${validationErrors.resume && touched.resume ? "border-red-500" : ""}`}
+                        className={`cursor-pointer ${validationErrors.resume && touched.resume ? "border-red-500" : "border-brand-main/20 focus-visible:ring-brand-main"}`}
                         aria-invalid={!!validationErrors.resume && touched.resume}
                         aria-describedby={validationErrors.resume && touched.resume ? "resume-error" : "resume-help"}
                       />
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <FileText className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center gap-3 p-3 bg-brand-auxiliary-1/20 border border-brand-main/30 rounded-lg">
+                      <div className="h-10 w-10 rounded-lg bg-brand-main/10 flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-5 w-5 text-brand-main" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-900 truncate">{resumeFile.name}</p>
@@ -380,7 +380,7 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-medium"
+                className="w-full h-11 text-base font-medium bg-brand-main hover:bg-brand-main/90 text-white"
                 disabled={loading || !isFormValid}
               >
                 {loading ? (
@@ -418,7 +418,7 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-slate-900">Processing Your Resume</h3>
+              <h3 className="text-xl font-semibold text-brand-background">Processing Your Resume</h3>
               <p className="text-sm text-slate-600 max-w-sm mx-auto">
                 Our AI is analyzing your resume and setting up your account. This will take just a moment...
               </p>
@@ -435,7 +435,7 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
           <ResumeParsingAnalysis
             parsedData={uploadResult.parsedData}
             resumeId={uploadResult.resumeId}
-            onEditInBuilder={handleEditInBuilder}
+            onContinue={handleEditInBuilder}
             onPreview={handlePreview}
             onCancel={onClose}
           />
@@ -449,9 +449,9 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-slate-900">Welcome to CVZen!</h3>
+              <h3 className="text-xl font-semibold text-brand-background">Welcome to CVZen!</h3>
               <p className="text-sm text-slate-600 max-w-sm mx-auto">
-                Your account has been created successfully. Check your email for your temporary password.
+                Your account has been created successfully. Check your email to set up your password and access all features.
               </p>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-slate-600">

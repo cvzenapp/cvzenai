@@ -307,9 +307,9 @@ export default function RecruiterDashboardLayout({
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <img 
-              src="/assets/cvzen_logo.png" 
+              src="/assets/cvzen_cap.svg" 
               alt="CVZen Logo" 
-              className="h-9 md:h-10 w-auto"
+              className="h-8 sm:h-9 md:h-10 w-auto"
             />
           </button>
         </div>

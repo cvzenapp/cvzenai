@@ -1017,7 +1017,7 @@ export default function JobSeekerChatInterface() {
                 </Avatar>
               )}
               
-              <div className={`max-w-[80%] ${message.type === 'user' ? 'order-first' : ''}`}>
+              <div className={`${message.jobRecommendations ? 'w-full' : 'max-w-[80%]'} ${message.type === 'user' ? 'order-first' : ''}`}>
                 <div
                   className={`rounded-lg p-3 ${
                     message.type === 'user'

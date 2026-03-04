@@ -251,9 +251,8 @@ class GuestResumeService {
       }
       
       // Step 5: Store resume data (this manages its own DB connection)
-      // Close our connection first to avoid conflicts
+      // Don't close connection - let connection pool manage connections
       if (db) {
-        await closeDatabase();
         db = null;
       }
       
@@ -290,7 +289,7 @@ class GuestResumeService {
       };
     } finally {
       if (db) {
-        await closeDatabase();
+        // Don't close database - let connection pool manage connections
       }
     }
   }

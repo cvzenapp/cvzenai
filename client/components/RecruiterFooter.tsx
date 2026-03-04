@@ -9,9 +9,9 @@ export default function RecruiterFooter() {
           <div className="space-y-4">
             <Link to="/recruiter" className="flex items-center gap-2">
               <img 
-                src="/assets/cvzen_logo.png" 
+                src="/assets/cvzen_cap.svg" 
                 alt="CVZen Recruiter Logo" 
-                className="h-10 w-auto"
+                className="h-8 sm:h-9 md:h-10 w-auto"
               />
               <span className="text-sm text-slate-400">Recruiter Portal</span>
             </Link>

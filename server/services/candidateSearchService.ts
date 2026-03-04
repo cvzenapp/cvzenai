@@ -234,7 +234,7 @@ class CandidateSearchService {
       console.error('❌ [LOCAL SEARCH] Database search error:', error);
       return [];
     } finally {
-      await closeDatabase();
+      // Don't close database - let connection pool manage connections
     }
   }
   
@@ -271,7 +271,7 @@ class CandidateSearchService {
       console.error('❌ [LOCAL SEARCH] Stats error:', error);
       return { total: 0, withResumes: 0, activeLastMonth: 0 };
     } finally {
-      await closeDatabase();
+      // Don't close database - let connection pool manage connections
     }
   }
   

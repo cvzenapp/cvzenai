@@ -43,6 +43,7 @@ import RecruiterPrivacyPolicy from "./pages/recruiter/RecruiterPrivacyPolicy";
 import RecruiterDisclaimer from "./pages/recruiter/RecruiterDisclaimer";
 import RecruiterRefundPolicy from "./pages/recruiter/RecruiterRefundPolicy";
 import RecruiterLanding from "./pages/recruiter/RecruiterLanding";
+import SetupPassword from "./pages/SetupPassword";
 import { JobSearch } from "./pages/JobSearch";
 import FakeJobDetectorPublic from "./pages/FakeJobDetectorPublic";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -71,6 +72,7 @@ const App = () => {
               <Route path="/builder/*" element={<ResumeBuilder />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Dashboard />} />
+              <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/job-search" element={<JobSearch />} />
               <Route path="/interviews" element={<InterviewsPage />} />
               <Route path="/interview/:interviewId/join" element={<InterviewJoinPage />} />

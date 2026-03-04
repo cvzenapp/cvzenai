@@ -83,6 +83,27 @@ class EmailService {
   }
 
   /**
+   * Send password setup email for new accounts
+   */
+  async sendPasswordSetupEmail(
+    email: string,
+    name: string,
+    setupUrl: string,
+    resumeUrl: string
+  ): Promise<boolean> {
+    const subject = 'Welcome to CVZen - Set Up Your Password';
+    const html = this.generatePasswordSetupEmailHTML(name, setupUrl, resumeUrl);
+    const text = this.generatePasswordSetupEmailText(name, setupUrl, resumeUrl);
+
+    return this.sendEmail({
+      to: email,
+      subject,
+      html,
+      text
+    });
+  }
+
+  /**
    * Send welcome email with account credentials
    */
   async sendWelcomeEmail(
@@ -101,6 +122,203 @@ class EmailService {
       html,
       text
     });
+  }
+
+  /**
+   * Generate HTML email template for password setup email
+   */
+  private generatePasswordSetupEmailHTML(name: string, setupUrl: string, resumeUrl: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to CVZen - Set Up Your Password</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #1891db 0%, #0a0a37 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .setup-box {
+      background: #f0f9ff;
+      border-left: 4px solid #1891db;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .setup-box h3 {
+      margin-top: 0;
+      color: #0a0a37;
+      font-size: 18px;
+    }
+    .button {
+      display: inline-block;
+      background: #1891db;
+      color: white !important;
+      padding: 16px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      margin: 15px 5px;
+      font-weight: 600;
+      font-size: 16px;
+      box-shadow: 0 2px 4px rgba(24, 145, 219, 0.3);
+    }
+    .button:hover {
+      background: #0a0a37;
+    }
+    .button-secondary {
+      background: #10b981;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      margin: 25px 0;
+      border-radius: 4px;
+    }
+    .warning strong {
+      color: #92400e;
+    }
+    .features {
+      margin: 25px 0;
+    }
+    .features ul {
+      padding-left: 20px;
+    }
+    .features li {
+      margin: 10px 0;
+      color: #4b5563;
+    }
+    .footer {
+      text-align: center;
+      padding: 30px;
+      color: #6b7280;
+      font-size: 14px;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+    }
+    .button-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 Welcome to CVZen!</h1>
+    </div>
+    
+    <div class="content">
+      <p>Hello <strong>${name}</strong>,</p>
+      
+      <p>Thank you for joining CVZen! Your account has been created successfully and your resume has been processed by our AI.</p>
+      
+      <div class="setup-box">
+        <h3>🔐 Set Up Your Password</h3>
+        <p>To secure your account, please set up your password by clicking the button below:</p>
+        <a href="${setupUrl}" class="button">
+          Set Up Password
+        </a>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
+          This link will expire in 24 hours for security reasons.
+        </p>
+      </div>
+      
+      <div class="features">
+        <h3>What's waiting for you:</h3>
+        <ul>
+          <li>✅ Your resume has been parsed and analyzed</li>
+          <li>🎯 AI-powered job recommendations</li>
+          <li>📄 Professional resume templates</li>
+          <li>🔍 ATS optimization tools</li>
+          <li>📊 Application tracking dashboard</li>
+        </ul>
+      </div>
+      
+      <div class="button-container">
+        <a href="${resumeUrl}" class="button button-secondary">
+          📄 View Your Resume
+        </a>
+      </div>
+      
+      <div class="warning">
+        <strong>⚠️ Security Note:</strong> For your security, this password setup link will expire in 24 hours. If you don't set up your password within this time, you can request a new setup link.
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p><strong>CVZen</strong> - Your AI-Powered Career Partner</p>
+      <p>This is an automated email. Please do not reply to this message.</p>
+      <p>© ${new Date().getFullYear()} CVZen. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+  }
+
+  /**
+   * Generate plain text version of password setup email
+   */
+  private generatePasswordSetupEmailText(name: string, setupUrl: string, resumeUrl: string): string {
+    return `
+Welcome to CVZen!
+
+Hello ${name},
+
+Thank you for joining CVZen! Your account has been created successfully and your resume has been processed by our AI.
+
+🔐 Set Up Your Password
+To secure your account, please set up your password using this link:
+${setupUrl}
+
+This link will expire in 24 hours for security reasons.
+
+What's waiting for you:
+✅ Your resume has been parsed and analyzed
+🎯 AI-powered job recommendations
+📄 Professional resume templates
+🔍 ATS optimization tools
+📊 Application tracking dashboard
+
+View Your Resume: ${resumeUrl}
+
+⚠️ Security Note: For your security, this password setup link will expire in 24 hours. If you don't set up your password within this time, you can request a new setup link.
+
+---
+CVZen - Your AI-Powered Career Partner
+This is an automated email. Please do not reply to this message.
+© ${new Date().getFullYear()} CVZen. All rights reserved.
+    `.trim();
   }
 
   /**

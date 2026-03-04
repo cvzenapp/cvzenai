@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
+import CVZenLogo from './CVZenLogo';
 
 export default function Footer() {
   return (
@@ -9,11 +10,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-5 gap-8">
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <img 
-                src="/assets/cvzen_logo.png" 
-                alt="CVZen Logo" 
-                className="h-10 w-auto"
-              />
+              <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={true} />
             </Link>
             <p className="text-slate-400">
               Build professional resumes that get you hired faster.

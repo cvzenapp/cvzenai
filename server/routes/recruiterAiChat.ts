@@ -1218,8 +1218,6 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
               }
             }));
             
-            await closeDatabase();
-            
             // Screen candidates with AI (streaming)
             const screeningResults: any[] = [];
             for await (const event of aiResumeScreeningService.screenCandidatesStreaming(fullCandidates, message)) {

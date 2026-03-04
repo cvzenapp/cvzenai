@@ -54,9 +54,9 @@ export default function JobSeekerSubscriptionPlans() {
             Back to Dashboard
           </Button>
           <img 
-            src="/assets/cvzen_logo.png" 
+            src="/assets/cvzen_cap.svg" 
             alt="CVZen Logo" 
-            className="h-9 w-auto"
+            className="h-8 sm:h-9 w-auto"
           />
         </div>
       </header>

@@ -1,15 +1,8 @@
 import express from "express";
-import type * as expressType from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
 import path from "path";
-import { fileURLToPath } from "url";
-import type * as pathType from "path";
 dotenv.config();
-
-// Get proper directory path for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 import {
   getResume,
   getResumePublic,
@@ -25,7 +18,6 @@ import {
   deleteResume,
   setActiveResume,
 } from "./routes/resume";
-import { optimizeResume, applyOptimization } from "./routes/resumeOptimization";
 import atsScoringRouter from "./routes/atsScoring";
 import authRouter from "./routes/auth";
 import recruiterAuthRouter from "./routes/recruiterAuthSimple";
@@ -68,8 +60,11 @@ import publicFakeJobDetectionRouter from "./routes/publicFakeJobDetection";
 import subscriptionsRouter from "./routes/subscriptions";
 import paymentRouter from "./routes/payment";
 import paymentHistoryRouter from "./routes/paymentHistory";
+import coverLetterRouter from "./routes/coverLetter.js";
+import jobMatchingRouter from "./routes/jobMatching.js";
+import resumeOptimizationRouter from "./routes/resumeOptimization.js";
 import { requireAuth } from "./middleware/unifiedAuth";
-import { getDatabase, initializeDatabase, closeDatabase, initializeDatabaseBackground, isDatabaseConnected } from "./database/connection";
+import { getDatabase, initializeDatabase, closeDatabase } from "./database/connection";
 import { seedDatabase } from "./database/seedData";
 
 export function createServer() {
@@ -77,10 +72,15 @@ export function createServer() {
 
   // Only initialize database in runtime, not during build
   if (process.env.NODE_ENV !== 'build' && typeof window === 'undefined' && !process.env.VITE_BUILD) {
-    // Initialize database in background without blocking server startup
-    initializeDatabaseBackground().catch(error => {
-      console.warn('⚠️ Database initialization failed - server will continue without database:', error.message);
-    });
+    // Use setTimeout to defer database initialization until after server setup
+    setTimeout(async () => {
+      try {
+        await initializeDatabase();
+        await seedDatabase();
+      } catch (error) {
+        console.warn('Database initialization skipped:', error.message);
+      }
+    }, 100);
   }
 
   // Middleware
@@ -91,10 +91,9 @@ export function createServer() {
       'http://localhost:8080',
       'https://cvzen.in',
       'https://www.cvzen.in',
-      'https://cvzen.netlify.app',
-      'https://main--cvzen.netlify.app',
-      /https:\/\/.*--cvzen\.netlify\.app$/,
-      /https:\/\/.*\.cvzen\.in$/
+      'https://www.cvzen.ai',
+      /https:\/\/.*\.cvzen\.in$/,
+      /https:\/\/.*\.cvzen\.ai$/
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -120,48 +119,26 @@ export function createServer() {
 
   app.get("/api/health", async (_req, res) => {
     try {
-      if (!isDatabaseConnected()) {
-        return res.json({ 
-          status: "partial",
-          database: "unavailable",
-          environment: process.env.NODE_ENV || "development",
-          timestamp: new Date().toISOString(),
-          message: "Server running but database unavailable"
-        });
-      }
-      
       // Test database connection
-      const db = await getDatabaseSafe();
+      const db = await getDatabase();
+      const result = await db.query('SELECT 1 as test');
       
-      if (db) {
-        const result = await db.query('SELECT 1 as test');
-        
-        // Close connection in serverless
-        if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-          await closeDatabase(db);
-        }
-        
-        res.json({ 
-          status: "healthy",
-          database: "connected",
-          environment: process.env.NODE_ENV || "development",
-          timestamp: new Date().toISOString(),
-          test_query: result.rows[0]
-        });
-      } else {
-        res.json({ 
-          status: "partial",
-          database: "unavailable",
-          environment: process.env.NODE_ENV || "development",
-          timestamp: new Date().toISOString(),
-          message: "Server running but database unavailable"
-        });
+      // Close connection in serverless
+      if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        await closeDatabase(db);
       }
+      
+      res.json({ 
+        status: "healthy",
+        database: "connected",
+        environment: process.env.NODE_ENV || "development",
+        timestamp: new Date().toISOString(),
+        test_query: result.rows[0]
+      });
     } catch (error) {
       console.error("Health check failed:", error);
-      res.status(200).json({ // Still return 200 to keep server alive
-        status: "partial",
-        database: "error",
+      res.status(500).json({ 
+        status: "unhealthy",
         error: error.message,
         environment: process.env.NODE_ENV || "development",
         timestamp: new Date().toISOString()
@@ -184,9 +161,7 @@ export function createServer() {
   app.get("/api/resume/projects", getProjects);
   app.get("/api/resume/personal-info", getPersonalInfo);
   
-  // Resume optimization routes (AI-powered ATS optimization)
-  app.post("/api/resume/optimize/:id", requireAuth, optimizeResume);
-  app.post("/api/resume/apply-optimization/:id", requireAuth, applyOptimization);
+  // Resume optimization routes (AI-powered ATS optimization) - handled by resumeOptimizationRouter
 
   // Authentication routes
   app.use("/api/auth", authRouter);
@@ -287,242 +262,11 @@ export function createServer() {
     match_reasons: string | null;
   }
 
-  // Simple job recommendations endpoint
-  app.get("/api/jobs/recommendations", requireAuth, async (req, res) => {
-    let db;
-    try {
-      const userId = req.user?.id;
-      const limit = parseInt(req.query.limit as string) || 20;
-      
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: "Authentication required"
-        });
-      }
-
-      const { initializeDatabase } = await import('./database/connection.js');
-      db = await initializeDatabase();
-      
-      // Get job recommendations from job_opportunities (real job data) - PostgreSQL
-      const query = `
-        SELECT 
-          jp.id,
-          jp.title,
-          jp.company,
-          jp.description,
-          jp.requirements,
-          jp.location,
-          jp.job_type,
-          jp.experience_level,
-          jp.salary_min,
-          jp.salary_max,
-          jp.created_at,
-          jp.application_count
-        FROM job_postings jp
-        WHERE jp.status = 'active'
-        ORDER BY jp.created_at DESC
-        LIMIT $1
-      `;
-      
-      const result = await db.query(query, [limit]);
-      const recommendations = result.rows;
-
-      const formattedJobs = recommendations.map((job: any) => {
-        const requirements = job.requirements ? 
-          (typeof job.requirements === 'string' ? JSON.parse(job.requirements) : job.requirements) : [];
-        
-        return {
-          id: job.id.toString(),
-          title: job.title,
-          company: job.company || 'Company',
-          description: job.description || '',
-          requirements: Array.isArray(requirements) ? requirements : [],
-          salaryRange: {
-            min: job.salary_min || 0,
-            max: job.salary_max || 0,
-            currency: job.currency || 'USD'
-          },
-          location: job.location || 'Remote',
-          remote: job.location?.toLowerCase().includes('remote') || false,
-          type: job.type || 'full-time',
-          experienceLevel: job.experience_level || 'mid',
-          industry: 'Technology',
-          companySize: 'medium',
-          postedDate: job.posted_date,
-          status: 'active',
-          matchScore: 75,
-          matchReasons: ['New opportunity'],
-          applicationCount: parseInt(job.application_count) || 0
-        };
-      });
-
-      res.json({
-        success: true,
-        data: {
-          jobs: formattedJobs,
-          total: formattedJobs.length
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching job recommendations:", error);
-      res.status(500).json({
-        success: false,
-        error: "Internal server error",
-      });
-    } finally {
-      if (db) {
-        const { closeDatabase } = await import('./database/connection.js');
-        await closeDatabase();
-      }
-    }
-  });
-
-  // Job analytics endpoint with real data
-  app.get("/api/jobs/analytics", requireAuth, async (req, res) => {
-    let db;
-    try {
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: "Authentication required"
-        });
-      }
-
-      const { initializeDatabase } = await import('./database/connection.js');
-      db = await initializeDatabase();
-
-      // Get total active jobs from job_opportunities - PostgreSQL
-      const totalJobsResult = await db.query(`
-        SELECT COUNT(*) as count 
-        FROM job_postings 
-        WHERE status = 'active'
-      `);
-      const totalJobs = parseInt(totalJobsResult.rows[0]?.count || '0');
-
-      // Get user's job applications
-      const applicationsResult = await db.query(`
-        SELECT 
-          COUNT(*) as total,
-          COUNT(CASE WHEN status = 'submitted' THEN 1 END) as submitted,
-          COUNT(CASE WHEN status = 'reviewed' THEN 1 END) as reviewed,
-          COUNT(CASE WHEN status = 'interview' THEN 1 END) as interview,
-          COUNT(CASE WHEN status = 'offer' THEN 1 END) as offer
-        FROM job_applications 
-        WHERE user_id = $1
-      `, [userId]);
-      const applications = applicationsResult.rows[0];
-
-      // Get saved jobs count (if table exists)
-      let savedJobsCount = 0;
-      try {
-        const savedJobsResult = await db.query(`
-          SELECT COUNT(*) as count 
-          FROM saved_jobs 
-          WHERE user_id = $1
-        `, [userId]);
-        savedJobsCount = parseInt(savedJobsResult.rows[0]?.count || '0');
-      } catch (e) {
-        // Table might not exist yet
-      }
-
-      // Get user's job searches in last 30 days (if table exists)
-      let searchesCount = 0;
-      try {
-        const searchesResult = await db.query(`
-          SELECT COUNT(*) as count 
-          FROM user_job_searches 
-          WHERE user_id = $1 
-          AND created_at >= NOW() - INTERVAL '30 days'
-        `, [userId]);
-        searchesCount = parseInt(searchesResult.rows[0]?.count || '0');
-      } catch (e) {
-        // Table might not exist yet
-      }
-
-      // Get active job alerts (if table exists)
-      let alertsCount = 0;
-      try {
-        const alertsResult = await db.query(`
-          SELECT COUNT(*) as count 
-          FROM job_alerts 
-          WHERE user_id = $1 AND is_active = true
-        `, [userId]);
-        alertsCount = parseInt(alertsResult.rows[0]?.count || '0');
-      } catch (e) {
-        // Table might not exist yet
-      }
-
-      // Get match scores for user (if table exists)
-      let matchScores = { avgScore: 0, highQuality: 0, perfect: 0 };
-      try {
-        const matchScoresResult = await db.query(`
-          SELECT 
-            AVG(match_score) as avgScore,
-            COUNT(CASE WHEN match_score >= 80 THEN 1 END) as highQuality,
-            COUNT(CASE WHEN match_score >= 95 THEN 1 END) as perfect
-          FROM job_match_scores 
-          WHERE user_id = $1
-        `, [userId]);
-        const row = matchScoresResult.rows[0];
-        if (row) {
-          matchScores = {
-            avgScore: parseFloat(row.avgscore) || 0,
-            highQuality: parseInt(row.highquality) || 0,
-            perfect: parseInt(row.perfect) || 0
-          };
-        }
-      } catch (e) {
-        // Table might not exist yet
-      }
-
-      const analytics = {
-        totalJobs,
-        applications: {
-          total: parseInt(applications?.total) || 0,
-          submitted: parseInt(applications?.submitted) || 0,
-          reviewed: parseInt(applications?.reviewed) || 0,
-          interview: parseInt(applications?.interview) || 0,
-          offer: parseInt(applications?.offer) || 0
-        },
-        searches: {
-          last30Days: searchesCount
-        },
-        alerts: {
-          active: alertsCount
-        },
-        savedJobs: savedJobsCount,
-        matchScores: {
-          average: matchScores.avgScore,
-          highQuality: matchScores.highQuality,
-          perfect: matchScores.perfect
-        }
-      };
-
-      res.json({
-        success: true,
-        data: analytics
-      });
-    } catch (error) {
-      console.error("Error fetching job analytics:", error);
-      res.status(500).json({
-        success: false,
-        error: "Internal server error",
-      });
-    } finally {
-      if (db) {
-        const { closeDatabase } = await import('./database/connection.js');
-        await closeDatabase();
-      }
-    }
-  });
-
-  // Job discovery and application routes
+  // Job routes are split across two routers for organization:
+  // - jobsRouter: handles /search endpoint (job discovery with filters)
+  // - jobRecommendationsRouter: handles /recommendations, /analytics, /save, /applications
+  // Both mount on /api/jobs but handle different endpoints (no conflicts)
   app.use("/api/jobs", jobsRouter);
-  
-  // Job recommendations routes (overlays on /api/jobs for recommendations, analytics, etc.)
   app.use("/api/jobs", jobRecommendationsRouter);
   
   // Job applications routes
@@ -568,6 +312,15 @@ export function createServer() {
   // Payment history and invoices routes
   app.use("/api/payment-history", paymentHistoryRouter);
 
+  // Cover letter generation routes
+  app.use("/api/cover-letter", coverLetterRouter);
+
+  // Job matching and ATS scoring routes
+  app.use("/api/job-matching", jobMatchingRouter);
+
+  // Resume optimization routes
+  app.use("/api/resume-optimization", resumeOptimizationRouter);
+
   // Remove catch-all route for static file serving (handled by Netlify)
   // In development, Vite handles client-side routing
   if (process.env.NODE_ENV === 'production') {
@@ -581,7 +334,7 @@ export function createServer() {
         return next();
       }
       // Serve index.html for client-side routing
-      res.sendFile(path.join(__dirname, '../spa/index.html'));
+      res.sendFile(path.join(__dirname, '../index.html'));
     });
   }
 

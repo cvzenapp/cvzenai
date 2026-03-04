@@ -173,102 +173,39 @@ async function getUserFromDatabase(userId: string, tokenType?: string): Promise<
  * Unified authentication middleware - requires authentication
  */
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const startTime = Date.now();
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(" ")[1];
 
-  console.log('🔐 UnifiedAuth - Authentication attempt:', {
-    url: req.url,
-    method: req.method,
-    hasAuthHeader: !!authHeader,
-    authHeaderPrefix: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
-    hasToken: !!token,
-    tokenPrefix: token ? token.substring(0, 20) + '...' : 'none'
-  });
-
-  serverAuthLogger.debug(ServerAuthOperation.TOKEN_VALIDATION, 'Authentication attempt', {
-    req,
-    res,
-    details: { hasToken: !!token, tokenPrefix: token?.substring(0, 10) }
-  });
-
   if (!token) {
-    serverAuthLogger.logUnauthorizedAccess(req, res, 'no_token_provided');
     return res.status(401).json({
       success: false,
-      error: "Authentication required",
-      message: "Please provide a valid authentication token"
+      error: "Authentication required"
     });
   }
-
-  console.log('🔍 UnifiedAuth - Token details:', {
-    tokenLength: token.length,
-    tokenPrefix: token.substring(0, 30) + '...',
-    tokenSuffix: '...' + token.substring(token.length - 10),
-    looksLikeJWT: token.includes('.'),
-    looksLikeBase64: !token.includes('.') && token.length > 10
-  });
   
   const tokenData = await validateToken(token);
   if (!tokenData) {
-    console.log('❌ UnifiedAuth - Token validation failed:', {
-      tokenPrefix: token.substring(0, 30) + '...',
-      tokenLength: token.length,
-      url: req.url,
-      method: req.method
-    });
-    serverAuthLogger.logUnauthorizedAccess(req, res, 'invalid_token', token);
     return res.status(401).json({
       success: false,
-      error: "Invalid or expired token",
-      message: "Please log in again"
-    });
-  } else {
-    console.log('✅ UnifiedAuth - Token validation successful:', {
-      userId: tokenData.id,
-      email: tokenData.email,
-      url: req.url,
-      method: req.method
+      error: "Invalid token"
     });
   }
 
   try {
     const user = await getUserFromDatabase(tokenData.id, tokenData.type);
-
     if (!user) {
-      serverAuthLogger.logUnauthorizedAccess(req, res, 'user_not_found');
       return res.status(401).json({
         success: false,
-        error: "User not found",
-        message: "Please log in again"
+        error: "User not found"
       });
     }
 
-    const duration = Date.now() - startTime;
-    serverAuthLogger.logTokenValidation(req, parseInt(user.id), true);
-    serverAuthLogger.debug(ServerAuthOperation.TOKEN_VALIDATION, 'User authenticated successfully', {
-      req,
-      res,
-      userId: user.id,
-      email: user.email,
-      duration
-    });
-
-    // Attach user to request
     (req as any).user = user;
     next();
   } catch (error) {
-    const duration = Date.now() - startTime;
-    serverAuthLogger.error(ServerAuthOperation.TOKEN_VALIDATION, 'Authentication service error', {
-      req,
-      res,
-      duration,
-      error: error as Error
-    });
     return res.status(500).json({
       success: false,
-      error: "Authentication service error",
-      message: "Please try again later"
+      error: "Authentication error"
     });
   }
 };

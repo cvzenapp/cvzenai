@@ -75,7 +75,7 @@ export default function JobPostingManager({ onJobsChange }: JobPostingManagerPro
 
   useEffect(() => {
     // Update displayed jobs when jobs list or display count changes
-    setDisplayedJobs(jobs.slice(0, displayCount));
+    setDisplayedJobs((jobs || []).slice(0, displayCount));
   }, [jobs, displayCount]);
 
   const loadJobs = async () => {
@@ -86,10 +86,10 @@ export default function JobPostingManager({ onJobsChange }: JobPostingManagerPro
       const response = await jobPostingsApi.getJobPostings();
       console.log('🔍 Jobs API response:', response);
       if (response.success) {
-        setJobs(response.jobs);
-        onJobsChange?.(response.jobs);
+        setJobs(response.jobPostings);
+        onJobsChange?.(response.jobPostings);
         setDisplayCount(10); // Reset display count when loading new jobs
-        console.log('✅ Jobs loaded successfully:', response.jobs.length);
+        console.log('✅ Jobs loaded successfully:', response.jobPostings?.length || 0);
       } else {
         console.error('❌ Jobs API returned error:', response);
         setError('Failed to load job postings');
@@ -303,7 +303,7 @@ export default function JobPostingManager({ onJobsChange }: JobPostingManagerPro
           </div>
         )}
 
-        {jobs.length === 0 ? (
+        {(jobs?.length || 0) === 0 ? (
           <div className="text-center py-16 px-6">
             <div className="max-w-sm mx-auto">
               <div className="relative mb-6">
@@ -476,14 +476,14 @@ export default function JobPostingManager({ onJobsChange }: JobPostingManagerPro
               })}
             </div>
             
-            {displayedJobs.length < jobs.length && (
+            {(displayedJobs?.length || 0) < (jobs?.length || 0) && (
               <div className="flex justify-center pt-4">
                 <Button 
                   onClick={() => setDisplayCount(prev => prev + 10)}
                   variant="outline"
                   className="w-full max-w-md"
                 >
-                  Load More ({jobs.length - displayedJobs.length} remaining)
+                  Load More ({(jobs?.length || 0) - (displayedJobs?.length || 0)} remaining)
                 </Button>
               </div>
             )}

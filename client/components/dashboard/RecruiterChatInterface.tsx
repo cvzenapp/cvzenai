@@ -49,7 +49,8 @@ import {
   Brain,
   XCircle,
   Plus,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 
 interface Message {
@@ -244,10 +245,24 @@ export default function RecruiterChatInterface() {
   const [requirementInput, setRequirementInput] = useState('');
   const [benefitInput, setBenefitInput] = useState('');
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const [pendingSearchMessage, setPendingSearchMessage] = useState<string>('');
   const [showJobSelectionModal, setShowJobSelectionModal] = useState(false);
   const [availableJobs, setAvailableJobs] = useState<any[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
+
+  // Fetch selected job details when selectedJobId changes
+  useEffect(() => {
+    const fetchSelectedJob = async () => {
+      if (selectedJobId && availableJobs.length > 0) {
+        const job = availableJobs.find(j => j.id === selectedJobId);
+        setSelectedJob(job || null);
+      } else {
+        setSelectedJob(null);
+      }
+    };
+    fetchSelectedJob();
+  }, [selectedJobId, availableJobs]);
 
   const handleJobSelection = async (jobId: number) => {
     if (!pendingSearchMessage) return;
@@ -1568,6 +1583,42 @@ export default function RecruiterChatInterface() {
             </div>
           )}
           
+          {/* Selected Job Display */}
+          {selectedJob && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Briefcase className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-medium text-blue-900">Selected Job</h3>
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-1">{selectedJob.title}</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div className="flex items-center gap-4">
+                      <span>📍 {selectedJob.location}</span>
+                      <span>🏢 {selectedJob.department}</span>
+                      <span>💼 {selectedJob.job_type}</span>
+                    </div>
+                    {selectedJob.salary_min && selectedJob.salary_max && (
+                      <div>💰 {selectedJob.salary_currency} {selectedJob.salary_min.toLocaleString()} - {selectedJob.salary_max.toLocaleString()}</div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedJobId(null);
+                    setSelectedJob(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          
           {messages.map((message) => (
             <div
               key={message.id}
@@ -1581,7 +1632,7 @@ export default function RecruiterChatInterface() {
                 </Avatar>
               )}
               
-              <div className={`max-w-[80%] ${message.type === 'user' ? 'order-first' : ''}`}>
+              <div className={`${message.candidateResults ? 'w-full' : 'max-w-[80%]'} ${message.type === 'user' ? 'order-first' : ''}`}>
                 <div className={`rounded-lg p-3 ${
                   message.type === 'user'
                     ? 'bg-blue-600 text-white ml-auto'

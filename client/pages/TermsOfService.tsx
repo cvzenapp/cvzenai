@@ -12,9 +12,9 @@ export default function TermsOfService() {
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2">
               <img 
-                src="/assets/cvzen_logo.png" 
+                src="/assets/cvzen_cap.svg" 
                 alt="CVZen Logo" 
-                className="h-10 w-auto"
+                className="h-8 sm:h-9 md:h-10 w-auto"
               />
             </Link>
             <div className="flex items-center gap-4">

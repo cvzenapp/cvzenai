@@ -159,7 +159,6 @@ router.post('/parse', unifiedAuth.requireAuth, upload.single('resume'), async (r
             resumeId
           ]
         );
-        await closeDatabase();
         console.log(`✅ ATS score stored for resume ${resumeId}: ${atsScore.overallScore}/100`);
       } catch (error) {
         console.error(`❌ Async ATS calculation failed for resume ${resumeId}:`, error);

@@ -526,23 +526,6 @@ export const createResume = async (req: AuthRequest, res: Response) => {
 
     console.log('✅ Resume created successfully:', newResume.id);
 
-    // Track usage for subscription
-    try {
-      const { SubscriptionService } = await import('../services/subscriptionService.js');
-      const subscription = await SubscriptionService.getUserSubscription(userId);
-      if (subscription) {
-        await SubscriptionService.incrementUsage(
-          subscription.id,
-          'user',
-          'resumes',
-          1
-        );
-      }
-    } catch (usageError) {
-      console.error('Error tracking resume usage:', usageError);
-      // Don't fail the request if usage tracking fails
-    }
-
     res.status(201).json({
       success: true,
       data: {
@@ -811,6 +794,3 @@ export const setActiveResume = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-
-

@@ -37,6 +37,7 @@ import { SustainabilityPledgeModal } from "@/components/SustainabilityPledgeModa
 import { QuickSignupModal } from "@/components/QuickSignupModal";
 import AuthModal from "@/components/AuthModal";
 import RecruiterAuthModal from "@/components/RecruiterAuthModal";
+import CVZenLogo from "@/components/CVZenLogo";
 import AITrainingInfoModal from "@/components/AITrainingInfoModal";
 
 interface Feature {
@@ -185,8 +186,7 @@ export default function LandingPage() {
     if (isAuthenticated) {
       navigate("/builder");
     } else {
-      setAuthModalMode('signup');
-      setAuthModalOpen(true);
+      setQuickSignupModalOpen(true);
     }
   };
 
@@ -223,11 +223,7 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
-              <img 
-                src="/assets/cvzen_logo.png" 
-                alt="CVZen Logo" 
-                className="h-10 w-auto"
-              />
+              <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={true} />
             </Link>
 
             {/* Desktop Navigation */}
@@ -428,7 +424,7 @@ export default function LandingPage() {
                   onClick={handleGetStarted}
                   className="group h-12 px-8 bg-brand-main hover:bg-brand-main/90 text-white"
                 >
-                  Start Building Free
+                  Start for Free
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Button
@@ -883,7 +879,7 @@ export default function LandingPage() {
               onClick={handleGetStarted}
               className="group h-12 px-8 bg-white text-brand-background hover:bg-brand-auxiliary-1"
             >
-              Start Building Now
+              Start for Free
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Link to="/tools/fake-job-detector">
@@ -906,11 +902,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-5 gap-8">
             <div className="space-y-4">
               <Link to="/" className="flex items-center gap-2">
-                <img 
-                  src="/assets/cvzen_logo.png" 
-                  alt="CVZen Logo" 
-                  className="h-10 w-auto"
-                />
+                <CVZenLogo className="h-8 sm:h-9 md:h-10 w-auto" />
               </Link>
               <p className="text-brand-auxiliary-1">
                 AI-powered platform for building professional resumes and accelerating your career.

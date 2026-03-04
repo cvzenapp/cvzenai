@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, DollarSign, Briefcase, Clock, Building, ChevronRight } from 'lucide-react';
+import { X, MapPin, DollarSign, Briefcase, Clock, Building, ChevronRight, Loader2 } from 'lucide-react';
 import { JobApplicationModal } from './JobApplicationModal';
 import { jobApplicationApi } from '../../services/jobApplicationApi';
+import { jobMatchingApi } from '../../services/jobMatchingApi';
 
 interface JobDetailsPanelProps {
   job: any;
@@ -12,9 +13,13 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+  const [matchReasons, setMatchReasons] = useState<string[]>([]);
+  const [loadingMatchScore, setLoadingMatchScore] = useState(false);
 
   useEffect(() => {
     checkApplicationStatus();
+    calculateMatchScore();
   }, [job.id]);
 
   const checkApplicationStatus = async () => {
@@ -27,6 +32,37 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
       console.error('Failed to check application status:', error);
     } finally {
       setCheckingStatus(false);
+    }
+  };
+
+  const calculateMatchScore = async () => {
+    setLoadingMatchScore(true);
+    console.log('🔍 Calculating match score for job:', job.id);
+    try {
+      const response = await jobMatchingApi.calculateMatchScore({
+        jobId: job.id,
+        jobDescription: job.description || '',
+        jobTitle: job.title,
+        jobRequirements: job.requirements || []
+      });
+      
+      console.log('✅ Match score response:', response);
+      
+      if (response.success) {
+        setMatchScore(response.data.score);
+        setMatchReasons(response.data.reasons);
+      } else {
+        console.error('Match score API failed:', response);
+        setMatchScore(job.matchScore || 75);
+        setMatchReasons(job.matchReasons || []);
+      }
+    } catch (error) {
+      console.error('Failed to calculate match score:', error);
+      // Fallback to static score if API fails
+      setMatchScore(job.matchScore || 75);
+      setMatchReasons(job.matchReasons || []);
+    } finally {
+      setLoadingMatchScore(false);
     }
   };
 
@@ -91,43 +127,51 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
           {/* Match Score */}
-          {job.matchScore && (
+          {(matchScore !== null || loadingMatchScore) && (
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
               <div className="flex items-center gap-4">
                 <div className="flex-shrink-0">
-                  <div className="relative w-20 h-20">
-                    <svg className="w-20 h-20 transform -rotate-90">
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r="36"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        fill="none"
-                        className="text-blue-200"
-                      />
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r="36"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        fill="none"
-                        strokeDasharray={`${2 * Math.PI * 36}`}
-                        strokeDashoffset={`${2 * Math.PI * 36 * (1 - job.matchScore / 100)}`}
-                        className="text-blue-600 transition-all duration-1000"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-blue-600">{job.matchScore}%</span>
+                  {loadingMatchScore ? (
+                    <div className="w-20 h-20 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                     </div>
-                  </div>
+                  ) : (
+                    <div className="relative w-20 h-20">
+                      <svg className="w-20 h-20 transform -rotate-90">
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="36"
+                          stroke="currentColor"
+                          strokeWidth="8"
+                          fill="none"
+                          className="text-blue-200"
+                        />
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="36"
+                          stroke="currentColor"
+                          strokeWidth="8"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 36}`}
+                          strokeDashoffset={`${2 * Math.PI * 36 * (1 - (matchScore || 0) / 100)}`}
+                          className="text-blue-600 transition-all duration-1000"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-blue-600">{matchScore}%</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Your Match</h3>
-                  {job.matchReasons && job.matchReasons.length > 0 && (
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                    {loadingMatchScore ? 'Calculating Match...' : 'Your ATS Match'}
+                  </h3>
+                  {!loadingMatchScore && matchReasons && matchReasons.length > 0 && (
                     <ul className="space-y-1">
-                      {job.matchReasons.map((reason: string, index: number) => (
+                      {matchReasons.map((reason: string, index: number) => (
                         <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
                           <ChevronRight className="w-4 h-4 text-blue-600" />
                           {reason}
@@ -198,6 +242,7 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
           jobId={job.id}
           jobTitle={job.title}
           company={job.company}
+          jobDescription={job.description}
           onClose={() => setShowApplicationModal(false)}
           onSuccess={() => {
             setHasApplied(true);

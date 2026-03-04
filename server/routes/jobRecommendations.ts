@@ -15,9 +15,11 @@ function verifyToken(token: string): any {
 
 // GET /api/jobs/recommendations - Get job recommendations for candidates
 router.get("/recommendations", async (req: Request, res: Response) => {
+  console.log('🔍 Job recommendations endpoint called');
   const token = req.headers.authorization?.replace("Bearer ", "");
 
   if (!token) {
+    console.log('❌ No token provided');
     return res.status(401).json({
       success: false,
       message: "Authentication required",
@@ -26,6 +28,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
 
   const decoded = verifyToken(token);
   if (!decoded) {
+    console.log('❌ Invalid token');
     return res.status(401).json({
       success: false,
       message: "Invalid or expired token",
@@ -34,18 +37,19 @@ router.get("/recommendations", async (req: Request, res: Response) => {
 
   const userId = decoded.userId;
   const limit = parseInt(req.query.limit as string) || 20;
+  console.log('🔍 Fetching recommendations for userId:', userId, 'limit:', limit);
 
   let db;
 
   try {
-    const { client } = await initializeDatabase();
-    db = client;
+    db = await initializeDatabase();
 
     // Get active job postings with recruiter/company info
     const query = `
       SELECT 
         jp.id,
         jp.title,
+        jp.company,
         jp.department,
         jp.location,
         jp.job_type,
@@ -68,6 +72,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
     `;
 
     const result = await db.query(query, [limit]);
+    console.log('🔍 Query result rows:', result.rows.length);
 
     const jobs = result.rows.map((row: any) => {
       // Parse requirements and benefits
@@ -79,7 +84,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       return {
         id: row.id.toString(),
         title: row.title,
-        company: row.department, // Using department as company for now
+        company: row.company || row.department, // Use company field, fallback to department
         description: row.description || '',
         requirements: Array.isArray(requirements) ? requirements : [],
         salaryRange: {
@@ -102,6 +107,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       };
     });
 
+    console.log('✅ Returning', jobs.length, 'jobs');
     res.json({
       success: true,
       data: {
@@ -118,9 +124,10 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   } finally {
-    if (db) {
-      await closeDatabase();
-    }
+    // Don't close the database connection - let the connection pool manage it
+    // if (db) {
+    //   await closeDatabase(db);
+    // }
   }
 });
 
@@ -148,31 +155,118 @@ router.get("/analytics", async (req: Request, res: Response) => {
   let db;
 
   try {
-    const { client } = await initializeDatabase();
-    db = client;
+    db = await initializeDatabase();
 
-    // Get user's job application statistics
-    const applicationsQuery = `
-      SELECT COUNT(*) as total
-      FROM job_applications
+    // Get total active jobs from job_postings
+    const totalJobsResult = await db.query(`
+      SELECT COUNT(*) as count 
+      FROM job_postings 
+      WHERE is_active = true
+    `);
+    const totalJobs = parseInt(totalJobsResult.rows[0]?.count || '0');
+
+    // Get user's job applications
+    const applicationsResult = await db.query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN status = 'submitted' THEN 1 END) as submitted,
+        COUNT(CASE WHEN status = 'reviewed' THEN 1 END) as reviewed,
+        COUNT(CASE WHEN status = 'interview' THEN 1 END) as interview,
+        COUNT(CASE WHEN status = 'offer' THEN 1 END) as offer
+      FROM job_applications 
       WHERE user_id = $1
-    `;
-    const applicationsResult = await db.query(applicationsQuery, [userId]);
+    `, [userId]);
+    const applications = applicationsResult.rows[0];
+
+    // Get saved jobs count (if table exists)
+    let savedJobsCount = 0;
+    try {
+      const savedJobsResult = await db.query(`
+        SELECT COUNT(*) as count 
+        FROM saved_jobs 
+        WHERE user_id = $1
+      `, [userId]);
+      savedJobsCount = parseInt(savedJobsResult.rows[0]?.count || '0');
+    } catch (e) {
+      // Table might not exist yet
+    }
+
+    // Get user's job searches in last 30 days (if table exists)
+    let searchesCount = 0;
+    try {
+      const searchesResult = await db.query(`
+        SELECT COUNT(*) as count 
+        FROM user_job_searches 
+        WHERE user_id = $1 
+        AND created_at >= NOW() - INTERVAL '30 days'
+      `, [userId]);
+      searchesCount = parseInt(searchesResult.rows[0]?.count || '0');
+    } catch (e) {
+      // Table might not exist yet
+    }
+
+    // Get active job alerts (if table exists)
+    let alertsCount = 0;
+    try {
+      const alertsResult = await db.query(`
+        SELECT COUNT(*) as count 
+        FROM job_alerts 
+        WHERE user_id = $1 AND is_active = true
+      `, [userId]);
+      alertsCount = parseInt(alertsResult.rows[0]?.count || '0');
+    } catch (e) {
+      // Table might not exist yet
+    }
+
+    // Get match scores for user (if table exists)
+    let matchScores = { avgScore: 0, highQuality: 0, perfect: 0 };
+    try {
+      const matchScoresResult = await db.query(`
+        SELECT 
+          AVG(match_score) as avgScore,
+          COUNT(CASE WHEN match_score >= 80 THEN 1 END) as highQuality,
+          COUNT(CASE WHEN match_score >= 95 THEN 1 END) as perfect
+        FROM job_match_scores 
+        WHERE user_id = $1
+      `, [userId]);
+      const row = matchScoresResult.rows[0];
+      if (row) {
+        matchScores = {
+          avgScore: parseFloat(row.avgscore) || 0,
+          highQuality: parseInt(row.highquality) || 0,
+          perfect: parseInt(row.perfect) || 0
+        };
+      }
+    } catch (e) {
+      // Table might not exist yet
+    }
+
+    const analytics = {
+      totalJobs,
+      applications: {
+        total: parseInt(applications?.total) || 0,
+        submitted: parseInt(applications?.submitted) || 0,
+        reviewed: parseInt(applications?.reviewed) || 0,
+        interview: parseInt(applications?.interview) || 0,
+        offer: parseInt(applications?.offer) || 0
+      },
+      searches: {
+        last30Days: searchesCount
+      },
+      alerts: {
+        active: alertsCount
+      },
+      savedJobs: savedJobsCount,
+      matchScores: {
+        average: matchScores.avgScore,
+        highQuality: matchScores.highQuality,
+        perfect: matchScores.perfect
+      }
+    };
 
     res.json({
       success: true,
-      data: {
-        applications: {
-          total: parseInt(applicationsResult.rows[0]?.total) || 0,
-        },
-        savedJobs: 0, // Can be implemented with a saved_jobs table
-        searches: {
-          last30Days: 0, // Can be tracked with a search_history table
-        },
-        alerts: {
-          active: 0, // Can be implemented with a job_alerts table
-        },
-      },
+      data: analytics,
     });
 
   } catch (error) {
@@ -182,9 +276,7 @@ router.get("/analytics", async (req: Request, res: Response) => {
       message: "Failed to fetch job analytics",
     });
   } finally {
-    if (db) {
-      await closeDatabase();
-    }
+    // Don't close the database connection - let the connection pool manage it
   }
 });
 
@@ -257,8 +349,7 @@ router.post("/applications", async (req: Request, res: Response) => {
   let db;
 
   try {
-    const { client } = await initializeDatabase();
-    db = client;
+    db = await initializeDatabase();
 
     // Check if already applied
     const checkQuery = `
@@ -297,9 +388,10 @@ router.post("/applications", async (req: Request, res: Response) => {
       message: "Failed to submit application",
     });
   } finally {
-    if (db) {
-      await closeDatabase();
-    }
+    // Don't close the database connection - let the connection pool manage it
+    // if (db) {
+    //   await closeDatabase(db);
+    // }
   }
 });
 

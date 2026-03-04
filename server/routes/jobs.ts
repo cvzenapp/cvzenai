@@ -49,7 +49,8 @@ router.get('/search', unifiedAuth.requireAuth, async (req: AuthRequest, res: Res
       SELECT 
         jp.id,
         jp.title,
-        jp.department as company,
+        jp.company,
+        jp.department,
         jp.description,
         jp.requirements,
         jp.benefits,
@@ -70,7 +71,7 @@ router.get('/search', unifiedAuth.requireAuth, async (req: AuthRequest, res: Res
 
     // Apply filters
     if (validatedQuery.keywords) {
-      query += ` AND (jp.title ILIKE $${paramIndex} OR jp.description ILIKE $${paramIndex + 1} OR jp.department ILIKE $${paramIndex + 2})`;
+      query += ` AND (jp.title ILIKE $${paramIndex} OR jp.description ILIKE $${paramIndex + 1} OR jp.company ILIKE $${paramIndex + 2})`;
       const keyword = `%${validatedQuery.keywords}%`;
       params.push(keyword, keyword, keyword);
       paramIndex += 3;
@@ -199,7 +200,7 @@ router.get('/search', unifiedAuth.requireAuth, async (req: AuthRequest, res: Res
     });
   } finally {
     if (db) {
-      await closeDatabase();
+      // Don't close database - let connection pool manage connections
     }
   }
 });

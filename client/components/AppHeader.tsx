@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, Loader2 } from "lucide-react";
 import { unifiedAuthService } from "@/services/unifiedAuthService";
 import { useEffect, useState } from "react";
+import CVZenLogo from "./CVZenLogo";
 
 interface AppHeaderProps {
   children?: React.ReactNode;
@@ -58,11 +59,7 @@ export default function AppHeader({ children, onToggleSidebar, showToggle = fals
               </button>
             )}
             <Link to="/" className="flex items-center space-x-2">
-              <img 
-                src="/assets/cvzen_logo.png" 
-                alt="CVZen Logo" 
-                className="h-8 sm:h-9 md:h-10 w-auto"
-              />
+              <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={false} />
             </Link>
             {children}
           </div>

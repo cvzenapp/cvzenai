@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import CVZenLogo from "./CVZenLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,11 +56,7 @@ export default function RecruiterAppHeader({ children, onSettingsClick }: Recrui
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/recruiter/dashboard" className="flex items-center gap-3">
-            <img 
-              src="/assets/cvzen_logo.png" 
-              alt="CVZen Logo" 
-              className="h-10 w-auto"
-            />
+            <CVZenLogo className="h-14 sm:h-16 md:h-20 w-auto" showCaption={true} />
             <div className="flex items-center gap-2">
               <div className="h-6 w-px bg-slate-600"></div>
               <span className="text-lg font-semibold text-slate-200">

@@ -203,12 +203,12 @@ export default function ResumeParsingAnalysis({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-brand-auxiliary-1/20 border border-brand-main/30 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+          <Info className="h-5 w-5 text-brand-main mt-0.5" />
           <div className="flex-1">
-            <h4 className="font-medium text-blue-900 mb-1">Resume Analysis Complete</h4>
-            <p className="text-sm text-blue-700">
+            <h4 className="font-medium text-brand-background mb-1">Resume Analysis Complete</h4>
+            <p className="text-sm text-slate-600">
               We've extracted your resume data. Review what was found and what needs attention.
             </p>
           </div>
@@ -230,11 +230,11 @@ export default function ResumeParsingAnalysis({
         </div>
       </div>
 
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
         {analysis.map((item, index) => (
           <div
             key={index}
-            className={`p-3 rounded-lg border ${
+            className={`p-2 rounded-lg border ${
               item.status === 'complete'
                 ? 'bg-green-50 border-green-200'
                 : item.status === 'incomplete'
@@ -245,8 +245,8 @@ export default function ResumeParsingAnalysis({
             <div className="flex items-start gap-2">
               {item.icon}
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm">{item.field}</div>
-                <div className="text-xs text-gray-600 mt-0.5">{item.message}</div>
+                <div className="font-medium text-xs">{item.field}</div>
+                <div className="text-xs text-gray-600 mt-0.5 leading-tight">{item.message}</div>
               </div>
             </div>
           </div>
@@ -254,27 +254,27 @@ export default function ResumeParsingAnalysis({
       </div>
 
       {(incompleteCount > 0 || missingCount > 0) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <p className="text-sm text-amber-800">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+          <p className="text-xs text-amber-800">
             <strong>Note:</strong> You can add missing information and fix incomplete data in the resume builder.
           </p>
         </div>
       )}
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-2 pt-2">
         <Button
           onClick={onPreview}
           variant="outline"
-          className="flex-1"
+          className="flex-1 h-9 text-sm border-brand-main/30 text-brand-main hover:bg-brand-main/10"
         >
-          <Eye className="h-4 w-4 mr-2" />
+          <Eye className="h-3 w-3 mr-1" />
           Preview Resume
         </Button>
         <Button
           onClick={onContinue}
-          className="flex-1"
+          className="flex-1 h-9 text-sm bg-brand-main hover:bg-brand-main/90 text-white"
         >
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="h-3 w-3 mr-1" />
           Edit in Builder
         </Button>
       </div>
@@ -282,7 +282,7 @@ export default function ResumeParsingAnalysis({
       <Button
         onClick={onCancel}
         variant="ghost"
-        className="w-full"
+        className="w-full h-8 text-sm"
       >
         Cancel
       </Button>

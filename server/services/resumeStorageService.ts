@@ -130,7 +130,7 @@ class ResumeStorageService {
       console.error('❌ Failed to store resume:', error);
       throw new Error(`Database error: ${error.message}`);
     } finally {
-      await closeDatabase();
+      // Don't close database - let connection pool manage connections
     }
   }
 
@@ -147,7 +147,7 @@ class ResumeStorageService {
       );
       return parseInt(result.rows[0].count);
     } finally {
-      await closeDatabase();
+      // Don't close database - let connection pool manage connections
     }
   }
 
@@ -164,7 +164,7 @@ class ResumeStorageService {
       );
       return result.rows[0] || null;
     } finally {
-      await closeDatabase();
+      // Don't close database - let connection pool manage connections
     }
   }
 }

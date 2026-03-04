@@ -603,6 +603,13 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
 
     db = await getDatabase();
     
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        error: "Service temporarily unavailable. Please try again in a few moments.",
+      });
+    }
+    
     // In serverless environments, we need to close the connection
     if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
       shouldCloseConnection = true;
@@ -617,9 +624,13 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
       });
     }
     
-    // Generate random password (16 characters, alphanumeric)
+    // Generate random password (16 characters, alphanumeric) - temporary for auto-login
     const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
     const hashedPassword = await hashPassword(generatedPassword);
+    
+    // Generate secure password setup token (expires in 24 hours)
+    const setupToken = generateResetToken();
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     
     // Split name into first and last name
     const nameParts = fullName.trim().split(' ');
@@ -628,10 +639,10 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
     
     console.log('👤 Creating user:', { firstName, lastName, email });
     
-    // Insert new user
+    // Insert new user with setup token
     const insertResult = await db.query(
-      'INSERT INTO users (email, password_hash, first_name, last_name, user_type, created_at, updated_at, email_verified, is_active) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), true, true) RETURNING id',
-      [email.toLowerCase(), hashedPassword, firstName, lastName, 'job_seeker']
+      'INSERT INTO users (email, password_hash, first_name, last_name, user_type, created_at, updated_at, email_verified, is_active, reset_token, reset_token_expires) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), true, true, $6, $7) RETURNING id',
+      [email.toLowerCase(), hashedPassword, firstName, lastName, 'job_seeker', setupToken, tokenExpiry]
     );
     
     const userId = insertResult.rows[0].id.toString();
@@ -639,6 +650,7 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
     
     // Parse and store resume
     let resumeId = null;
+    let parsedData = null;
     try {
       console.log('📄 Parsing resume...');
       const { resumeParsingService } = await import('../services/resumeParsingService.js');
@@ -650,7 +662,7 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
       );
       
       // Parse resume with AI
-      const parsedData = await resumeParsingService.parseResumeWithAI(resumeText);
+      parsedData = await resumeParsingService.parseResumeWithAI(resumeText);
       
       // Store resume in database
       const { resumeStorageService } = await import('../services/resumeStorageService.js');
@@ -677,19 +689,20 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
       emailVerified: true,
     };
     
-    // Send welcome email with password
+    // Send welcome email with password setup link
     try {
-      console.log('📧 Sending welcome email...');
+      console.log('📧 Sending welcome email with setup link...');
       const { emailService } = await import('../services/emailService.js');
+      const setupUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/setup-password?token=${setupToken}`;
       const resumeUrl = resumeId 
         ? `${process.env.FRONTEND_URL || 'http://localhost:8080'}/resume/${resumeId}`
         : `${process.env.FRONTEND_URL || 'http://localhost:8080'}/dashboard`;
       
-      await emailService.sendWelcomeEmail(email.toLowerCase(), fullName, generatedPassword, resumeUrl);
-      console.log('✅ Welcome email sent');
+      await emailService.sendPasswordSetupEmail(email.toLowerCase(), fullName, setupUrl, resumeUrl);
+      console.log('✅ Welcome email with setup link sent');
     } catch (emailError) {
       console.error('❌ Failed to send welcome email:', emailError);
-      // Continue even if email fails - user can still login
+      // Continue even if email fails - user can still login with temp password
     }
     
     console.log('🎉 Quick signup completed successfully');
@@ -700,13 +713,178 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
       token,
       userId,
       resumeId,
-      message: "Account created successfully. Check your email for your password.",
+      parsedData,
+      message: "Account created successfully. Check your email to set up your password.",
     });
   } catch (error: any) {
     console.error("❌ Quick signup error:", error);
     res.status(500).json({
       success: false,
       error: error.message || "Failed to create account. Please try again.",
+    });
+  } finally {
+    if (shouldCloseConnection && db) {
+      await closeDatabase(db);
+    }
+  }
+});
+
+// GET /api/auth/verify-setup-token - Verify password setup token
+router.get("/verify-setup-token", async (req: Request, res: Response) => {
+  let db;
+  let shouldCloseConnection = false;
+  
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: "Setup token is required",
+      });
+    }
+
+    db = await getDatabase();
+    
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        error: "Service temporarily unavailable. Please try again in a few moments.",
+      });
+    }
+    
+    // In serverless environments, we need to close the connection
+    if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      shouldCloseConnection = true;
+    }
+    
+    // Check if token exists and is not expired
+    const result = await db.query(
+      'SELECT id, email, first_name, last_name FROM users WHERE reset_token = $1 AND reset_token_expires > NOW() AND is_active = true',
+      [token]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid or expired setup token",
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: "Setup token is valid",
+    });
+  } catch (error: any) {
+    console.error("❌ Verify setup token error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to verify setup token",
+    });
+  } finally {
+    if (shouldCloseConnection && db) {
+      await closeDatabase(db);
+    }
+  }
+});
+
+// POST /api/auth/setup-password - Set up password with token
+router.post("/setup-password", async (req: Request, res: Response) => {
+  let db;
+  let shouldCloseConnection = false;
+  
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        error: "Setup token and password are required",
+      });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: "Password must be at least 8 characters long",
+      });
+    }
+
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      return res.status(400).json({
+        success: false,
+        error: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+      });
+    }
+
+    db = await getDatabase();
+    
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        error: "Service temporarily unavailable. Please try again in a few moments.",
+      });
+    }
+    
+    // In serverless environments, we need to close the connection
+    if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      shouldCloseConnection = true;
+    }
+    
+    // Find user with valid token
+    const userResult = await db.query(
+      'SELECT id, email, first_name, last_name FROM users WHERE reset_token = $1 AND reset_token_expires > NOW() AND is_active = true',
+      [token]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid or expired setup token",
+      });
+    }
+    
+    const user = userResult.rows[0];
+    const hashedPassword = await hashPassword(password);
+    
+    // Update user password and clear setup token
+    await db.query(
+      'UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+    
+    // Generate JWT token for auto-login
+    const jwtToken = generateJWTToken(user.id.toString(), user.email);
+    
+    const userResponse: User = {
+      id: user.id.toString(),
+      email: user.email,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      emailVerified: true,
+    };
+    
+    console.log('✅ Password setup completed for user:', user.email);
+    
+    res.json({
+      success: true,
+      message: "Password set up successfully",
+      user: userResponse,
+      token: jwtToken,
+      userId: user.id.toString(),
+    });
+  } catch (error: any) {
+    console.error("❌ Setup password error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to set up password",
     });
   } finally {
     if (shouldCloseConnection && db) {
