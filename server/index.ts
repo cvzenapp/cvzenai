@@ -337,23 +337,6 @@ export function createServer() {
   // Job preferences routes
   app.use("/api/job-preferences", jobPreferencesRouter);
 
-  // Remove catch-all route for static file serving (handled by Netlify)
-  // In development, Vite handles client-side routing
-  if (process.env.NODE_ENV === 'production') {
-    app.get('*', (req, res, next) => {
-      // Skip API routes, health checks, and static assets
-      if (req.path.startsWith('/api/') || 
-          req.path === '/health' ||
-          req.path.startsWith('/@') || // Vite internal routes
-          req.path.startsWith('/node_modules/') ||
-          req.path.includes('.') && (req.path.endsWith('.js') || req.path.endsWith('.ts') || req.path.endsWith('.jsx') || req.path.endsWith('.tsx') || req.path.endsWith('.css') || req.path.endsWith('.scss') || req.path.endsWith('.json') || req.path.endsWith('.svg') || req.path.endsWith('.png') || req.path.endsWith('.jpg') || req.path.endsWith('.ico'))) {
-        return next();
-      }
-      // Serve index.html for client-side routing
-      res.sendFile(path.join(__dirname, '../index.html'));
-    });
-  }
-
   // Add 404 handler for unmatched API routes
   app.use('/api/*', (req, res) => {
     res.status(404).json({ success: false, error: 'API route not found' });

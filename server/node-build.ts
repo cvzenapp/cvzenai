@@ -77,14 +77,15 @@ if (fs.existsSync(distPath)) {
 
 // Handle React Router - serve index.html for all non-API routes
 app.get("*", (req, res) => {
-  // Don't serve index.html for API routes
+  // Don't serve index.html for API routes or health checks
   if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
-    return res.status(404).json({ error: "API endpoint not found" });
+    return res.status(404).json({ error: "Endpoint not found" });
   }
 
   const indexPath = path.join(distPath, "index.html");
   
   if (fs.existsSync(indexPath)) {
+    console.log(`📄 Serving index.html for route: ${req.path}`);
     res.sendFile(indexPath);
   } else {
     console.error('❌ index.html not found at:', indexPath);
