@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 // Get proper directory path for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -34,11 +35,45 @@ console.log('  import.meta.url:', import.meta.url);
 console.log('  __filename:', __filename);
 console.log('  __dirname:', __dirname);
 
-const distPath = path.join(__dirname, "spa");
-console.log('  distPath:', distPath);
+// Try multiple possible paths for the built SPA files
+const possiblePaths = [
+  path.join(__dirname, "../spa"),           // Standard build output
+  path.join(process.cwd(), "dist/spa"),     // Docker container
+  path.join(__dirname, "../../dist/spa"),   // Alternative structure
+];
+
+let distPath = possiblePaths[0]; // Default fallback
+
+for (const testPath of possiblePaths) {
+  console.log('🔍 Checking path:', testPath);
+  try {
+    if (fs.existsSync(testPath)) {
+      console.log('✅ Found SPA files at:', testPath);
+      distPath = testPath;
+      break;
+    }
+  } catch (error) {
+    console.log('❌ Error checking path:', testPath, error.message);
+  }
+}
+
+console.log('  Final distPath:', distPath);
+console.log('  distPath exists:', fs.existsSync(distPath));
 
 // Serve static files
-app.use(express.static(distPath));
+if (fs.existsSync(distPath)) {
+  console.log('✅ Serving static files from:', distPath);
+  app.use(express.static(distPath));
+} else {
+  console.error('❌ Static files directory not found:', distPath);
+  console.log('📁 Available files in current directory:');
+  try {
+    const files = fs.readdirSync(process.cwd());
+    console.log(files);
+  } catch (error) {
+    console.error('Error reading current directory:', error.message);
+  }
+}
 
 // Handle React Router - serve index.html for all non-API routes
 app.get("*", (req, res) => {
@@ -47,7 +82,23 @@ app.get("*", (req, res) => {
     return res.status(404).json({ error: "API endpoint not found" });
   }
 
-  res.sendFile(path.join(distPath, "index.html"));
+  const indexPath = path.join(distPath, "index.html");
+  
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    console.error('❌ index.html not found at:', indexPath);
+    res.status(404).send(`
+      <html>
+        <body>
+          <h1>Application Not Built</h1>
+          <p>The frontend application has not been built yet.</p>
+          <p>Expected location: ${indexPath}</p>
+          <p>Please run <code>npm run build</code> to build the application.</p>
+        </body>
+      </html>
+    `);
+  }
 });
 
 app.listen(port, () => {
@@ -59,14 +110,14 @@ app.listen(port, () => {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("🛑 Received SIGTERM, shutting down gracefully");
-  const { closeDatabase } = await import("./database/connection.js");
-  await closeDatabase();
+  const { closePool } = await import("./database/connection.js");
+  await closePool();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
   console.log("🛑 Received SIGINT, shutting down gracefully");
-  const { closeDatabase } = await import("./database/connection.js");
-  await closeDatabase();
+  const { closePool } = await import("./database/connection.js");
+  await closePool();
   process.exit(0);
 });
