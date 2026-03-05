@@ -479,9 +479,9 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-slate-900">Scanning Your Resume</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Scanning Your CV</h3>
               <p className="text-sm text-slate-600 max-w-sm mx-auto">
-                Our AI is analyzing your resume structure, extracting key information, and preparing your digital profile...
+                Our AI is analyzing your cv structure, extracting key information, and preparing your digital profile...
               </p>
             </div>
 

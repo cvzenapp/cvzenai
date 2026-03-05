@@ -641,7 +641,7 @@ export default function Templates() {
                     window.location.href = `/builder?template=${templateId}`;
                   }}
                   onPreview={(templateId) => {
-                    window.location.href = `/resume/1?template=${templateId}`;
+                    window.location.href = `/builder?template=${templateId}`;
                   }}
                   compact={false}
                 />
@@ -778,7 +778,7 @@ export default function Templates() {
           onPreviewTemplate={(templateId) => {
             const template = getAllTemplates().find(t => t.id === templateId);
             if (template) {
-              window.location.href = `/resume/1?template=${template.category}`;
+              window.location.href = `/builder?template=${template.category}`;
             }
           }}
         />

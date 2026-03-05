@@ -363,4 +363,80 @@ router.post('/recruiter-resume', upload.single('file'), async (req, res: Respons
   }
 });
 
+// Configure multer for image uploads
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads', 'images');
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename: userId_timestamp_originalname
+    const userId = (req as AuthRequest).user?.id || 'anonymous';
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `${userId}_${timestamp}_${basename}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Check if file is an image
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+// POST /api/upload/image - Upload image file (authenticated)
+router.post('/image', unifiedAuth.requireAuth, imageUpload.single('image'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No image file provided'
+      });
+    }
+
+    console.log('✅ Image uploaded:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
+
+    // Generate URL for the uploaded file
+    const fileUrl = `/uploads/images/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      url: fileUrl,
+      data: {
+        url: fileUrl,
+        filename: req.file.originalname,
+        size: req.file.size
+      }
+    });
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload image'
+    });
+  }
+});
+
 export default router;

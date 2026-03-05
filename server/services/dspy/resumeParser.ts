@@ -284,14 +284,20 @@ OUTPUT FORMAT:
 {
   "personalInfo": {"name": "string", "email": "string", "phone": "string", "linkedin": "string", "location": "string"},
   "summary": "string",
+  "objective": "string",
   "education": [{"degree": "string", "institution": "string", "field": "string", "year": "string", "location": "string", "startDate": "string", "endDate": "string"}],
   "experience": [{"title": "string", "company": "string", "startDate": "string", "endDate": "string", "location": "string", "responsibilities": ["string"], "description": "string"}],
-  "skills": ["string"],
+  "skills": ["individual skill name", "another skill", "separate skill"],
   "certifications": ["string"],
   "projects": [{"name": "string", "description": "string", "technologies": ["string"], "url": "string"}],
   "languages": ["string"],
   "achievements": ["string"]
-}`;
+}
+
+IMPORTANT: 
+- For skills, extract each skill as a separate item in the array. Do NOT group skills together with commas. Each skill should be its own array element.
+- If no career objective is found in the resume, generate a professional one based on the person's experience and skills.
+Example: ["JavaScript", "React", "Node.js", "Python", "Django"] NOT ["JavaScript, React, Node.js", "Python, Django"]`;
   }
 
   /**

@@ -152,7 +152,7 @@ export default function ModernTechTemplate({
               className="flex-1 flex items-center justify-center gap-1 text-xs"
               onClick={() => {
                 // Navigate to preview
-                window.location.href = `/resume/1?template=tech-modern`;
+                window.location.href = `/builder?template=tech-modern`;
               }}
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,7 +305,7 @@ export default function ModernTechTemplate({
                 className="flex-1 flex items-center justify-center gap-2"
                 onClick={() => {
                   // Navigate to preview
-                  window.location.href = `/resume/1?template=tech-modern`;
+                  window.location.href = `/builder?template=tech-modern`;
                 }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

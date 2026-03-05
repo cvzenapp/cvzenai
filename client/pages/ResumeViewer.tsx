@@ -5,13 +5,10 @@ import { unifiedAuthService } from "@/services/unifiedAuthService";
 import { Resume } from "@shared/api";
 import {
   getTemplateConfig,
-  getTemplateContentId,
   type TemplateCategory,
   type TemplateConfig,
 } from "@/services/templateService";
-import { getTemplateSampleData } from "@/services/templateSampleDataService";
-import { templateContentRegistry } from "@/services/templateContentRegistry";
-import { getTemplateIdForCategory, getContentIdForTemplateId, getTemplateCategoryFromId } from "@/services/templateContentInitializer";
+import { getTemplateCategoryFromId } from "@/services/templateContentInitializer";
 import { reactPdfService } from "@/services/reactPdfService";
 import { TemplateCustomizationService, type TemplateCustomization } from "@/services/templateCustomizationService";
 
@@ -23,7 +20,16 @@ import ResumeDisplay from "@/components/ResumeDisplay";
 import { CustomizationTrigger as NewCustomizationTrigger } from "@/components/customization";
 import { CustomizationTrigger } from "@/components/templates/customization/CustomizationTrigger";
 import { TemplateCustomizationPanel } from "@/components/templates/customization/TemplateCustomizationPanel";
-import { Download, Palette, Settings, Mail, Calendar, Share2 } from "lucide-react";
+import { Download, Palette, Mail, Calendar, Share2 } from "lucide-react";
+import { ProfessionalSummaryEditModal } from "@/components/resume/ProfessionalSummaryEditModal";
+import { SkillsEditModal } from "@/components/resume/SkillsEditModal";
+import { CareerObjectiveEditModal } from "@/components/resume/CareerObjectiveEditModal";
+import { ProjectsEditModal } from "@/components/resume/ProjectsEditModal";
+import { EducationEditModal } from "@/components/resume/EducationEditModal";
+import { PersonalInfoEditModal } from "@/components/resume/PersonalInfoEditModal";
+import { ExperienceEditModal } from "@/components/resume/ExperienceEditModal";
+import { CertificationsEditModal } from "@/components/resume/CertificationsEditModal";
+import { resumeUpdateApi } from "@/services/resumeUpdateApi";
 // Removed unused import
 
 export default function ResumeViewer() {
@@ -50,6 +56,27 @@ export default function ResumeViewer() {
   
   // User information state
   const [userName, setUserName] = useState<string>("");
+  
+  // Edit modal states
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
+  const [isEditingObjective, setIsEditingObjective] = useState(false);
+  const [isEditingProjects, setIsEditingProjects] = useState(false);
+  const [isEditingEducation, setIsEditingEducation] = useState(false);
+  const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
+  const [isEditingExperience, setIsEditingExperience] = useState(false);
+  const [isEditingCertifications, setIsEditingCertifications] = useState(false);
+  const [showEditButtons, setShowEditButtons] = useState(false);
+  
+  // Check if current user owns this resume
+  const isResumeOwner = () => {
+    if (shareToken) return false; // Shared resumes are not editable
+    
+    // For now, assume user owns the resume if they're authenticated and viewing their own resume
+    // This is a temporary solution - ideally we should get userId from the resume data
+    const currentUserId = user?.id || localStorage.getItem('userId');
+    return !!currentUserId && !shareToken;
+  };
   
   // Template detection from URL parameters - moved to top
   const templateParam = searchParams.get("template");
@@ -349,7 +376,7 @@ export default function ResumeViewer() {
                     summary: targetResume.summary || targetResume.personalInfo?.summary || "",
                     objective: targetResume.objective || "",
                     skills: targetResume.skills || [],
-                    experiences: targetResume.experience || [],
+                    experiences: targetResume.experiences || targetResume.experience || [],
                     education: targetResume.education || [],
                     projects: targetResume.projects || [],
                     certifications: targetResume.certifications || [],
@@ -406,7 +433,7 @@ export default function ResumeViewer() {
                         summary: targetResume.summary || targetResume.personalInfo?.summary || "",
                         objective: targetResume.objective || "",
                         skills: targetResume.skills || [],
-                        experiences: targetResume.experience || [],
+                        experiences: targetResume.experiences || targetResume.experience || [],
                         education: targetResume.education || [],
                         projects: targetResume.projects || [],
                         upvotes: 0,
@@ -449,7 +476,7 @@ export default function ResumeViewer() {
                       summary: targetResume.summary || targetResume.personalInfo?.summary || "",
                       objective: targetResume.objective || "",
                       skills: targetResume.skills || [],
-                      experiences: targetResume.experience || [],
+                      experiences: targetResume.experiences || targetResume.experience || [],
                       education: targetResume.education || [],
                       projects: targetResume.projects || [],
                       upvotes: 0,
@@ -474,8 +501,8 @@ export default function ResumeViewer() {
         if (userResumeData) {
           console.log("✅ USING API DATA - CLEARING OLD LOCALSTORAGE DATA");
           // Clear old resume data to prevent conflicts
-          localStorage.removeItem("resume-1");
-          localStorage.removeItem("resume-2");
+          localStorage.removeItem("1");
+          localStorage.removeItem("2");
           localStorage.removeItem("resume-3");
         } else {
           console.log("⚠️ NO API DATA FOUND - THIS SHOULD NOT HAPPEN FOR LOGGED IN USERS");
@@ -569,7 +596,7 @@ export default function ResumeViewer() {
         console.log("🔍 Trying localStorage as final fallback for resume ID:", id);
         
         // Try multiple localStorage keys
-        const possibleKeys = [id, `resume-${id}`, "resume-1", "1"];
+        const possibleKeys = [id, `resume-${id}`, "1"];
         let localStorageData = null;
         let usedKey = null;
         
@@ -637,7 +664,7 @@ export default function ResumeViewer() {
     };
 
     loadResumeData();
-  }, [actualTemplateCategory, templateConfig.id, searchParams, contentCache, shareToken, id]); // Re-run when template parameters change
+  }, [id, shareToken]); // Only reload when resume ID or share token changes
 
   // Refresh shortlist status periodically and on window focus for shared resumes
   useEffect(() => {
@@ -1033,6 +1060,108 @@ export default function ResumeViewer() {
     console.log("Previewing template customization:", customization);
   };
 
+  // Handle resume section updates
+  const handleResumeUpdate = (updatedResumeData: Resume) => {
+    console.log("Resume updated:", updatedResumeData);
+    console.log("Personal info updated:", updatedResumeData.personalInfo);
+    setResume(updatedResumeData);
+  };
+
+  const handleSummaryUpdate = async (newSummary: string) => {
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    const result = await resumeUpdateApi.updateProfessionalSummary(resume.id, newSummary);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update summary');
+    }
+  };
+
+  const handleSkillsUpdate = async (newSkills: any[]) => {
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    const result = await resumeUpdateApi.updateSkills(resume.id, newSkills);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update skills');
+    }
+  };
+
+  const handleObjectiveUpdate = async (newObjective: string) => {
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    const result = await resumeUpdateApi.updateObjective(resume.id, newObjective);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update objective');
+    }
+  };
+
+  const handleProjectsUpdate = async (newProjects: any[]) => {
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    console.log('🔍 handleProjectsUpdate called with:', newProjects);
+    const result = await resumeUpdateApi.updateProjects(resume.id, newProjects);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update projects');
+    }
+  };
+
+  const handleEducationUpdate = async (newEducation: any[]) => {
+    console.log('🔍 handleEducationUpdate called with:', newEducation);
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    console.log('🔍 Calling resumeUpdateApi.updateEducation with resumeId:', resume.id);
+    const result = await resumeUpdateApi.updateEducation(resume.id, newEducation);
+    console.log('🔍 API result:', result);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update education');
+    }
+  };
+
+  const handleCertificationsUpdate = async (newCertifications: any[]) => {
+    console.log('🔍 handleCertificationsUpdate called with:', newCertifications);
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    console.log('🔍 Calling resumeUpdateApi.updateCertifications with resumeId:', resume.id);
+    const result = await resumeUpdateApi.updateCertifications(resume.id, newCertifications);
+    console.log('🔍 API result:', result);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update certifications');
+    }
+  };
+
+  const handleExperienceUpdate = async (newExperience: any[]) => {
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    const result = await resumeUpdateApi.updateExperiences(resume.id, newExperience);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update experience');
+    }
+  };
+
+  const handlePersonalInfoUpdate = async (newPersonalInfo: any) => {
+    if (!resume?.id) throw new Error("No resume ID available");
+    
+    const result = await resumeUpdateApi.updatePersonalInfo(resume.id, newPersonalInfo);
+    if (result.success) {
+      handleResumeUpdate(result.data);
+    } else {
+      throw new Error(result.error || 'Failed to update personal info');
+    }
+  };
+
   // Template customization loading disabled - using resume-specific customizations only
   // The customizationService (loaded in earlier useEffect) handles resume-specific customizations
   // which are stored in resume_customizations table
@@ -1349,6 +1478,7 @@ export default function ResumeViewer() {
   return (
     <>
       <ResumeDisplay
+        key={`resume-${resume.id}-${resume.personalInfo?.github || 'no-github'}-${resume.updatedAt || Date.now()}-${JSON.stringify(resume.experiences?.length || 0)}`}
         resume={resume}
         templateConfig={customizedTemplateConfig || templateConfig}
         mode={shareToken ? "shared" : "preview"}
@@ -1364,7 +1494,88 @@ export default function ResumeViewer() {
         onCustomizationChange={handleCustomizationChange}
         onCustomizationSave={handleCustomizationSave}
         shareToken={shareToken}
+        setIsEditingPersonalInfo={setIsEditingPersonalInfo}
+        setIsEditingSummary={setIsEditingSummary}
+        setIsEditingObjective={setIsEditingObjective}
+        setIsEditingSkills={setIsEditingSkills}
+        setIsEditingProjects={setIsEditingProjects}
+        setIsEditingEducation={setIsEditingEducation}
+        setIsEditingExperience={setIsEditingExperience}
+        setIsEditingCertifications={setIsEditingCertifications}
       />
+      
+      {/* Edit Modals - Only show for resume owner */}
+      {isResumeOwner() && (
+        <>
+          <ProfessionalSummaryEditModal
+            isOpen={isEditingSummary}
+            onClose={() => setIsEditingSummary(false)}
+            currentSummary={resume?.summary || ''}
+            onSave={handleSummaryUpdate}
+            resumeData={resume}
+          />
+          
+          <SkillsEditModal
+            isOpen={isEditingSkills}
+            onClose={() => setIsEditingSkills(false)}
+            currentSkills={resume?.skills || []}
+            onSave={handleSkillsUpdate}
+            resumeData={resume}
+          />
+          
+          <CareerObjectiveEditModal
+            isOpen={isEditingObjective}
+            onClose={() => setIsEditingObjective(false)}
+            currentObjective={resume?.objective || ''}
+            onSave={handleObjectiveUpdate}
+            resumeData={resume}
+          />
+          
+          <ProjectsEditModal
+            isOpen={isEditingProjects}
+            onClose={() => setIsEditingProjects(false)}
+            currentProjects={resume?.projects || []}
+            onSave={handleProjectsUpdate}
+            resumeId={resume?.id}
+          />
+          
+          <EducationEditModal
+            isOpen={isEditingEducation}
+            onClose={() => setIsEditingEducation(false)}
+            currentEducation={resume?.education || []}
+            onSave={handleEducationUpdate}
+            resumeData={resume}
+          />
+          
+          <PersonalInfoEditModal
+            isOpen={isEditingPersonalInfo}
+            onClose={() => setIsEditingPersonalInfo(false)}
+            currentPersonalInfo={resume?.personalInfo || {
+              name: "",
+              title: "",
+              email: "",
+              phone: "",
+              location: "",
+              website: "",
+              linkedin: "",
+              github: "",
+              avatar: ""
+            }}
+            onSave={handlePersonalInfoUpdate}
+          />
+          
+          <ExperienceEditModal
+            isOpen={isEditingExperience}
+            onClose={() => setIsEditingExperience(false)}
+            currentExperiences={resume?.experiences || []}
+            onSave={handleExperienceUpdate}
+            resumeData={resume}
+          />
+          
+          {/* Floating Edit Buttons */}
+          
+        </>
+      )}
       
       {/* New Customization Button - Only show for authenticated users viewing their own resume */}
       {!shareToken && (() => {
@@ -1402,6 +1613,83 @@ export default function ResumeViewer() {
           />
         );
       })()}
+      
+      {/* Edit Modals - Only show for resume owner */}
+      {isResumeOwner() && (
+        <>
+          <ProfessionalSummaryEditModal
+            isOpen={isEditingSummary}
+            onClose={() => setIsEditingSummary(false)}
+            currentSummary={resume?.summary || ''}
+            onSave={handleSummaryUpdate}
+            resumeData={resume}
+          />
+          
+          <SkillsEditModal
+            isOpen={isEditingSkills}
+            onClose={() => setIsEditingSkills(false)}
+            currentSkills={resume?.skills || []}
+            onSave={handleSkillsUpdate}
+            resumeData={resume}
+          />
+
+          <CareerObjectiveEditModal
+            isOpen={isEditingObjective}
+            onClose={() => setIsEditingObjective(false)}
+            currentObjective={resume?.objective || ''}
+            onSave={handleObjectiveUpdate}
+            resumeData={resume}
+          />
+
+          <ProjectsEditModal
+            isOpen={isEditingProjects}
+            onClose={() => setIsEditingProjects(false)}
+            currentProjects={resume?.projects || []}
+            onSave={handleProjectsUpdate}
+            resumeId={resume?.id}
+          />
+
+          <EducationEditModal
+            isOpen={isEditingEducation}
+            onClose={() => setIsEditingEducation(false)}
+            currentEducation={resume?.education || []}
+            onSave={handleEducationUpdate}
+            resumeData={resume}
+          />
+
+          <PersonalInfoEditModal
+            isOpen={isEditingPersonalInfo}
+            onClose={() => setIsEditingPersonalInfo(false)}
+            currentPersonalInfo={resume?.personalInfo || {
+              name: "",
+              email: "",
+              phone: "",
+              location: "",
+              title: "",
+              linkedin: "",
+              github: "",
+              website: ""
+            }}
+            onSave={handlePersonalInfoUpdate}
+          />
+
+          <ExperienceEditModal
+            isOpen={isEditingExperience}
+            onClose={() => setIsEditingExperience(false)}
+            currentExperiences={resume?.experiences || []}
+            onSave={handleExperienceUpdate}
+            resumeData={resume}
+          />
+
+          <CertificationsEditModal
+            isOpen={isEditingCertifications}
+            onClose={() => setIsEditingCertifications(false)}
+            currentCertifications={resume?.certifications || []}
+            onSave={handleCertificationsUpdate}
+            resumeData={resume}
+          />
+        </>
+      )}
     </>
   );
 }

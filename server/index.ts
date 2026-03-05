@@ -15,6 +15,7 @@ import {
   getPersonalInfo,
   createResume,
   updateResume,
+  updateResumeSection,
   deleteResume,
   setActiveResume,
 } from "./routes/resume";
@@ -153,6 +154,7 @@ export function createServer() {
   app.get("/api/resume/public/:id", getResumePublic); // Public endpoint for recruiters
   app.post("/api/resume", requireAuth, createResume);
   app.put("/api/resume/:id", requireAuth, updateResume);
+  app.patch("/api/resume/:id", requireAuth, updateResumeSection);
   app.delete("/api/resume/:id", requireAuth, deleteResume);
   app.patch("/api/resume/:id/set-active", requireAuth, setActiveResume);
   app.post("/api/resume/interactions", updateResumeInteractions);

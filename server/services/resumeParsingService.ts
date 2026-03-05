@@ -383,7 +383,7 @@ class ResumeParsingService {
           website: localPersonalInfo.website || ''
         },
         summary: parsedData.summary || '',
-        objective: '',
+        objective: parsedData.objective || '',
         skills: parsedData.skills || [],
         skillCategories: parsedData.skillCategories || {},
         experience: (parsedData.experience || []).map(exp => ({

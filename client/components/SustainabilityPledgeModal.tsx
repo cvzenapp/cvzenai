@@ -95,7 +95,7 @@ export function SustainabilityPledgeModal({ isOpen, onClose }: SustainabilityPle
               <div className="text-center">
                 <div className="flex items-center justify-center gap-3 mb-3">
                   <Leaf className="w-8 h-8" />
-                  <h2 className="text-2xl font-normal">I DON'T print CV</h2>
+                  <h2 className="text-2xl font-normal">Go Papreless</h2>
                 </div>
                 <p className="text-green-50 text-sm font-normal">
                   Join the pledge for sustainable, paperless hiring.

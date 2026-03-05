@@ -44,6 +44,16 @@ interface ResumeDisplayProps {
   
   // Shared mode specific
   shareToken?: string;
+  
+  // Edit modal handlers
+  setIsEditingPersonalInfo?: (editing: boolean) => void;
+  setIsEditingSummary?: (editing: boolean) => void;
+  setIsEditingObjective?: (editing: boolean) => void;
+  setIsEditingSkills?: (editing: boolean) => void;
+  setIsEditingProjects?: (editing: boolean) => void;
+  setIsEditingEducation?: (editing: boolean) => void;
+  setIsEditingExperience?: (editing: boolean) => void;
+  setIsEditingCertifications?: (editing: boolean) => void;
 }
 
 export default function ResumeDisplay({
@@ -61,7 +71,15 @@ export default function ResumeDisplay({
   currentCustomization,
   onCustomizationChange,
   onCustomizationSave,
-  shareToken
+  shareToken,
+  setIsEditingPersonalInfo,
+  setIsEditingSummary,
+  setIsEditingObjective,
+  setIsEditingSkills,
+  setIsEditingProjects,
+  setIsEditingEducation,
+  setIsEditingExperience,
+  setIsEditingCertifications,
 }: ResumeDisplayProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [localCustomization, setLocalCustomization] = useState<TemplateCustomization | null>(currentCustomization || null);
@@ -508,6 +526,14 @@ export default function ResumeDisplay({
               improveSection={improveSection}
               isImprovingSection={isImprovingSection}
               showImproveButtons={mode === 'preview'}
+              setIsEditingPersonalInfo={setIsEditingPersonalInfo}
+              setIsEditingSummary={setIsEditingSummary}
+              setIsEditingObjective={setIsEditingObjective}
+              setIsEditingSkills={setIsEditingSkills}
+              setIsEditingProjects={setIsEditingProjects}
+              setIsEditingEducation={setIsEditingEducation}
+              setIsEditingExperience={setIsEditingExperience}
+              setIsEditingCertifications={setIsEditingCertifications}
             />
           </div>
         </div>

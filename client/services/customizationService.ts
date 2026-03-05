@@ -67,8 +67,8 @@ class CustomizationService {
     if (resumeId && userId) {
       try {
         const payload = { resumeId, userId, settings };
-        console.log('📡 Sending POST request to /api/customization/save...');
-        console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+        // console.log('📡 Sending POST request to /api/customization/save...');
+        // console.log('📦 Payload:', JSON.stringify(payload, null, 2));
         
         const response = await fetch('/api/customization/save', {
           method: 'POST',

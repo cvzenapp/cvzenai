@@ -26,12 +26,7 @@ export default function Footer() {
               >
                 Features
               </Link>
-              <Link
-                to="/templates"
-                className="block text-slate-400 hover:text-white transition-colors"
-              >
-                Templates
-              </Link>
+              
               <Link
                 to="/pricing"
                 className="block text-slate-400 hover:text-white transition-colors"
@@ -118,7 +113,7 @@ export default function Footer() {
 
         <div className="flex flex-col md:flex-row justify-between items-center">
           <p className="text-slate-400">
-            © 2025 CVZen. All rights reserved.
+            © 2026 CVZen. All rights reserved.
           </p>
           <div className="flex items-center gap-4 mt-4 md:mt-0">
             <Link

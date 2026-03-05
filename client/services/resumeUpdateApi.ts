@@ -22,6 +22,8 @@ class ResumeUpdateApi {
 
   async updateResumeSection(resumeId: string | number, updates: ResumeUpdateData) {
     try {
+      console.log('🔍 updateResumeSection called with:', { resumeId, updates });
+      
       const response = await fetch(`/api/resume/${resumeId}`, {
         method: 'PATCH',
         headers: this.getAuthHeaders(),
@@ -33,6 +35,7 @@ class ResumeUpdateApi {
       }
 
       const result = await response.json();
+      console.log('🔍 Server response:', result);
       return result;
     } catch (error) {
       console.error('Error updating resume section:', error);
@@ -65,7 +68,18 @@ class ResumeUpdateApi {
   }
 
   async updateProjects(resumeId: string | number, projects: any[]) {
+    console.log('🔍 updateProjects called with:', { resumeId, projects });
+    console.log('🔍 Projects with dates:', projects.map(p => ({ 
+      name: p.name, 
+      startDate: p.startDate, 
+      endDate: p.endDate 
+    })));
     return this.updateResumeSection(resumeId, { projects });
+  }
+
+  async updateCertifications(resumeId: string | number, certifications: any[]) {
+    console.log('🔍 updateCertifications called with:', { resumeId, certifications });
+    return this.updateResumeSection(resumeId, { certifications });
   }
 }
 

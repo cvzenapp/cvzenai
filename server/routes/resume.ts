@@ -244,7 +244,7 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
         createdAt: resume.created_at,
         updatedAt: resume.updated_at,
         personalInfo,
-        experience: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
+        experiences: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
@@ -332,7 +332,7 @@ export const getResumePublic = async (req: any, res: Response) => {
         createdAt: resume.created_at,
         updatedAt: resume.updated_at,
         personalInfo,
-        experience: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
+        experiences: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
@@ -423,7 +423,7 @@ export const getResume = async (req: AuthRequest, res: Response) => {
         createdAt: resume.created_at,
         updatedAt: resume.updated_at,
         personalInfo,
-        experience: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
+        experiences: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
@@ -535,7 +535,7 @@ export const createResume = async (req: AuthRequest, res: Response) => {
         summary: newResume.summary,
         objective: newResume.objective,
         skills: parseSkills(newResume.skills),
-        experience: typeof newResume.experience === 'string' ? JSON.parse(newResume.experience) : (newResume.experience || []),
+        experiences: typeof newResume.experience === 'string' ? JSON.parse(newResume.experience) : (newResume.experience || []),
         education: typeof newResume.education === 'string' ? JSON.parse(newResume.education) : (newResume.education || []),
         projects: typeof newResume.projects === 'string' ? JSON.parse(newResume.projects) : (newResume.projects || []),
         certifications: typeof newResume.certifications === 'string' ? JSON.parse(newResume.certifications) : (newResume.certifications || []),
@@ -660,7 +660,7 @@ export const updateResume = async (req: AuthRequest, res: Response) => {
         summary: updatedResume.summary,
         objective: updatedResume.objective,
         skills: parseSkills(updatedResume.skills),
-        experience: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
+        experiences: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
         education: typeof updatedResume.education === 'string' ? JSON.parse(updatedResume.education) : (updatedResume.education || []),
         projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : (updatedResume.projects || []),
         certifications: typeof updatedResume.certifications === 'string' ? JSON.parse(updatedResume.certifications) : (updatedResume.certifications || []),
@@ -862,6 +862,12 @@ export const updateResumeSection = async (req: AuthRequest, res: Response) => {
     }
 
     if (updates.projects !== undefined) {
+      console.log('🔍 Server: Updating projects:', updates.projects);
+      console.log('🔍 Server: Projects with dates:', updates.projects.map((p: any) => ({ 
+        name: p.name, 
+        startDate: p.startDate, 
+        endDate: p.endDate 
+      })));
       updateFields.push(`projects = $${paramIndex++}`);
       updateValues.push(JSON.stringify(updates.projects));
     }
@@ -911,7 +917,7 @@ export const updateResumeSection = async (req: AuthRequest, res: Response) => {
         summary: updatedResume.summary,
         objective: updatedResume.objective,
         skills: parseSkills(updatedResume.skills),
-        experience: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
+        experiences: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
         education: typeof updatedResume.education === 'string' ? JSON.parse(updatedResume.education) : (updatedResume.education || []),
         projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : (updatedResume.projects || []),
         certifications: typeof updatedResume.certifications === 'string' ? JSON.parse(updatedResume.certifications) : (updatedResume.certifications || []),

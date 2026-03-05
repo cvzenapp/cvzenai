@@ -77,6 +77,7 @@ export interface Project {
   startDate: string;
   endDate?: string;
   url?: string;
+  link?: string;
   github?: string;
   images?: string[];
   status?: string;

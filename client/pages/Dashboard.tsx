@@ -273,7 +273,9 @@ export default function Dashboard() {
             resumeData = [response.data];
           }
           
-          const formattedResumes: SavedResume[] = resumeData.map(resume => ({
+          const formattedResumes: SavedResume[] = resumeData
+            .filter(resume => resume.id) // Only include resumes with valid IDs
+            .map(resume => ({
             id: resume.id,
             name: resume.title || `${resume.personalInfo?.name || 'Untitled'} Resume`,
             personalInfo: {
@@ -457,7 +459,9 @@ export default function Dashboard() {
           resumeData = [response.data];
         }
         
-        const formattedResumes: SavedResume[] = resumeData.map(resume => ({
+        const formattedResumes: SavedResume[] = resumeData
+          .filter(resume => resume.id) // Only include resumes with valid IDs
+          .map(resume => ({
           id: resume.id,
           name: resume.title || `${resume.personalInfo?.name || 'Untitled'} Resume`,
           personalInfo: {
@@ -578,7 +582,9 @@ export default function Dashboard() {
 
         console.log('📋 Resume data array:', resumeData.map(r => ({ id: r.id, title: r.title, isActive: r.isActive })));
 
-        const formattedResumes: SavedResume[] = resumeData.map(resume => ({
+        const formattedResumes: SavedResume[] = resumeData
+          .filter(resume => resume.id) // Only include resumes with valid IDs
+          .map(resume => ({
           id: resume.id,
           name: resume.title || `${resume.personalInfo?.name || 'Untitled'} Resume`,
           personalInfo: {

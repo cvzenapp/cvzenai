@@ -60,10 +60,21 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
       ? JSON.parse(resume.personal_info) 
       : resume.personal_info;
     
+    // Get user information for candidate name
+    const userResult = await db.query(
+      'SELECT first_name, last_name FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    const user = userResult.rows[0];
     const userName = personalInfo?.name || 
                      personalInfo?.fullName || 
                      `${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}`.trim() ||
                      resume.email.split('@')[0];
+    
+    const candidateName = user && (user.first_name || user.last_name)
+      ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+      : userName;
     
     const slug = await generateUniqueSlug(db, userName);
 
@@ -136,7 +147,7 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
         jobApplicationEmailService.sendApplicationNotification({
           recruiterEmail,
           recruiterName,
-          candidateName: userName,
+          candidateName: candidateName,
           candidateEmail: resume.email,
           jobTitle: job.title,
           companyName: job.company_name || 'Your Company',

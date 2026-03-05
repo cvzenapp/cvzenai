@@ -192,7 +192,7 @@ export class WaitlistEmailService {
                 </div>
                 <div class="content">
                   <p>Hi ${name},</p>
-                  <p>Thank you for taking the <strong>"I DON'T print CV"</strong> pledge. You're now part of a growing community committed to sustainable hiring practices.</p>
+                  <p>Thank you for taking the <strong>"Go Papreless"</strong> pledge. You're now part of a growing community committed to sustainable hiring practices.</p>
                   
                   <div class="certificate">
                     <div class="certificate-title">🏆 Sustainability Pledge Certificate</div>

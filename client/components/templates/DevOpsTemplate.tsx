@@ -151,7 +151,7 @@ export default function DevOpsTemplate({
               size="sm"
               className="flex-1 flex items-center justify-center gap-1 text-xs"
               onClick={() => {
-                window.location.href = `/resume/1?template=tech-devops`;
+                window.location.href = `/builder?template=tech-devops`;
               }}
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

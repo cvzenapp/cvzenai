@@ -1,0 +1,339 @@
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Plus, Trash2, Sparkles } from 'lucide-react';
+import { unifiedAuthService } from '@/services/unifiedAuthService';
+
+interface Experience {
+  id?: string;
+  company: string;
+  position: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  description: string;
+  location?: string;
+}
+
+interface ExperienceEditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentExperiences: Experience[];
+  onSave: (experiences: Experience[]) => Promise<void>;
+  resumeData?: any;
+}
+
+export function ExperienceEditModal({
+  isOpen,
+  onClose,
+  currentExperiences,
+  onSave,
+  resumeData
+}: ExperienceEditModalProps) {
+  const [experiences, setExperiences] = useState<Experience[]>(currentExperiences);
+  const [selectedExperienceIndex, setSelectedExperienceIndex] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Initialize with current experiences when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const experiencesWithIds = currentExperiences.map((exp, index) => ({
+        ...exp,
+        id: exp.id || `exp-${Date.now()}-${index}`
+      }));
+      setExperiences(experiencesWithIds.length > 0 ? experiencesWithIds : [createNewExperience()]);
+      setSelectedExperienceIndex(0);
+    }
+  }, [isOpen, currentExperiences]);
+
+  const createNewExperience = (): Experience => ({
+    id: `exp-${Date.now()}`,
+    company: '',
+    position: '',
+    startDate: '',
+    endDate: '',
+    current: false,
+    description: '',
+    location: ''
+  });
+
+  const handleExperienceChange = (field: keyof Experience, value: string | boolean) => {
+    const updatedExperiences = [...experiences];
+    updatedExperiences[selectedExperienceIndex] = {
+      ...updatedExperiences[selectedExperienceIndex],
+      [field]: value
+    };
+    setExperiences(updatedExperiences);
+  };
+
+  const addExperience = () => {
+    const newExperience = createNewExperience();
+    setExperiences([...experiences, newExperience]);
+    setSelectedExperienceIndex(experiences.length);
+  };
+
+  const removeExperience = (index: number) => {
+    if (experiences.length <= 1) return;
+    
+    const updatedExperiences = experiences.filter((_, i) => i !== index);
+    setExperiences(updatedExperiences);
+    
+    // Adjust selected index
+    if (selectedExperienceIndex >= updatedExperiences.length) {
+      setSelectedExperienceIndex(updatedExperiences.length - 1);
+    }
+  };
+
+  const generateAIDescription = async () => {
+    const currentExperience = experiences[selectedExperienceIndex];
+    if (!currentExperience.company || !currentExperience.position) {
+      alert('Please fill in company and position first');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await fetch(`/api/ats/improve-section/${resumeData?.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...unifiedAuthService.getAuthHeaders()
+        },
+        body: JSON.stringify({
+          section: 'experience',
+          content: `${currentExperience.position} at ${currentExperience.company}`,
+          context: {
+            company: currentExperience.company,
+            position: currentExperience.position,
+            location: currentExperience.location
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.data?.improvedContent) {
+        handleExperienceChange('description', result.data.improvedContent);
+      } else {
+        throw new Error(result.error || 'Failed to generate description');
+      }
+    } catch (error) {
+      console.error('Error generating AI description:', error);
+      alert('Failed to generate AI description. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      // Filter out empty experiences
+      const validExperiences = experiences.filter(exp => 
+        exp.company.trim() && exp.position.trim()
+      );
+      
+      await onSave(validExperiences);
+      onClose();
+    } catch (error) {
+      console.error('Error saving experiences:', error);
+      alert('Failed to save experiences. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectedExperience = experiences[selectedExperienceIndex] || createNewExperience();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Edit Professional Experience
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex gap-6 h-[600px]">
+          {/* Left Panel - Experience List */}
+          <div className="w-1/3 border-r border-gray-200 pr-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-medium text-gray-900">Experiences</h3>
+              <Button
+                onClick={addExperience}
+                size="sm"
+                className="brand-button"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
+            </div>
+
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {experiences.map((experience, index) => (
+                <div
+                  key={experience.id}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedExperienceIndex === index
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedExperienceIndex(index)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-gray-900 truncate">
+                        {experience.position || 'New Position'}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">
+                        {experience.company || 'Company Name'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {experience.startDate} - {experience.current ? 'Present' : experience.endDate}
+                      </p>
+                    </div>
+                    {experiences.length > 1 && (
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeExperience(index);
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Panel - Experience Details */}
+          <div className="flex-1 space-y-4 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="position">Position *</Label>
+                <Input
+                  id="position"
+                  value={selectedExperience.position}
+                  onChange={(e) => handleExperienceChange('position', e.target.value)}
+                  placeholder="e.g., Senior Software Engineer"
+                />
+              </div>
+              <div>
+                <Label htmlFor="company">Company *</Label>
+                <Input
+                  id="company"
+                  value={selectedExperience.company}
+                  onChange={(e) => handleExperienceChange('company', e.target.value)}
+                  placeholder="e.g., Tech Corp Inc."
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={selectedExperience.location || ''}
+                onChange={(e) => handleExperienceChange('location', e.target.value)}
+                placeholder="e.g., San Francisco, CA"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="month"
+                  value={selectedExperience.startDate}
+                  onChange={(e) => handleExperienceChange('startDate', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="month"
+                  value={selectedExperience.endDate}
+                  onChange={(e) => handleExperienceChange('endDate', e.target.value)}
+                  disabled={selectedExperience.current}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="current"
+                checked={selectedExperience.current}
+                onChange={(e) => {
+                  handleExperienceChange('current', e.target.checked);
+                  if (e.target.checked) {
+                    handleExperienceChange('endDate', '');
+                  }
+                }}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="current" className="text-sm">
+                I currently work here
+              </Label>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <Label htmlFor="description">Job Description</Label>
+                <Button
+                  onClick={generateAIDescription}
+                  disabled={isGenerating || !selectedExperience.company || !selectedExperience.position}
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                >
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  {isGenerating ? 'Generating...' : 'AI Generate'}
+                </Button>
+              </div>
+              <Textarea
+                id="description"
+                value={selectedExperience.description}
+                onChange={(e) => handleExperienceChange('description', e.target.value)}
+                placeholder="Describe your key responsibilities and achievements..."
+                rows={8}
+                className="resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="brand-button"
+          >
+            {isLoading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

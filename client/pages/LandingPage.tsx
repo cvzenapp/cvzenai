@@ -440,7 +440,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex flex-col">
                   <div className="bg-green-600 text-white px-4 py-1 rounded-t-lg text-sm font-medium text-center">
-                    I DON'T print CV
+                   Go Papreless
                   </div>
                   <Button
                     variant="outline"
@@ -926,12 +926,7 @@ export default function LandingPage() {
                 >
                   Features
                 </Link>
-                <Link
-                  to="/templates"
-                  className="block text-brand-auxiliary-1 hover:text-brand-main transition-colors"
-                >
-                  Templates
-                </Link>
+                
                 <Link
                   to="/pricing"
                   className="block text-brand-auxiliary-1 hover:text-brand-main transition-colors"
@@ -1018,7 +1013,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-brand-auxiliary-1">
-              © 2025 CVZen. All rights reserved.
+              © 2026 CVZen. All rights reserved.
             </p>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
               <Link

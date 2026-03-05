@@ -36,6 +36,15 @@ interface TemplateRendererProps {
   ) => Promise<any>;
   isImprovingSection?: (sectionType: string, sectionIndex?: number) => boolean;
   showImproveButtons?: boolean;
+  // Edit modal handlers
+  setIsEditingPersonalInfo?: (editing: boolean) => void;
+  setIsEditingSummary?: (editing: boolean) => void;
+  setIsEditingObjective?: (editing: boolean) => void;
+  setIsEditingSkills?: (editing: boolean) => void;
+  setIsEditingProjects?: (editing: boolean) => void;
+  setIsEditingEducation?: (editing: boolean) => void;
+  setIsEditingExperience?: (editing: boolean) => void;
+  setIsEditingCertifications?: (editing: boolean) => void;
 }
 
 /**
@@ -62,6 +71,14 @@ export default function TemplateRenderer({
   improveSection,
   isImprovingSection,
   showImproveButtons = false,
+  setIsEditingPersonalInfo,
+  setIsEditingSummary,
+  setIsEditingObjective,
+  setIsEditingSkills,
+  setIsEditingProjects,
+  setIsEditingEducation,
+  setIsEditingExperience,
+  setIsEditingCertifications,
 }: TemplateRendererProps) {
   // Error boundary for template loading failures
   if (!templateConfig) {
@@ -131,6 +148,14 @@ export default function TemplateRenderer({
     improveSection,
     isImprovingSection,
     showImproveButtons,
+    setIsEditingPersonalInfo,
+    setIsEditingSummary,
+    setIsEditingObjective,
+    setIsEditingSkills,
+    setIsEditingProjects,
+    setIsEditingEducation,
+    setIsEditingExperience,
+    setIsEditingCertifications,
   };
 
   // Template routing with fallback system

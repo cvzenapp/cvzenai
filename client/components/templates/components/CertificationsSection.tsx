@@ -21,13 +21,13 @@ export function CertificationsSection({
 
   return (
     <div className={`certifications-section ${className}`}>
-      <h2 
+      {/* <h2 
         className="text-2xl font-bold mb-6 flex items-center gap-2"
         style={{ color: `var(--template-primary-color, ${primaryColor})` }}
       >
         <Award className="w-6 h-6" />
         Certifications
-      </h2>
+      </h2> */}
 
       <div className="space-y-3">
         {certifications.map((cert, index) => (

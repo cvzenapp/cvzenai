@@ -124,9 +124,9 @@ export default function ResumeBuilder() {
   // Enhanced template state
   const templateParam = searchParams.get("template") as ExtendedTemplateCategory;
   const editMode = searchParams.get("edit") === "true"; // Check if we're in edit mode
-  const resumeId = searchParams.get("id") || "resume-1"; // Get resume ID from URL, default to "resume-1"
+  const resumeId = searchParams.get("id") || null; // Get resume ID from URL, null if creating new
 
-  const formStateManager = useFormStateManager(resumeId);
+  const formStateManager = useFormStateManager(resumeId || "new-resume");
   const { state: formState, updateField, setFormState, addArrayItem, removeArrayItem, updateArrayItem } = formStateManager;
   // validation hook removed - no longer needed
 
@@ -281,7 +281,7 @@ export default function ResumeBuilder() {
       try {
         let targetResume = null;
 
-        if (resumeId && resumeId !== "resume-1") {
+        if (resumeId && resumeId !== "new-resume") {
           // Load specific resume by ID
           console.log(`🌐 Fetching specific resume ID: ${resumeId}`);
           const resumeResponse = await resumeApi.getResume(resumeId);
@@ -415,7 +415,7 @@ export default function ResumeBuilder() {
 
       // If not found, try common resume keys
       if (!loadedFromLocalStorage) {
-        const commonKeys = ['resume-1', '1', 'resume-2', '2'];
+        const commonKeys = ['1', '2', '3'];
         for (const key of commonKeys) {
           const data = localStorage.getItem(key);
           if (data) {
@@ -543,7 +543,7 @@ export default function ResumeBuilder() {
           status: 'published' as const
         };
 
-        if (currentResumeId === 'resume-1') {
+        if (currentResumeId === 'new-resume' || !currentResumeId) {
           // Create new resume
           const response = await resumeApi.createResume(saveData);
           if (!response.success) {
@@ -560,7 +560,7 @@ export default function ResumeBuilder() {
         }
         // console.log("✅ Resume saved to database successfully:", result);
 
-        if (currentResumeId === 'resume-1' && result?.id) {
+        if ((currentResumeId === 'new-resume' || !currentResumeId) && result?.id) {
           currentResumeId = result.id.toString();
           // Update URL with new ID using setSearchParams
           // This will cause a re-render with the new ID
@@ -584,8 +584,10 @@ export default function ResumeBuilder() {
         });
 
         // Clear localStorage to force preview to use fresh API data
-        localStorage.removeItem(currentResumeId);
-        localStorage.removeItem("resume-1");
+        if (currentResumeId && currentResumeId !== 'new-resume') {
+          localStorage.removeItem(currentResumeId);
+        }
+        localStorage.removeItem("new-resume");
         console.log("🧹 Cleared localStorage to force fresh API data load");
 
         // Refresh the form data by re-fetching from API

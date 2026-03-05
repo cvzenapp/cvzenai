@@ -52,6 +52,7 @@
     "axios": "^1.13.4",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
@@ -69,11 +70,11 @@
     "openai": "^6.17.0",
     "pdf-parse": "^1.1.1",
     "pg": "^8.16.3",
+    "razorpay": "^2.9.6",
     "react-markdown": "^10.1.0",
     "react-redux": "^9.2.0",
     "stripe": "^18.4.0",
-    "zod": "^3.23.8",
-    "cors": "^2.8.5"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.9.0",

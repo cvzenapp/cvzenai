@@ -129,145 +129,202 @@ export function ProjectsCarousel({
           scrollbarWidth: 'thin',
           scrollbarColor: `var(--template-accent-color, ${accentColor}) #f1f5f9`
         }}>
-          {/* Project Image Thumbnail (if available) */}
-          {currentProject.images && currentProject.images.length > 0 && (
-            <div 
-              className="mb-4 relative group cursor-pointer rounded-lg overflow-hidden border-2 border-slate-200 hover:border-slate-300 transition-colors"
-              onClick={openImageModal}
-            >
-              <img 
-                src={currentProject.images[0]} 
-                alt={`${currentProject.title || currentProject.name} preview`}
-                className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Maximize2 className="w-6 h-6 text-white drop-shadow-lg" />
-                  {currentProject.images.length > 1 && (
-                    <span className="text-white text-sm font-medium drop-shadow-lg">
-                      {currentProject.images.length} images
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Project Title */}
-          <div className="mb-4 sticky top-0 pb-2 z-10" style={{ backgroundColor: 'var(--template-background-color, #ffffff)' }}>
-            <div className="flex items-center justify-between gap-3">
-              <h3 
-                className="text-xl font-bold flex-1"
-                style={{ 
-                  fontFamily: 'var(--template-font-family, ' + fontFamily + ')',
-                  fontWeight: 'var(--template-heading-weight, ' + headingWeight + ')',
-                  color: 'var(--template-primary-color, ' + primaryColor + ')'
-                }}
-              >
-                {currentProject.title || currentProject.name}
-              </h3>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {currentProject.status && (
-                  <Badge variant="secondary">
-                    {currentProject.status}
-                  </Badge>
-                )}
-                {/* Improve Button */}
-                {showImproveButtons && improveSection && (
-                  <button
-                    onClick={() => improveSection('project', currentProject, currentIndex)}
-                    disabled={isImproving}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      background: `linear-gradient(to right, var(--template-primary-color, ${primaryColor}), var(--template-accent-color, ${accentColor}))`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '0.9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '1';
+          {/* Full Width Project Details */}
+          <div className="flex flex-col h-full">
+            {/* Project Title */}
+              <div className="mb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 
+                    className="text-lg font-bold flex-1"
+                    style={{ 
+                      fontFamily: 'var(--template-font-family, ' + fontFamily + ')',
+                      fontWeight: 'var(--template-heading-weight, ' + headingWeight + ')',
+                      color: 'var(--template-primary-color, ' + primaryColor + ')'
                     }}
                   >
-                    <svg className={`w-3 h-3 ${isImproving ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                    {isImproving ? 'Improving...' : 'Improve'}
+                    {currentProject.title || currentProject.name}
+                  </h3>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {currentProject.status && (
+                      <Badge variant="secondary" className="text-xs">
+                        {currentProject.status}
+                      </Badge>
+                    )}
+                    {/* Improve Button */}
+                    {showImproveButtons && improveSection && (
+                      <button
+                        onClick={() => improveSection('project', currentProject, currentIndex)}
+                        disabled={isImproving}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          background: `linear-gradient(to right, var(--template-primary-color, ${primaryColor}), var(--template-accent-color, ${accentColor}))`,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                      >
+                        <svg className={`w-3 h-3 ${isImproving ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        {isImproving ? 'Improving...' : 'Improve'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Project Description */}
+              <div className="flex-1 mb-3">
+                <p className="leading-relaxed text-sm" style={{ color: 'var(--template-text-muted, #6b7280)' }}>
+                  {currentProject.description}
+                </p>
+              </div>
+
+              {/* Bottom Row: Date, Links, Images */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {/* Date Range */}
+                  {(currentProject.startDate || currentProject.endDate) && (
+                    <span className="text-xs px-2 py-1 bg-slate-100 rounded-md" style={{ color: 'var(--template-text-muted, #6b7280)' }}>
+                      {currentProject.startDate} {currentProject.startDate && currentProject.endDate && '→'} {currentProject.endDate || 'Present'}
+                    </span>
+                  )}
+                  
+                  {/* Project Links */}
+                  {currentProject.link && (
+                    <a
+                      href={currentProject.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border transition-colors hover:shadow-sm"
+                      style={{ 
+                        borderColor: 'var(--template-primary-color, ' + primaryColor + ')',
+                        color: 'var(--template-primary-color, ' + primaryColor + ')',
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--template-primary-color, ' + primaryColor + ')';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--template-primary-color, ' + primaryColor + ')';
+                      }}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      Demo
+                    </a>
+                  )}
+                  {currentProject.github && (
+                    <a
+                      href={currentProject.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border transition-colors hover:shadow-sm"
+                      style={{ 
+                        borderColor: 'var(--template-primary-color, ' + primaryColor + ')',
+                        color: 'var(--template-primary-color, ' + primaryColor + ')',
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--template-primary-color, ' + primaryColor + ')';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--template-primary-color, ' + primaryColor + ')';
+                      }}
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                      </svg>
+                      GitHub
+                    </a>
+                  )}
+                  {currentProject.url && !currentProject.link && (
+                    <a
+                      href={currentProject.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border transition-colors hover:shadow-sm"
+                      style={{ 
+                        borderColor: 'var(--template-primary-color, ' + primaryColor + ')',
+                        color: 'var(--template-primary-color, ' + primaryColor + ')',
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--template-primary-color, ' + primaryColor + ')';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--template-primary-color, ' + primaryColor + ')';
+                      }}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      Demo
+                    </a>
+                  )}
+                </div>
+
+                {/* View Images Link */}
+                {currentProject.images && currentProject.images.length > 0 && (
+                  <button
+                    onClick={openImageModal}
+                    className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all hover:shadow-sm"
+                    style={{ 
+                      backgroundColor: 'var(--template-primary-color, ' + primaryColor + ')',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '';
+                    }}
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    View Images ({currentProject.images.length})
                   </button>
                 )}
               </div>
-            </div>
+
+              {/* Technologies */}
+              {currentProject.technologies && currentProject.technologies.length > 0 && (
+                <div className="mb-3">
+                  <div className="flex flex-wrap gap-1">
+                    {currentProject.technologies.slice(0, 4).map((tech, idx) => (
+                      <Badge 
+                        key={idx} 
+                        variant="outline"
+                        className="text-xs px-2 py-0"
+                        style={{ 
+                          borderColor: 'var(--template-accent-color, ' + accentColor + ')',
+                          color: 'var(--template-primary-color, ' + primaryColor + ')',
+                          backgroundColor: 'var(--template-background-color, #ffffff)'
+                        }}
+                      >
+                        {tech}
+                      </Badge>
+                    ))}
+                    {currentProject.technologies.length > 4 && (
+                      <Badge variant="outline" className="text-xs px-2 py-0">
+                        +{currentProject.technologies.length - 4}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
           </div>
-
-          {/* Project Description */}
-          <p className="leading-relaxed mb-4" style={{ color: 'var(--template-text-muted, #6b7280)' }}>
-            {currentProject.description}
-          </p>
-
-          {/* Technologies */}
-          {currentProject.technologies && currentProject.technologies.length > 0 && (
-            <div className="mb-4">
-              <div className="flex flex-wrap gap-2">
-                {currentProject.technologies.map((tech, idx) => (
-                  <Badge 
-                    key={idx} 
-                    variant="outline"
-                    className="text-xs"
-                    style={{ 
-                      borderColor: 'var(--template-accent-color, ' + accentColor + ')',
-                      color: 'var(--template-primary-color, ' + primaryColor + ')',
-                      backgroundColor: 'var(--template-background-color, #ffffff)'
-                    }}
-                  >
-                    {tech}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Project Links */}
-          <div className="flex flex-wrap gap-3 mt-4">
-            {currentProject.link && (
-              <a
-                href={currentProject.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium hover:underline"
-                style={{ color: 'var(--template-primary-color, ' + primaryColor + ')' }}
-              >
-                View Project →
-              </a>
-            )}
-            {currentProject.github && (
-              <a
-                href={currentProject.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium hover:underline"
-                style={{ color: 'var(--template-primary-color, ' + primaryColor + ')' }}
-              >
-                GitHub →
-              </a>
-            )}
-            {currentProject.url && !currentProject.link && (
-              <a
-                href={currentProject.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium hover:underline"
-                style={{ color: 'var(--template-primary-color, ' + primaryColor + ')' }}
-              >
-                Live Demo →
-              </a>
-            )}
-          </div>
-
-          {/* Date Range */}
-          {(currentProject.startDate || currentProject.endDate) && (
-            <div className="mt-4 text-sm" style={{ color: 'var(--template-text-muted, #9ca3af)' }}>
-              {currentProject.startDate} {currentProject.startDate && currentProject.endDate && '→'} {currentProject.endDate || 'Present'}
-            </div>
-          )}
         </CardContent>
       </Card>
 

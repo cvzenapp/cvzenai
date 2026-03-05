@@ -121,20 +121,21 @@ function getLanguageColor(language: string): string {
   return colors[language] || '#858585';
 }
 
-// Add CSS styles
+// Add CSS styles with template customization support
 const styles = `
 .github-repo-card {
-  background: linear-gradient(135deg, #f6f8fa 0%, #ffffff 100%);
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
+  background: linear-gradient(135deg, var(--template-background-color, #f6f8fa) 0%, var(--template-background-color, #ffffff) 100%);
+  border: 1px solid rgba(from var(--template-primary-color, #d0d7de) r g b / 0.2);
+  border-radius: var(--template-border-radius, 8px);
   padding: 1rem;
   margin-top: 0.75rem;
   transition: all 0.3s ease;
+  font-family: var(--template-font-family, inherit);
 }
 
 .github-repo-card:hover {
-  border-color: #0969da;
-  box-shadow: 0 4px 12px rgba(9, 105, 218, 0.15);
+  border-color: var(--template-primary-color, #0969da);
+  box-shadow: 0 4px 12px rgba(from var(--template-primary-color, #0969da) r g b / 0.15);
   transform: translateY(-2px);
 }
 
@@ -152,35 +153,38 @@ const styles = `
 }
 
 .github-icon {
-  color: #0969da;
+  color: var(--template-primary-color, #0969da);
   flex-shrink: 0;
 }
 
 .github-repo-link {
-  font-weight: 600;
-  color: #0969da;
+  font-weight: var(--template-heading-weight, 600);
+  color: var(--template-primary-color, #0969da);
   text-decoration: none;
   display: flex;
   align-items: center;
   gap: 0.375rem;
   font-size: 0.9375rem;
   transition: color 0.2s ease;
+  font-family: var(--template-font-family, inherit);
 }
 
 .github-repo-link:hover {
-  color: #0550ae;
+  color: var(--template-accent-color, #0550ae);
   text-decoration: underline;
 }
 
 .external-link-icon {
   opacity: 0.6;
+  color: var(--template-primary-color, #0969da);
 }
 
 .github-repo-description {
   font-size: 0.875rem;
-  color: #57606a;
+  color: var(--template-secondary-color, #57606a);
   line-height: 1.5;
   margin: 0.5rem 0;
+  font-family: var(--template-font-family, inherit);
 }
 
 .github-repo-stats {
@@ -196,20 +200,21 @@ const styles = `
   align-items: center;
   gap: 0.375rem;
   font-size: 0.8125rem;
-  color: #57606a;
+  color: var(--template-secondary-color, #57606a);
+  font-family: var(--template-font-family, inherit);
 }
 
 .stat-icon {
-  color: #656d76;
+  color: var(--template-accent-color, #656d76);
 }
 
 .stat-value {
-  font-weight: 600;
-  color: #24292f;
+  font-weight: var(--template-heading-weight, 600);
+  color: var(--template-primary-color, #24292f);
 }
 
 .stat-label {
-  color: #656d76;
+  color: var(--template-secondary-color, #656d76);
 }
 
 .github-repo-meta {
@@ -219,7 +224,7 @@ const styles = `
   flex-wrap: wrap;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #d0d7de;
+  border-top: 1px solid rgba(from var(--template-primary-color, #d0d7de) r g b / 0.2);
 }
 
 .github-language {
@@ -227,7 +232,8 @@ const styles = `
   align-items: center;
   gap: 0.375rem;
   font-size: 0.8125rem;
-  color: #57606a;
+  color: var(--template-secondary-color, #57606a);
+  font-family: var(--template-font-family, inherit);
 }
 
 .language-dot {
@@ -238,10 +244,11 @@ const styles = `
 
 .github-license {
   font-size: 0.8125rem;
-  color: #57606a;
+  color: var(--template-secondary-color, #57606a);
   padding: 0.125rem 0.5rem;
-  background: #f6f8fa;
-  border-radius: 4px;
+  background: rgba(from var(--template-primary-color, #f6f8fa) r g b / 0.1);
+  border-radius: var(--template-border-radius, 4px);
+  font-family: var(--template-font-family, inherit);
 }
 
 .github-topics {
@@ -252,11 +259,35 @@ const styles = `
 
 .github-topic {
   font-size: 0.75rem;
-  color: #0969da;
-  background: #ddf4ff;
+  color: var(--template-primary-color, #0969da);
+  background: rgba(from var(--template-primary-color, #ddf4ff) r g b / 0.15);
   padding: 0.125rem 0.5rem;
   border-radius: 12px;
   font-weight: 500;
+  font-family: var(--template-font-family, inherit);
+}
+
+/* Fallback for browsers that don't support rgba(from ...) */
+@supports not (background-color: rgba(from white r g b / 0.1)) {
+  .github-repo-card {
+    border: 1px solid #d0d7de;
+  }
+  
+  .github-repo-card:hover {
+    box-shadow: 0 4px 12px rgba(9, 105, 218, 0.15);
+  }
+  
+  .github-repo-meta {
+    border-top: 1px solid #d0d7de;
+  }
+  
+  .github-license {
+    background: #f6f8fa;
+  }
+  
+  .github-topic {
+    background: #ddf4ff;
+  }
 }
 
 @media (max-width: 640px) {

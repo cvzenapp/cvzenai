@@ -17,6 +17,8 @@ export function useGitHubUserRepositories(githubProfileUrl?: string) {
       return;
     }
 
+    console.log('🔄 GitHub hook triggered with URL:', githubProfileUrl);
+
     let cancelled = false;
 
     const fetchRepos = async () => {
@@ -31,6 +33,7 @@ export function useGitHubUserRepositories(githubProfileUrl?: string) {
           if (repos.length === 0) {
             setError('No repositories found or invalid GitHub profile');
           }
+          console.log('✅ GitHub repositories loaded:', repos.length);
         }
       } catch (err) {
         if (!cancelled) {

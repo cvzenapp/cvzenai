@@ -118,28 +118,12 @@ export const SkillsGraphChart: React.FC<SkillsGraphChartProps> = ({
       `}</style>
       <div 
         ref={containerRef}
-        className="rounded-lg p-6 hover:shadow-sm transition-shadow w-full"
+        className="rounded-lg p-2 hover:shadow-sm transition-shadow w-full"
            style={{ 
              backgroundColor: 'var(--template-background-color, #ffffff)',
-             border: '1px solid var(--template-border-color, #e5e7eb)'
            }}>
       {/* Chart Title */}
-      <div className="flex items-center gap-3 mb-6">
-        <div 
-          className="w-1 h-6 rounded-full" 
-          style={{ backgroundColor: primaryColor }}
-        />
-        <h3 
-          className="text-lg font-bold" 
-          style={{ 
-            color: primaryColor,
-            fontFamily: 'var(--template-font-family)',
-            fontWeight: 'var(--template-heading-weight)'
-          }}
-        >
-          {title}
-        </h3>
-      </div>
+     
 
       {/* Legend - Core Skills Indicator */}
       {coreSkills.length > 0 && (

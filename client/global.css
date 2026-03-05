@@ -218,11 +218,13 @@ h1, h2, h3{
   }
 
   .brand-button {
-    @apply font-russo font-normal bg-brand-main text-white hover:bg-brand-background transition-colors;
+    @apply font-normal bg-brand-main text-white hover:bg-brand-background transition-colors;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   .brand-button-outline {
-    @apply font-russo font-normal border-2 border-brand-main text-brand-main hover:bg-brand-main hover:text-white transition-colors;
+    @apply font-normal border-2 border-brand-main text-brand-main hover:bg-brand-main hover:text-white transition-colors;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   .brand-header-bg {

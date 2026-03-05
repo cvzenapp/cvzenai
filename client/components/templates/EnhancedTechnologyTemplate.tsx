@@ -59,9 +59,7 @@ import {
   Maximize2,
   X,
 } from "lucide-react";
-import { EducationCarousel } from "./components/EducationCarousel";
 import { ExperienceCarousel } from "./components/ExperienceCarousel";
-import { SkillsBarChart } from "./components/SkillsBarChart";
 import { SkillsGraphChart } from "./components/SkillsGraphChart";
 import { ProjectsCarousel } from "./components/ProjectsCarousel";
 import { CertificationsSection } from "./components/CertificationsSection";
@@ -84,6 +82,15 @@ interface EnhancedTechnologyTemplateProps {
   improveSection?: (type: string, data: any, index?: number) => Promise<any>;
   isImprovingSection?: (type: string, index?: number) => boolean;
   showImproveButtons?: boolean;
+  // Edit modal handlers
+  setIsEditingPersonalInfo?: (editing: boolean) => void;
+  setIsEditingSummary?: (editing: boolean) => void;
+  setIsEditingObjective?: (editing: boolean) => void;
+  setIsEditingSkills?: (editing: boolean) => void;
+  setIsEditingProjects?: (editing: boolean) => void;
+  setIsEditingEducation?: (editing: boolean) => void;
+  setIsEditingExperience?: (editing: boolean) => void;
+  setIsEditingCertifications?: (editing: boolean) => void;
 }
 
 export default function EnhancedTechnologyTemplate({
@@ -102,6 +109,14 @@ export default function EnhancedTechnologyTemplate({
   improveSection,
   isImprovingSection,
   showImproveButtons = false,
+  setIsEditingPersonalInfo,
+  setIsEditingSummary,
+  setIsEditingObjective,
+  setIsEditingSkills,
+  setIsEditingProjects,
+  setIsEditingEducation,
+  setIsEditingExperience,
+  setIsEditingCertifications,
 }: EnhancedTechnologyTemplateProps) {
   // HFI Optimization: Three-tier information hierarchy
   // Tier 1: Critical Assessment (3 seconds) - Name, title, contact, key metrics
@@ -111,7 +126,7 @@ export default function EnhancedTechnologyTemplate({
   // Dynamic Customization State - simplified to work with unified system
   const [appliedCustomization, setAppliedCustomization] = useState<TemplateCustomization | null>(null);
 
-  // Fetch GitHub repositories from user's profile
+  // Fetch GitHub repositories from user's profile - force re-fetch when GitHub URL changes
   const { repositories: githubRepos, loading: githubLoading } = useGitHubUserRepositories(
     resume.personalInfo?.github
   );
@@ -345,7 +360,19 @@ export default function EnhancedTechnologyTemplate({
                   </p>
 
                   {/* Contact Information - Clean and Scannable */}
-                  <div className="space-y-3">
+                  <div className="space-y-3 relative">
+                    {/* Contact Edit Button */}
+                    {showImproveButtons && (
+                      <button
+                        onClick={() => setIsEditingPersonalInfo?.(true)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+                        title="Edit Contact Info"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
                     {resume.personalInfo?.email && (
                       <a href={`mailto:${resume.personalInfo.email}`} 
                          className="flex items-center gap-3 transition-all duration-300 group hover:bg-white/10 rounded-lg p-2 -m-2">
@@ -473,39 +500,45 @@ export default function EnhancedTechnologyTemplate({
         {/* TIER 2: Qualification Review Zone (10-second scan) */}
         <div className="hfi-tier-2 bg-white">
           
-          {/* Professional Summary & Career Objective - Two Column Layout */}
-          <div className={`${responsiveValues.horizontalPadding} py-4 border-b border-slate-100`}>
-            <div className="grid lg:grid-cols-2 gap-6">
-              
-              {/* Left Column: Professional Summary */}
-              <div className="flex flex-col h-[280px]">
-                {renderSection('summary', (
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-center justify-between gap-2 mb-4 flex-shrink-0">
-                      <h2 className="text-2xl font-bold flex items-center gap-2" 
-                          style={{ 
-                            color: 'var(--template-primary-color)',
-                            fontFamily: 'var(--template-font-family)',
-                            fontWeight: 'var(--template-heading-weight)'
-                          }}>
-                        <Users size={24} />
-                        Professional Summary
-                      </h2>
+          {/* Professional Summary & Career Objective - Full Width Sections */}
+          <div className={`${responsiveValues.horizontalPadding} py-4 border-b border-slate-100 space-y-6`}>
+            
+            {/* Professional Summary - Full Width */}
+            <div className="w-full">
+              {renderSection('summary', (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                       style={{ 
+                         background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                       }}>
+                    <h4 className="text-2xl flex items-center gap-2 text-white" 
+                        style={{ 
+                          fontFamily: 'var(--template-font-family)',
+                          fontWeight: 'var(--template-heading-weight)'
+                        }}>
+                      <Users size={20} />
+                      Professional Summary
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      {/* Edit Button */}
+                      {showImproveButtons && (
+                        <button
+                          onClick={() => setIsEditingSummary?.(true)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                          title="Edit Summary"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
+                      )}
                       {/* Improve Button */}
                       {showImproveButtons && improveSection && resume.summary && (
                         <button
                           onClick={() => improveSection('summary', resume.summary)}
                           disabled={isImprovingSection?.('summary')}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                          style={{
-                            background: `linear-gradient(to right, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 transition-colors"
                         >
                           <svg className={`w-3 h-3 ${isImprovingSection?.('summary') ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -514,58 +547,65 @@ export default function EnhancedTechnologyTemplate({
                         </button>
                       )}
                     </div>
-                    {resume.summary ? (
-                      <div className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex-1 overflow-y-auto relative ${isImprovingSection?.('summary') ? 'animate-pulse' : ''}`} style={{
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: 'var(--template-primary-color) #f1f1f1'
-                      }}>
-                        {isImprovingSection?.('summary') && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer pointer-events-none rounded-xl"></div>
-                        )}
-                        <p className="text-slate-700 leading-relaxed text-base">
-                          {resume.summary}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-8 text-center flex-1 flex flex-col items-center justify-center">
-                        <Eye className="w-10 h-10 text-slate-400 mb-3" />
+                  </div>
+                  {resume.summary ? (
+                    <div className={`p-6 relative ${isImprovingSection?.('summary') ? 'animate-pulse' : ''}`}>
+                      {isImprovingSection?.('summary') && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer pointer-events-none"></div>
+                      )}
+                      <p className="text-slate-700 leading-relaxed text-base">
+                        {resume.summary}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-6">
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-8 text-center">
+                        <Eye className="w-10 h-10 text-slate-400 mb-3 mx-auto" />
                         <p className="text-slate-500 text-base font-medium mb-1">Add Professional Summary</p>
                         <p className="text-slate-400 text-sm">Showcase your expertise and value</p>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Right Column: Career Objective */}
-              <div className="flex flex-col h-[280px]">
-                {renderSection('objective', (
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-center justify-between gap-2 mb-4 flex-shrink-0">
-                      <h2 className="text-2xl font-bold flex items-center gap-2" 
-                          style={{ 
-                            color: 'var(--template-primary-color)',
-                            fontFamily: 'var(--template-font-family)',
-                            fontWeight: 'var(--template-heading-weight)'
-                          }}>
-                        <Target size={24} />
-                        Career Objective
-                      </h2>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Career Objective - Full Width */}
+            <div className="w-full">
+              {renderSection('objective', (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                       style={{ 
+                         background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                       }}>
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                        style={{ 
+                          fontFamily: 'var(--template-font-family)',
+                          fontWeight: 'var(--template-heading-weight)'
+                        }}>
+                      <Target size={20} />
+                      Career Objective
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      {/* Edit Button */}
+                      {showImproveButtons && (
+                        <button
+                          onClick={() => setIsEditingObjective?.(true)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                          title="Edit Objective"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
+                      )}
                       {/* Improve Button */}
                       {showImproveButtons && improveSection && resume.objective && (
                         <button
                           onClick={() => improveSection('objective', resume.objective)}
                           disabled={isImprovingSection?.('objective')}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                          style={{
-                            background: `linear-gradient(to right, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 transition-colors"
                         >
                           <svg className={`w-3 h-3 ${isImprovingSection?.('objective') ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -574,28 +614,27 @@ export default function EnhancedTechnologyTemplate({
                         </button>
                       )}
                     </div>
-                    {resume.objective ? (
-                      <div className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex-1 overflow-y-auto relative ${isImprovingSection?.('objective') ? 'animate-pulse' : ''}`} style={{
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: 'var(--template-primary-color) #f1f1f1'
-                      }}>
-                        {isImprovingSection?.('objective') && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer pointer-events-none rounded-xl"></div>
-                        )}
-                        <p className="text-slate-700 leading-relaxed text-base">
-                          {resume.objective}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-8 text-center flex-1 flex flex-col items-center justify-center">
-                        <Target className="w-10 h-10 text-slate-400 mb-3" />
+                  </div>
+                  {resume.objective ? (
+                    <div className={`p-6 relative ${isImprovingSection?.('objective') ? 'animate-pulse' : ''}`}>
+                      {isImprovingSection?.('objective') && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer pointer-events-none"></div>
+                      )}
+                      <p className="text-slate-700 leading-relaxed text-base">
+                        {resume.objective}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-6">
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-8 text-center">
+                        <Target className="w-10 h-10 text-slate-400 mb-3 mx-auto" />
                         <p className="text-slate-500 text-base font-medium mb-1">Add Career Objective</p>
                         <p className="text-slate-400 text-sm">Define your career goals</p>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -603,90 +642,170 @@ export default function EnhancedTechnologyTemplate({
         {/* TIER 3: Detailed Evaluation Zone (30+ second deep dive) */}
         <div className="hfi-tier-3 bg-slate-50">
           
-          {/* Experience & Education Row */}
-          <div className={`grid lg:grid-cols-3 ${responsiveValues.gap} ${responsiveValues.horizontalPadding} py-4`}>
-            
-            {/* Professional Experience - 2/3 width */}
-            {renderSection('experience', (
-              <div className={`lg:col-span-2 ${responsiveValues.sectionSpacing}`}>
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" 
-                  style={{ 
-                    color: 'var(--template-primary-color)',
-                    fontFamily: 'var(--template-font-family)',
-                    fontWeight: 'var(--template-heading-weight)'
-                  }}>
-                <Briefcase size={24} />
-                Professional Experience
-              </h2>
-
-              {resume.experiences && resume.experiences.length > 0 ? (
-                <ExperienceCarousel 
-                  experiences={resume.experiences}
-                  improveSection={improveSection}
-                  isImprovingSection={isImprovingSection}
-                  showImproveButtons={showImproveButtons}
-                />
-              ) : (
-                <Card className="border-2 border-dashed border-slate-200" style={{ height: '320px' }}>
-                  <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full">
-                    <Briefcase className="w-12 h-12 text-slate-400 mb-4" />
-                    <p className="text-slate-500 text-lg font-medium mb-2">No experience added yet</p>
-                    <p className="text-slate-400">Add your professional experience to build credibility</p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              </div>
-            ))}
-
-            {/* Education & Skills Sidebar - 1/3 width */}
-            {renderSection('education', (
-              <div className={responsiveValues.sectionSpacing}>
-                
-                {/* Education Carousel */}
-                <div className={responsiveValues.sectionSpacing}>
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2" 
-                    style={{ 
-                      color: 'var(--template-primary-color)',
-                      fontFamily: 'var(--template-font-family)',
-                      fontWeight: 'var(--template-heading-weight)'
-                    }}>
-                  <GraduationCap size={20} />
-                  Education
-                </h2>
+          {/* Education - Full Width */}
+          {renderSection('education', (
+            <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200`}>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                     style={{ 
+                       background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                     }}>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                      style={{ 
+                        fontFamily: 'var(--template-font-family)',
+                        fontWeight: 'var(--template-heading-weight)'
+                      }}>
+                    <GraduationCap size={20} />
+                    Education
+                  </h2>
+                  {/* Edit Button */}
+                  {showImproveButtons && (
+                    <button
+                      onClick={() => setIsEditingEducation?.(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                      title="Edit Education"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
+                </div>
                 
                 {resume.education && resume.education.length > 0 ? (
-                  <EducationCarousel education={resume.education} />
+                  <div className="p-6">
+                    <div className="max-h-80 overflow-y-auto space-y-3">
+                      {resume.education.map((edu, index) => (
+                        <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-4 h-24 flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <h3 className="font-bold text-base" style={{ color: 'var(--template-primary-color)' }}>
+                                  {edu.institution}
+                                </h3>
+                                <p className="text-sm text-slate-600">
+                                  {edu.degree} in {edu.field}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-slate-500">
+                                  {edu.startDate} - {edu.endDate || 'Present'}
+                                </p>
+                                {edu.gpa && (
+                                  <p className="text-xs font-medium px-2 py-1 bg-slate-100 rounded inline-block mt-1" 
+                                     style={{ color: 'var(--template-primary-color)' }}>
+                                    GPA: {edu.gpa}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ) : (
-                  <Card className="border-2 border-dashed border-slate-200" style={{ height: '320px' }}>
-                    <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full">
-                      <GraduationCap className="w-12 h-12 text-slate-400 mb-4" />
+                  <div className="p-6">
+                    <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                      <GraduationCap className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                       <p className="text-slate-500 text-lg font-medium mb-2">No education added yet</p>
                       <p className="text-slate-400">Add education details</p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )}
               </div>
+            </div>
+          ))}
 
+          {/* Experience - Full Width */}
+          {renderSection('experience', (
+            <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200`}>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                     style={{ 
+                       background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                     }}>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                      style={{ 
+                        fontFamily: 'var(--template-font-family)',
+                        fontWeight: 'var(--template-heading-weight)'
+                      }}>
+                    <Briefcase size={20} />
+                    Professional Experience
+                  </h2>
+                  {/* Edit Button */}
+                  {showImproveButtons && (
+                    <button
+                      onClick={() => setIsEditingExperience?.(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                      title="Edit Experience"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
+                </div>
+                
+                {resume.experiences && resume.experiences.length > 0 ? (
+                  <div className="p-6">
+                    <ExperienceCarousel 
+                      experiences={resume.experiences}
+                      improveSection={improveSection}
+                      isImprovingSection={isImprovingSection}
+                      showImproveButtons={showImproveButtons}
+                    />
+                  </div>
+                ) : (
+                  <div className="p-6">
+                    <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                      <Briefcase className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-500 text-lg font-medium mb-2">No experience added yet</p>
+                      <p className="text-slate-400">Add your professional experience to build credibility</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
 
-           {/* Projects & GitHub Repositories - Two Column Layout */}
+           {/* Projects & GitHub Repositories - 70/30 Split */}
           {renderSection('projects-github', (
             <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200`}>
-              <div className="grid lg:grid-cols-2 gap-6 items-start">
+              <div className="grid lg:grid-cols-10 gap-6 items-start">
                 
-                {/* Left Column: Projects Portfolio */}
-                <div className="flex flex-col">
-                  <h2 className="text-2xl font-bold mb-6 flex-shrink-0" 
-                  style={{ 
-                    color: 'var(--template-primary-color)',
-                    fontFamily: 'var(--template-font-family)',
-                    fontWeight: 'var(--template-heading-weight)'
-                  }}>
-                Projects Portfolio
-              </h2>
+                {/* Left Column: Projects Portfolio - 70% width */}
+                <div className="lg:col-span-7 flex flex-col">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                    <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                         style={{ 
+                           background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                         }}>
+                      <h3 className="text-xl font-bold flex items-center gap-2 text-white" 
+                          style={{ 
+                            fontFamily: 'var(--template-font-family)',
+                            fontWeight: 'var(--template-heading-weight)'
+                          }}>
+                        <FileCode size={20} />
+                        Projects Portfolio
+                      </h3>
+                      {/* Edit Button */}
+                      {showImproveButtons && (
+                        <button
+                          onClick={() => setIsEditingProjects?.(true)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                          title="Edit Projects"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                    <div className="p-6">
               
               {resume.projects && resume.projects.length > 0 ? (
                 <ProjectsCarousel
@@ -700,43 +819,47 @@ export default function EnhancedTechnologyTemplate({
                   showImproveButtons={showImproveButtons}
                 />
               ) : (
-                <Card className="border-2 border-dashed border-slate-200" style={{ height: '320px' }}>
-                  <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full">
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center" style={{ height: '320px' }}>
+                  <div className="flex flex-col items-center justify-center h-full">
                     <FileCode className="w-12 h-12 text-slate-400 mb-4" />
                     <p className="text-slate-500 text-lg font-medium mb-2">No projects added yet</p>
                     <p className="text-slate-400">Add your projects to showcase your technical expertise</p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Right Column: GitHub Repositories - Always Show */}
-                <div className="flex flex-col">
-                  <h2 className="text-2xl font-bold mb-6 flex-shrink-0" 
-                  style={{ 
-                    color: 'var(--template-primary-color)',
-                    fontFamily: 'var(--template-font-family)',
-                    fontWeight: 'var(--template-heading-weight)'
-                  }}>
-                <Github className="inline-block mr-2 mb-1" size={24} />
-                GitHub Repositories
-              </h2>
+                {/* Right Column: GitHub Repositories - 30% width */}
+                <div className="lg:col-span-3 flex flex-col">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                         style={{ 
+                           background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                         }}>
+                      <h4 className="text-xl font-bold flex items-center gap-2 text-white" 
+                          style={{ 
+                            fontFamily: 'var(--template-font-family)',
+                            fontWeight: 'var(--template-heading-weight)'
+                          }}>
+                        <Github size={20} />
+                        GitHub
+                      </h4>
+                    </div>
+                    <div className="p-6">
               
               {!resume.personalInfo?.github ? (
-                <Card className="border-2 border-dashed border-slate-200" style={{ height: '320px' }}>
-                  <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full">
-                    <Github className="w-12 h-12 text-slate-400 mb-4" />
-                    <p className="text-slate-500 text-lg font-medium mb-2">No GitHub profile linked</p>
-                    <p className="text-slate-400">Add your GitHub profile to showcase your repositories</p>
-                  </CardContent>
-                </Card>
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center flex flex-col items-center justify-center" style={{ height: '320px' }}>
+                  <Github className="w-12 h-12 text-slate-400 mb-4" />
+                  <p className="text-slate-500 text-lg font-medium mb-2">No GitHub profile linked</p>
+                  <p className="text-slate-400">Add your GitHub profile to showcase your repositories</p>
+                </div>
               ) : githubLoading ? (
-                <Card className="border border-slate-200" style={{ height: '320px' }}>
-                  <CardContent className="p-6 flex flex-col items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mb-3"></div>
-                    <span className="text-sm text-slate-500">Loading repositories from GitHub...</span>
-                  </CardContent>
-                </Card>
+                <div className="border border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center" style={{ height: '320px' }}>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mb-3"></div>
+                  <span className="text-sm text-slate-500">Loading repositories from GitHub...</span>
+                </div>
               ) : githubRepos.length > 0 ? (
                 <div className="flex flex-col" style={{ height: '320px' }}>
                   <p className="text-sm text-slate-600 mb-4 flex-shrink-0">
@@ -773,14 +896,14 @@ export default function EnhancedTechnologyTemplate({
                   )}
                 </div>
               ) : (
-                <Card className="border-2 border-dashed border-slate-200" style={{ height: '320px' }}>
-                  <CardContent className="p-6 text-center flex flex-col items-center justify-center h-full">
-                    <Github className="w-12 h-12 text-slate-400 mb-4" />
-                    <p className="text-slate-500 text-lg font-medium mb-2">No public repositories found</p>
-                    <p className="text-slate-400">Make sure your GitHub profile has public repositories</p>
-                  </CardContent>
-                </Card>
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center flex flex-col items-center justify-center" style={{ height: '320px' }}>
+                  <Github className="w-12 h-12 text-slate-400 mb-4" />
+                  <p className="text-slate-500 text-lg font-medium mb-2">No public repositories found</p>
+                  <p className="text-slate-400">Make sure your GitHub profile has public repositories</p>
+                </div>
               )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -789,41 +912,157 @@ export default function EnhancedTechnologyTemplate({
           {/* Technical Expertise - Graph Chart Visualization */}
           <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200 bg-gradient-to-br from-white to-slate-50`}>
             {resume.skills && resume.skills.length > 0 ? (
-              <SkillsGraphChart
-                skills={resume.skills}
-                title="Technical Expertise"
-                primaryColor={templateConfig.primaryColor}
-                accentColor={templateConfig.accentColor}
-              />
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                     style={{ 
+                       background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                     }}>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                      style={{ 
+                        fontFamily: 'var(--template-font-family)',
+                        fontWeight: 'var(--template-heading-weight)'
+                      }}>
+                    <Code2 size={20} />
+                    Technical Expertise
+                  </h2>
+                  {/* Edit Button */}
+                  {showImproveButtons && (
+                    <button
+                      onClick={() => setIsEditingSkills?.(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                      title="Edit Skills"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
+                </div>
+                <div className="p-3">
+                  <SkillsGraphChart
+                    skills={resume.skills}
+                    title=""
+                    primaryColor={templateConfig.primaryColor}
+                    accentColor={templateConfig.accentColor}
+                  />
+                </div>
+              </div>
             ) : (
-              <div>
-                <h2 className="text-2xl font-bold mb-6" 
-                    style={{ 
-                      color: 'var(--template-primary-color)',
-                      fontFamily: 'var(--template-font-family)',
-                      fontWeight: 'var(--template-heading-weight)'
-                    }}>
-                  Technical Expertise
-                </h2>
-                <div className="bg-white border-2 border-dashed border-slate-200 rounded-xl p-8 text-center">
-                  <Code2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-500 text-lg font-medium mb-1">No technical skills added yet</p>
-                  <p className="text-slate-400 text-sm">Add your technical expertise to showcase your capabilities</p>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                     style={{ 
+                       background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                     }}>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                      style={{ 
+                        fontFamily: 'var(--template-font-family)',
+                        fontWeight: 'var(--template-heading-weight)'
+                      }}>
+                    <Code2 size={20} />
+                    Technical Expertise
+                  </h2>
+                  {/* Edit Button for empty state */}
+                  {showImproveButtons && (
+                    <button
+                      onClick={() => setIsEditingSkills?.(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                      title="Add Skills"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+                <div className="p-6">
+                  <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                    <Code2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-500 text-lg font-medium mb-1">No technical skills added yet</p>
+                    <p className="text-slate-400 text-sm">Add your technical expertise to showcase your capabilities</p>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
           {/* Certifications Section */} 
-          {resume.certifications && resume.certifications.length > 0 && (
-            <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200 bg-white`}>
-              <CertificationsSection
-                certifications={resume.certifications}
-                primaryColor={templateConfig?.primaryColor}
-                accentColor={templateConfig?.accentColor}
-              />
-            </div>
-          )}
+          <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200 bg-white`}>
+            {resume.certifications && resume.certifications.length > 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                     style={{ 
+                       background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                     }}>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                      style={{ 
+                        fontFamily: 'var(--template-font-family)',
+                        fontWeight: 'var(--template-heading-weight)'
+                      }}>
+                    <Award size={20} />
+                    Certifications
+                  </h2>
+                  {/* Edit Button */}
+                  {showImproveButtons && (
+                    <button
+                      onClick={() => setIsEditingCertifications?.(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                      title="Edit Certifications"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
+                </div>
+                <div className="p-6">
+                  <CertificationsSection
+                    certifications={resume.certifications}
+                    primaryColor={templateConfig?.primaryColor}
+                    accentColor={templateConfig?.accentColor}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-slate-200" 
+                     style={{ 
+                       background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
+                     }}>
+                  <h2 className="text-2xl font-bold flex items-center gap-2 text-white" 
+                      style={{ 
+                        fontFamily: 'var(--template-font-family)',
+                        fontWeight: 'var(--template-heading-weight)'
+                      }}>
+                    <Award size={20} />
+                    Certifications
+                  </h2>
+                  {/* Edit Button for empty state */}
+                  {showImproveButtons && (
+                    <button
+                      onClick={() => setIsEditingCertifications?.(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-white/20 hover:bg-white/30 rounded shadow-sm transition-colors flex-shrink-0"
+                      title="Add Certifications"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </button>
+                  )}
+                </div>
+                <div className="p-6">
+                  <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+                    <Award className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-500 text-lg font-medium mb-1">No certifications added yet</p>
+                    <p className="text-slate-400 text-sm">Add your professional certifications to showcase your expertise</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           
          
         </div>
