@@ -16,7 +16,8 @@ import {
   Eye,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from "lucide-react";
 import { ATSScoreDisplay } from "@/components/ATSScoreDisplay";
 import { atsApi } from "@/services/atsApi";
@@ -54,6 +55,7 @@ interface ResumeDisplayProps {
   setIsEditingEducation?: (editing: boolean) => void;
   setIsEditingExperience?: (editing: boolean) => void;
   setIsEditingCertifications?: (editing: boolean) => void;
+  setIsEditingJobPreferences?: (editing: boolean) => void;
 }
 
 export default function ResumeDisplay({
@@ -80,6 +82,7 @@ export default function ResumeDisplay({
   setIsEditingEducation,
   setIsEditingExperience,
   setIsEditingCertifications,
+  setIsEditingJobPreferences,
 }: ResumeDisplayProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [localCustomization, setLocalCustomization] = useState<TemplateCustomization | null>(currentCustomization || null);
@@ -443,6 +446,19 @@ export default function ResumeDisplay({
                 >
                   <Sparkles className="h-4 w-4" />
                   <span>{isCalculatingATS ? 'Calculating...' : 'Improve ATS'}</span>
+                </Button>
+              )}
+
+              {/* Job Preferences Button - Only show for preview mode (user's own resume) */}
+              {mode === 'preview' && setIsEditingJobPreferences && (
+                <Button
+                  onClick={() => setIsEditingJobPreferences(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Preferences</span>
                 </Button>
               )}
             </div>

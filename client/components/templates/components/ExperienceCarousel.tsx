@@ -42,7 +42,7 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
                   {exp.position}
                 </h3>
                 {/* Improve Button */}
-                {showImproveButtons && improveSection && (
+                {/* {showImproveButtons && improveSection && (
                   <button
                     onClick={() => improveSection('experience', exp, 0)}
                     disabled={isImproving}
@@ -62,7 +62,7 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
                     </svg>
                     {isImproving ? 'Improving...' : 'Improve'}
                   </button>
-                )}
+                )} */}
               </div>
               <p className="experience-company">
                 <Building2 size={18} />
@@ -133,7 +133,7 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
                     {currentExp.position}
                   </h3>
                   {/* Improve Button */}
-                  {showImproveButtons && improveSection && (
+                  {/* {showImproveButtons && improveSection && (
                     <button
                       onClick={() => improveSection('experience', currentExp, currentIndex)}
                       disabled={isImproving}
@@ -153,7 +153,7 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
                       </svg>
                       {isImproving ? 'Improving...' : 'Improve'}
                     </button>
-                  )}
+                  )} */}
                 </div>
                 <p className="experience-company">
                   <Building2 size={18} />

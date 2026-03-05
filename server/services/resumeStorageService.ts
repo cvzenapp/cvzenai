@@ -237,13 +237,13 @@ class ResumeStorageService {
       const experienceJson = JSON.stringify(
         (parsedData.experience || []).map(exp => ({
           company: exp.company,
-          position: exp.position,
+          position: exp.title, // Map title to position
           location: exp.location || '',
           startDate: exp.startDate,
           endDate: exp.endDate,
           current: exp.current || false,
           description: exp.description || '',
-          achievements: exp.achievements || []
+          achievements: exp.responsibilities || [] // Map responsibilities to achievements
         }))
       );
       

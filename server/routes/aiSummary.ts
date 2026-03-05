@@ -4,6 +4,91 @@ import { groqService } from '../services/groqService';
 
 const router = express.Router();
 
+// Generate AI-enhanced career objective
+router.post('/generate-objective', requireAuth, async (req, res) => {
+  try {
+    console.log('🎯 Generate objective endpoint hit');
+    
+    const { personalInfo, experiences, education, skills, currentObjective } = req.body;
+
+    if (!personalInfo) {
+      console.log('❌ Missing personal info');
+      return res.status(400).json({
+        success: false,
+        error: 'Personal information is required'
+      });
+    }
+
+    // Build context for AI
+    const context = {
+      name: personalInfo.name || personalInfo.fullName,
+      title: personalInfo.title,
+      skills: skills?.slice(0, 10) || [], // Top 10 skills
+      experiences: experiences?.slice(0, 3) || [], // Recent 3 experiences
+      education: education?.slice(0, 2) || [], // Top 2 education entries
+      currentObjective
+    };
+
+    const prompt = `Write a compelling career objective for ${context.name}, a ${context.title || 'professional'}.
+
+Context:
+- Current objective: ${context.currentObjective || 'None provided'}
+- Key skills: ${context.skills.map((s: any) => s.name || s).join(', ')}
+- Recent experience: ${context.experiences.map((exp: any) => `${exp.position} at ${exp.company}`).join(', ')}
+- Education: ${context.education.map((edu: any) => `${edu.degree} from ${edu.institution}`).join(', ')}
+
+Requirements:
+- 1-2 sentences maximum (50-80 words)
+- Focus on career goals and value proposition
+- Make it specific and professional
+- Highlight key strengths and aspirations
+- Avoid generic phrases like "seeking opportunities"
+- Write in first person
+- Be compelling and achievement-focused
+
+Return only the career objective text, no additional formatting or explanations.`;
+
+    console.log('🤖 Calling AI service...');
+    const aiResponse = await groqService.generateResponse(
+      'You are a career counselor writing career objectives for resumes.',
+      prompt,
+      {
+        temperature: 0.7,
+        maxTokens: 150,
+        auditContext: {
+          serviceName: 'ai_objective_generation',
+          operationType: 'career_objective_generation'
+        }
+      }
+    );
+    
+    if (!aiResponse?.response) {
+      console.log('❌ No AI response');
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to generate AI objective'
+      });
+    }
+
+    const result = {
+      success: true,
+      data: {
+        objective: aiResponse.response.trim()
+      }
+    };
+
+    console.log('✅ Objective generated successfully');
+    res.json(result);
+
+  } catch (error) {
+    console.error('❌ Error generating AI objective:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // Generate AI-enhanced professional summary
 router.post('/generate-summary', requireAuth, async (req, res) => {
   try {

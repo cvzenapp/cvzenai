@@ -72,6 +72,16 @@ EXTRACTION RULES:
 - IGNORE redacted placeholders like [EMAIL_REDACTED], [PHONE_REDACTED], [NAME_REDACTED]
 - Leave personalInfo fields empty (they will be filled separately)
 
+PROJECT EXTRACTION RULES (CRITICAL):
+- Look for sections: "Projects", "Portfolio", "Personal Projects", "Product", "Product Summary", "Key Projects"
+- Extract ALL projects mentioned - if you see 5 projects, return 5 entries
+- Project indicators: "Project #1:", "Project:", "Product:", bullet points under project sections
+- Include project names, descriptions, technologies used, and any links (GitHub, demo, live site)
+- If project has no explicit name, use first few words of description as name
+- Extract technologies from project descriptions (e.g., "Built with React and Node.js" → ["React", "Node.js"])
+- Look for dates in project descriptions (e.g., "Jan 2023 - Mar 2023")
+- Include any GitHub repositories, live demos, or portfolio links mentioned
+
 SUMMARY GENERATION RULES:
 - If a "Professional Summary" or "Career Objective" section exists, extract it as-is
 - If NO summary exists in the resume, generate a professional 3-4 sentence summary based on:
@@ -235,9 +245,13 @@ Return JSON only (extract from resume text above, not from examples):`;
 
     // Validate and enhance projects
     if (data.projects && Array.isArray(data.projects)) {
-      console.log('🔍 Projects BEFORE validation:', JSON.stringify(data.projects, null, 2));
+      console.log(`🔍 Projects BEFORE validation: ${data.projects.length} found`);
+      console.log('🔍 Raw projects:', JSON.stringify(data.projects.map(p => ({ name: p.name || p.title, desc: (p.description || '').substring(0, 50) })), null, 2));
       data.projects = projectsExtractor.validateProjects(data.projects);
-      console.log('🔍 Projects AFTER validation:', JSON.stringify(data.projects, null, 2));
+      console.log(`🔍 Projects AFTER validation: ${data.projects.length} final`);
+      console.log('🔍 Final projects:', JSON.stringify(data.projects.map(p => ({ name: p.name, desc: (p.description || '').substring(0, 50) })), null, 2));
+    } else {
+      console.log('⚠️ No projects array found in parsed data');
     }
 
     // FALLBACK: If no projects but has experience with technical work, create project entries
@@ -295,7 +309,7 @@ Return JSON only (extract from resume text above, not from examples):`;
   private extractProjectsFromExperience(experience: any[]): any[] {
     const projects: any[] = [];
     
-    experience.forEach((exp: any) => {
+    experience.forEach((exp: any, index: number) => {
       // Look for project-related keywords in description or achievements
       const description = (exp.description || '').toLowerCase();
       const achievements = (exp.achievements || []).join(' ').toLowerCase();
@@ -304,26 +318,38 @@ Return JSON only (extract from resume text above, not from examples):`;
       const projectKeywords = [
         'built', 'developed', 'created', 'designed', 'implemented',
         'project', 'application', 'system', 'platform', 'tool',
-        'dashboard', 'website', 'app', 'api', 'service'
+        'dashboard', 'website', 'app', 'api', 'service', 'solution',
+        'feature', 'module', 'component', 'framework', 'library'
       ];
       
       const hasProjectKeywords = projectKeywords.some(keyword => 
         combinedText.includes(keyword)
       );
       
-      if (hasProjectKeywords && exp.technologies && exp.technologies.length > 0) {
+      // More lenient criteria - include if has tech keywords OR project keywords
+      const hasTechWork = exp.technologies && exp.technologies.length > 0;
+      const techKeywords = ['react', 'node', 'python', 'java', 'javascript', 'typescript', 'sql', 'aws', 'docker'];
+      const hasTechKeywords = techKeywords.some(tech => combinedText.includes(tech));
+      
+      if ((hasProjectKeywords || hasTechWork || hasTechKeywords) && exp.description) {
         // Create a project from this experience
+        const projectName = exp.position && exp.company 
+          ? `${exp.position} at ${exp.company}` 
+          : `Professional Project ${index + 1}`;
+          
         projects.push({
-          name: `${exp.position} Project at ${exp.company}`,
-          description: exp.description?.substring(0, 150) || 'Professional project',
+          name: projectName,
+          description: exp.description.substring(0, 150) || 'Professional development project',
           technologies: exp.technologies || [],
           link: '',
           startDate: exp.startDate || '',
-          endDate: exp.endDate || ''
+          endDate: exp.endDate || '',
+          category: 'Professional'
         });
       }
     });
     
+    console.log(`🔍 Extracted ${projects.length} projects from ${experience.length} experience entries`);
     return projects;
   }
 

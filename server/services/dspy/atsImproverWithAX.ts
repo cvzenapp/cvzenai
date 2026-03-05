@@ -619,8 +619,8 @@ Return ONLY valid JSON with improved resume data.`;
   ): string[] {
     const improvements: string[] = [];
     
-    improvements.push(`ATS score improved from ${oldScore} to ${newScore} (+${newScore - oldScore} points)`);
-    improvements.push(`Quality metric: ${(metricScore * 100).toFixed(1)}% (DSPy evaluation)`);
+    improvements.push(`Applied AI-powered improvements to increase ATS score from ${oldScore} to ${newScore} (+${newScore - oldScore} points)`);
+    improvements.push(`Quality metric: ${(metricScore * 100).toFixed(1)}% (trained model evaluation)`);
     
     if (weakAreas.length > 0) {
       improvements.push(`Addressed ${weakAreas.length} weak areas: ${weakAreas.join(', ')}`);

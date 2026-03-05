@@ -47,9 +47,9 @@ class ATSApiClient extends BaseApiClient {
   /**
    * Improve resume based on ATS analysis
    * @param resumeId - Resume ID to improve
-   * @param method - Improvement method: 'rule-based' (default), 'llm', or 'hybrid'
+   * @param method - Improvement method: 'llm' (default), 'rule-based', or 'hybrid'
    */
-  async improveResume(resumeId: number, method: 'rule-based' | 'llm' | 'hybrid' = 'rule-based') {
+  async improveResume(resumeId: number, method: 'rule-based' | 'llm' | 'hybrid' = 'llm') {
     return this.post<ATSImproveResponse>(`/ats/improve/${resumeId}?method=${method}`, {});
   }
 

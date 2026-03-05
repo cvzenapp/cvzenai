@@ -534,7 +534,7 @@ export default function EnhancedTechnologyTemplate({
                         </button>
                       )}
                       {/* Improve Button */}
-                      {showImproveButtons && improveSection && resume.summary && (
+                      {/* {showImproveButtons && improveSection && resume.summary && (
                         <button
                           onClick={() => improveSection('summary', resume.summary)}
                           disabled={isImprovingSection?.('summary')}
@@ -545,7 +545,7 @@ export default function EnhancedTechnologyTemplate({
                           </svg>
                           {isImprovingSection?.('summary') ? 'Improving...' : 'Improve'}
                         </button>
-                      )}
+                      )} */}
                     </div>
                   </div>
                   {resume.summary ? (
@@ -601,7 +601,7 @@ export default function EnhancedTechnologyTemplate({
                         </button>
                       )}
                       {/* Improve Button */}
-                      {showImproveButtons && improveSection && resume.objective && (
+                      {/* {showImproveButtons && improveSection && resume.objective && (
                         <button
                           onClick={() => improveSection('objective', resume.objective)}
                           disabled={isImprovingSection?.('objective')}
@@ -612,7 +612,7 @@ export default function EnhancedTechnologyTemplate({
                           </svg>
                           {isImprovingSection?.('objective') ? 'Improving...' : 'Improve'}
                         </button>
-                      )}
+                      )} */}
                     </div>
                   </div>
                   {resume.objective ? (
@@ -672,7 +672,7 @@ export default function EnhancedTechnologyTemplate({
                     </button>
                   )}
                 </div>
-                
+              
                 {resume.education && resume.education.length > 0 ? (
                   <div className="p-6">
                     <div className="max-h-80 overflow-y-auto space-y-3">

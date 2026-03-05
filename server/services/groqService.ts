@@ -183,6 +183,7 @@ Provide helpful career and professional development advice. Be conversational an
     options?: {
       temperature?: number;
       maxTokens?: number;
+      model?: string;
       auditContext?: {
         serviceName?: string;
         operationType?: string;
@@ -201,6 +202,7 @@ Provide helpful career and professional development advice. Be conversational an
     options?: {
       temperature?: number;
       maxTokens?: number;
+      model?: string;
       auditContext?: {
         serviceName?: string;
         operationType?: string;
@@ -225,6 +227,7 @@ Provide helpful career and professional development advice. Be conversational an
       let requestType: string;
       let temperature = 0.3;
       let maxTokens = 2048;
+      let modelToUse = this.defaultModel;
       let request: GroqRequest | undefined;
       
       if (isNewAPI) {
@@ -234,15 +237,17 @@ Provide helpful career and professional development advice. Be conversational an
         auditContext = options?.auditContext || {};
         temperature = options?.temperature ?? 0.3;
         maxTokens = options?.maxTokens ?? 2048;
+        modelToUse = options?.model ?? this.defaultModel;
         requestType = auditContext.serviceName || 'other';
-        console.log('🤖 [GROQ] Generating response for type:', auditContext.serviceName || 'unknown');
+        console.log('🤖 [GROQ] Generating response for type:', auditContext.serviceName || 'unknown', 'with model:', modelToUse);
       } else {
         // Old API: request object
         request = requestOrSystemPrompt as GroqRequest;
-        console.log('🤖 [GROQ] Generating response for type:', request.type);
+        console.log('🤖 [GROQ] Generating response for type:', request.type, 'with model:', this.defaultModel);
         systemPrompt = this.getSystemPrompt(request.type);
         requestType = request.type;
         auditContext = request.auditContext || {};
+        modelToUse = this.defaultModel;
         
         // Build user message with context
         userMessage = request.content;
@@ -265,7 +270,7 @@ Provide helpful career and professional development advice. Be conversational an
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
-        model: this.defaultModel,
+        model: modelToUse,
         temperature,
         max_tokens: maxTokens,
         top_p: 1,
@@ -277,7 +282,7 @@ Provide helpful career and professional development advice. Be conversational an
       
       console.log('✅ [GROQ] Response generated:', {
         responseLength: responseText.length,
-        model: this.defaultModel,
+        model: modelToUse,
         latency: latencyMs + 'ms'
       });
 

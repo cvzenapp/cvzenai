@@ -29,6 +29,7 @@ import { EducationEditModal } from "@/components/resume/EducationEditModal";
 import { PersonalInfoEditModal } from "@/components/resume/PersonalInfoEditModal";
 import { ExperienceEditModal } from "@/components/resume/ExperienceEditModal";
 import { CertificationsEditModal } from "@/components/resume/CertificationsEditModal";
+import { JobPreferencesModal } from "@/components/resume/JobPreferencesModal";
 import { resumeUpdateApi } from "@/services/resumeUpdateApi";
 // Removed unused import
 
@@ -66,6 +67,7 @@ export default function ResumeViewer() {
   const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
   const [isEditingExperience, setIsEditingExperience] = useState(false);
   const [isEditingCertifications, setIsEditingCertifications] = useState(false);
+  const [isEditingJobPreferences, setIsEditingJobPreferences] = useState(false);
   const [showEditButtons, setShowEditButtons] = useState(false);
   
   // Check if current user owns this resume
@@ -1502,6 +1504,7 @@ export default function ResumeViewer() {
         setIsEditingEducation={setIsEditingEducation}
         setIsEditingExperience={setIsEditingExperience}
         setIsEditingCertifications={setIsEditingCertifications}
+        setIsEditingJobPreferences={setIsEditingJobPreferences}
       />
       
       {/* Edit Modals - Only show for resume owner */}
@@ -1687,6 +1690,11 @@ export default function ResumeViewer() {
             currentCertifications={resume?.certifications || []}
             onSave={handleCertificationsUpdate}
             resumeData={resume}
+          />
+
+          <JobPreferencesModal
+            isOpen={isEditingJobPreferences}
+            onClose={() => setIsEditingJobPreferences(false)}
           />
         </>
       )}

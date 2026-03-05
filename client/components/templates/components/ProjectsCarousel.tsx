@@ -151,7 +151,7 @@ export function ProjectsCarousel({
                       </Badge>
                     )}
                     {/* Improve Button */}
-                    {showImproveButtons && improveSection && (
+                    {/* {showImproveButtons && improveSection && (
                       <button
                         onClick={() => improveSection('project', currentProject, currentIndex)}
                         disabled={isImproving}
@@ -171,7 +171,7 @@ export function ProjectsCarousel({
                         </svg>
                         {isImproving ? 'Improving...' : 'Improve'}
                       </button>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>

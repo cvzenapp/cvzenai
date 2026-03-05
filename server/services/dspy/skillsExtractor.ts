@@ -98,6 +98,7 @@ IMPORTANT: Each skill will be automatically categorized based on its name, so ex
 
   /**
    * Validate and enhance extracted skills with categories and proficiency
+   * Limits core skills to 6-10 most important skills
    */
   validateSkills(extractedSkills: string[]): any[] {
     console.log(`🎯 [SKILLS VALIDATOR] Processing ${extractedSkills.length} extracted skills...`);
@@ -128,7 +129,8 @@ IMPORTANT: Each skill will be automatically categorized based on its name, so ex
           category: category, // NEVER null - always has a value
           proficiency: this.estimateProficiency(normalized),
           yearsOfExperience: 0, // Default, user can update
-          isCore: this.isCoreSkill(normalized)
+          isCore: false, // Will be set later based on priority ranking
+          coreSkillPriority: this.getCoreSkillPriority(normalized) // Add priority for ranking
         };
         
         console.log(`✅ [SKILLS VALIDATOR] Skill ${index + 1}: "${normalized}" → Category: "${category}"`);
@@ -138,7 +140,26 @@ IMPORTANT: Each skill will be automatically categorized based on its name, so ex
       }
     });
 
-    console.log(`✅ [SKILLS VALIDATOR] Validated ${validated.length} skills with categories`);
+    // Sort skills by core skill priority (higher priority = more likely to be core)
+    validated.sort((a, b) => b.coreSkillPriority - a.coreSkillPriority);
+    
+    // Mark top 6-10 skills as core skills (limit to prevent too many core skills)
+    const maxCoreSkills = Math.min(10, Math.max(6, Math.floor(validated.length * 0.3))); // 30% of skills or 6-10 max
+    const actualCoreSkills = Math.min(maxCoreSkills, validated.length);
+    
+    for (let i = 0; i < actualCoreSkills; i++) {
+      validated[i].isCore = true;
+    }
+    
+    // Ensure remaining skills are marked as non-core
+    for (let i = actualCoreSkills; i < validated.length; i++) {
+      validated[i].isCore = false;
+    }
+    
+    // Remove the temporary priority field
+    validated.forEach(skill => delete skill.coreSkillPriority);
+
+    console.log(`✅ [SKILLS VALIDATOR] Validated ${validated.length} skills with ${validated.filter(s => s.isCore).length} core skills (max allowed: ${actualCoreSkills})`);
     
     // Log category distribution
     const categoryCount = validated.reduce((acc, skill) => {
@@ -147,6 +168,8 @@ IMPORTANT: Each skill will be automatically categorized based on its name, so ex
     }, {} as Record<string, number>);
     
     console.log('📊 [SKILLS VALIDATOR] Category distribution:', categoryCount);
+    console.log(`🎯 [SKILLS VALIDATOR] Core skills (${validated.filter(s => s.isCore).length}/${actualCoreSkills}): ${validated.filter(s => s.isCore).map(s => s.name).join(', ')}`);
+    console.log(`📝 [SKILLS VALIDATOR] Additional skills (${validated.filter(s => !s.isCore).length}): ${validated.filter(s => !s.isCore).map(s => s.name).slice(0, 5).join(', ')}${validated.filter(s => !s.isCore).length > 5 ? '...' : ''}`);
 
     return validated;
   }
@@ -329,18 +352,172 @@ IMPORTANT: Each skill will be automatically categorized based on its name, so ex
   }
 
   /**
+   * Get priority score for core skill ranking (higher = more likely to be core)
+   * This helps limit core skills to the most important 6-10 skills
+   */
+  private getCoreSkillPriority(skill: string): number {
+    const lowerSkill = skill.toLowerCase();
+    
+    // Tier 1: Most critical skills (priority 100-90)
+    const tier1Skills = [
+      'javascript', 'js', 'python', 'java', 'react', 'reactjs', 'react.js',
+      'node', 'nodejs', 'node.js', 'sql', 'aws', 'docker', 'git'
+    ];
+    
+    // Tier 2: Very important skills (priority 89-80)
+    const tier2Skills = [
+      'typescript', 'ts', 'angular', 'vue', 'vuejs', 'express', 'django',
+      'spring', 'mysql', 'postgresql', 'mongodb', 'kubernetes', 'k8s',
+      'azure', 'gcp', 'html', 'css', 'rest', 'api'
+    ];
+    
+    // Tier 3: Important skills (priority 79-70)
+    const tier3Skills = [
+      'c++', 'cpp', 'c#', 'csharp', 'php', 'ruby', 'go', 'golang',
+      'flask', 'laravel', 'next', 'nextjs', 'redux', 'graphql',
+      'redis', 'jenkins', 'terraform', 'ansible'
+    ];
+    
+    // Tier 4: Valuable skills (priority 69-60)
+    const tier4Skills = [
+      'swift', 'kotlin', 'flutter', 'react native', 'android', 'ios',
+      'tensorflow', 'pytorch', 'machine learning', 'ml', 'pandas',
+      'numpy', 'elasticsearch', 'nginx', 'apache'
+    ];
+    
+    // Tier 5: Good to have skills (priority 59-50)
+    const tier5Skills = [
+      'sass', 'scss', 'webpack', 'babel', 'jest', 'cypress', 'selenium',
+      'figma', 'sketch', 'photoshop', 'jira', 'confluence', 'postman'
+    ];
+    
+    // Tier 6: Soft skills and others (priority 49-40)
+    const tier6Skills = [
+      'leadership', 'communication', 'teamwork', 'problem solving',
+      'project management', 'agile', 'scrum', 'analytical thinking'
+    ];
+    
+    // Check tiers and assign priority
+    for (const tier1 of tier1Skills) {
+      if (lowerSkill === tier1 || lowerSkill.includes(tier1) || tier1.includes(lowerSkill)) {
+        return 95 + Math.random() * 5; // 95-100
+      }
+    }
+    
+    for (const tier2 of tier2Skills) {
+      if (lowerSkill === tier2 || lowerSkill.includes(tier2) || tier2.includes(lowerSkill)) {
+        return 80 + Math.random() * 9; // 80-89
+      }
+    }
+    
+    for (const tier3 of tier3Skills) {
+      if (lowerSkill === tier3 || lowerSkill.includes(tier3) || tier3.includes(lowerSkill)) {
+        return 70 + Math.random() * 9; // 70-79
+      }
+    }
+    
+    for (const tier4 of tier4Skills) {
+      if (lowerSkill === tier4 || lowerSkill.includes(tier4) || tier4.includes(lowerSkill)) {
+        return 60 + Math.random() * 9; // 60-69
+      }
+    }
+    
+    for (const tier5 of tier5Skills) {
+      if (lowerSkill === tier5 || lowerSkill.includes(tier5) || tier5.includes(lowerSkill)) {
+        return 50 + Math.random() * 9; // 50-59
+      }
+    }
+    
+    for (const tier6 of tier6Skills) {
+      if (lowerSkill === tier6 || lowerSkill.includes(tier6) || tier6.includes(lowerSkill)) {
+        return 40 + Math.random() * 9; // 40-49
+      }
+    }
+    
+    // Default priority for unrecognized skills
+    return 30 + Math.random() * 9; // 30-39
+  }
+
+  /**
    * Determine if skill is a core/primary skill
+   * Enhanced logic to identify major skills that should be highlighted
    */
   private isCoreSkill(skill: string): boolean {
     const lowerSkill = skill.toLowerCase();
     
-    // Programming languages and major frameworks are typically core skills
-    const coreSkillKeywords = [
-      'javascript', 'python', 'java', 'react', 'angular', 'vue',
-      'node', 'django', 'spring', 'sql', 'aws', 'docker'
+    // Programming languages are typically core skills
+    const programmingLanguages = [
+      'javascript', 'js', 'typescript', 'ts', 'python', 'java', 'c++', 'cpp', 
+      'c#', 'csharp', 'ruby', 'go', 'golang', 'rust', 'php', 'swift', 'kotlin', 
+      'scala', 'dart', 'r'
     ];
     
-    return coreSkillKeywords.some(core => lowerSkill.includes(core));
+    // Major frameworks and libraries
+    const majorFrameworks = [
+      'react', 'reactjs', 'react.js', 'angular', 'vue', 'vuejs', 'vue.js',
+      'node', 'nodejs', 'node.js', 'express', 'django', 'flask', 'spring',
+      'springboot', 'laravel', '.net', 'dotnet', 'asp.net', 'next', 'nextjs'
+    ];
+    
+    // Essential databases
+    const majorDatabases = [
+      'sql', 'mysql', 'postgresql', 'postgres', 'mongodb', 'mongo', 'redis',
+      'oracle', 'sqlite'
+    ];
+    
+    // Major cloud platforms
+    const majorCloudPlatforms = [
+      'aws', 'amazon web services', 'azure', 'microsoft azure', 'gcp', 
+      'google cloud platform', 'google cloud'
+    ];
+    
+    // Essential DevOps tools
+    const majorDevOpsTools = [
+      'docker', 'kubernetes', 'k8s', 'jenkins', 'git', 'github', 'gitlab',
+      'ci/cd', 'terraform', 'ansible'
+    ];
+    
+    // Popular mobile development
+    const majorMobile = [
+      'android', 'ios', 'react native', 'flutter'
+    ];
+    
+    // Major data science/AI tools
+    const majorDataScience = [
+      'machine learning', 'ml', 'tensorflow', 'pytorch', 'pandas', 'numpy',
+      'scikit-learn', 'data science', 'artificial intelligence', 'ai'
+    ];
+    
+    // Essential web technologies
+    const essentialWeb = [
+      'html', 'html5', 'css', 'css3', 'rest', 'restful', 'api', 'graphql'
+    ];
+    
+    // Important soft skills
+    const coreSoftSkills = [
+      'leadership', 'communication', 'teamwork', 'problem solving', 
+      'project management', 'agile', 'scrum'
+    ];
+    
+    // Check if skill matches any core skill category
+    const allCoreSkills = [
+      ...programmingLanguages,
+      ...majorFrameworks,
+      ...majorDatabases,
+      ...majorCloudPlatforms,
+      ...majorDevOpsTools,
+      ...majorMobile,
+      ...majorDataScience,
+      ...essentialWeb,
+      ...coreSoftSkills
+    ];
+    
+    return allCoreSkills.some(core => {
+      // Exact match or contains match for flexibility
+      return lowerSkill === core || 
+             lowerSkill.includes(core) || 
+             core.includes(lowerSkill);
+    });
   }
 }
 

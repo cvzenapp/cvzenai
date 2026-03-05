@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import { groqService } from './groqService.js';
 import { jsonrepair } from 'jsonrepair';
 import { resumeParser } from './dspy/resumeParser.js';
-import { resumeExtractionOrchestrator } from './dspy/resumeExtractionOrchestrator.js';
+import { skillsExtractor } from './dspy/skillsExtractor.js';
 
 export interface ParsedResumeData {
   personalInfo: {
@@ -371,7 +371,18 @@ class ResumeParsingService {
       // Step 3: Use DSPy-trained parser (trained on 4.1M+ records from 8 datasets)
       const parsedData = await resumeParser.parseResume(redactedText);
       
-      // Step 4: Convert to ParsedResumeData format and merge with local personal info
+      // Step 4: Initialize skills extractor and process skills
+      await skillsExtractor.initialize();
+      
+      // Step 5: Process skills through the skills extractor to add categories, proficiency, and core skill detection
+      let processedSkills: any[] = [];
+      if (parsedData.skills && parsedData.skills.length > 0) {
+        console.log('🎯 Processing skills through skills extractor...');
+        processedSkills = skillsExtractor.validateSkills(parsedData.skills);
+        console.log(`✅ Processed ${processedSkills.length} skills with core skill detection`);
+      }
+      
+      // Step 6: Convert to ParsedResumeData format and merge with local personal info
       const result: ParsedResumeData = {
         personalInfo: {
           fullName: localPersonalInfo.fullName || parsedData.personalInfo?.name || '',
@@ -384,7 +395,7 @@ class ResumeParsingService {
         },
         summary: parsedData.summary || '',
         objective: parsedData.objective || '',
-        skills: parsedData.skills || [],
+        skills: processedSkills, // Use processed skills with core detection
         skillCategories: parsedData.skillCategories || {},
         experience: (parsedData.experience || []).map(exp => ({
           company: exp.company || '',
@@ -428,6 +439,7 @@ class ResumeParsingService {
         email: result.personalInfo?.email || 'N/A',
         phone: result.personalInfo?.phone || 'N/A',
         skills: result.skills?.length || 0,
+        coreSkills: processedSkills.filter(s => s.isCore).length || 0,
         experience: result.experience?.length || 0,
         education: result.education?.length || 0,
         projects: result.projects?.length || 0,
@@ -435,6 +447,12 @@ class ResumeParsingService {
         personalInfoSource: 'local_extraction',
         trainingData: '4.1M+ records from 8 datasets'
       });
+      
+      if (result.projects && result.projects.length > 0) {
+        console.log(`📋 Project details: ${result.projects.map(p => `"${p.name}" (${(p.technologies || []).join(', ')})`).join(', ')}`);
+      } else {
+        console.log('⚠️ No projects found in parsed resume - check if resume has projects section');
+      }
       
       return result;
       

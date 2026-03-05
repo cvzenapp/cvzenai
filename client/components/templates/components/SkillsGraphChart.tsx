@@ -11,7 +11,6 @@ interface SkillsGraphChartProps {
 
 export const SkillsGraphChart: React.FC<SkillsGraphChartProps> = ({
   skills,
-  title,
   primaryColor = 'var(--template-primary-color, #2563eb)',
   accentColor = 'var(--template-accent-color, #3b82f6)',
 }) => {
@@ -60,9 +59,6 @@ export const SkillsGraphChart: React.FC<SkillsGraphChartProps> = ({
     const indexB = SKILL_CATEGORIES.indexOf(b as any);
     return indexA - indexB;
   });
-
-  // Calculate total number of core skills
-  const totalCoreSkills = coreSkills.length;
 
   // Chart dimensions - fully responsive to container width
   const chartHeight = 350;

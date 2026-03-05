@@ -165,12 +165,12 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
  * Improve resume based on ATS score analysis
  * 
  * Query params:
- * - method: 'rule-based' (default) | 'llm' | 'hybrid'
+ * - method: 'llm' (default) | 'rule-based' | 'hybrid'
  */
 router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthRequest, res) => {
   const { resumeId } = req.params;
   const userId = req.user?.id;
-  const method = (req.query.method as string) || 'rule-based'; // Default to rule-based
+  const method = (req.query.method as string) || 'llm'; // Default to AI-powered improvements
 
   console.log(`🚀 ATS improvement requested for resume ${resumeId} by user ${userId}`);
   console.log(`   📋 Query params:`, req.query);
@@ -304,7 +304,7 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
 
     // Choose improvement method
     if (method === 'rule-based') {
-      console.log('🔧 Using rule-based ATS improvements (guaranteed results)...');
+      console.log('🔧 Using rule-based ATS improvements (legacy method)...');
       
       const { ruleBasedATSImprover } = await import('../services/dspy/ruleBasedATSImprover.js');
       const result = ruleBasedATSImprover.improveResume(currentData, currentATSScore);
@@ -314,7 +314,7 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
       changesApplied = result.changesApplied;
       
     } else if (method === 'llm') {
-      console.log('🤖 Using LLM-based ATS improvements (DSPy + AX training)...');
+      console.log('🤖 Using AI-powered ATS improvements (trained model with 12,093+ examples)...');
       
       const { atsImproverWithAX } = await import('../services/dspy/atsImproverWithAX.js');
       improvement = await atsImproverWithAX.improveResume(currentData, currentATSScore);

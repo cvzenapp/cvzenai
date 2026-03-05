@@ -2,6 +2,12 @@ import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// Get proper directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config();
 import {
   getResume,
@@ -65,6 +71,7 @@ import coverLetterRouter from "./routes/coverLetter.js";
 import jobMatchingRouter from "./routes/jobMatching.js";
 import resumeOptimizationRouter from "./routes/resumeOptimization.js";
 import aiSummaryRouter from "./routes/aiSummary.js";
+import jobPreferencesRouter from "./routes/jobPreferences.js";
 import { requireAuth } from "./middleware/unifiedAuth";
 import { getDatabase, initializeDatabase, closeDatabase } from "./database/connection";
 import { seedDatabase } from "./database/seedData";
@@ -326,6 +333,9 @@ export function createServer() {
 
   // AI summary generation routes
   app.use("/api/ai", aiSummaryRouter);
+
+  // Job preferences routes
+  app.use("/api/job-preferences", jobPreferencesRouter);
 
   // Remove catch-all route for static file serving (handled by Netlify)
   // In development, Vite handles client-side routing
