@@ -88,11 +88,19 @@ router.get('/applications', async (req: Request, res: Response) => {
           res.title as resume_title,
           ja.shared_token,
           ja.resume_file_url,
-          CASE WHEN ja.user_id IS NULL THEN true ELSE false END as is_guest
+          CASE WHEN ja.user_id IS NULL THEN true ELSE false END as is_guest,
+          COALESCE(interview_count.count, 0) as interview_count,
+          COALESCE(interview_count.max_round, 0) as current_round
         FROM job_applications ja
         INNER JOIN job_postings jp ON ja.job_id = jp.id
         LEFT JOIN users u ON ja.user_id = u.id
         LEFT JOIN resumes res ON ja.user_id = res.user_id
+        LEFT JOIN (
+          SELECT application_id, COUNT(*) as count, MAX(interview_round) as max_round
+          FROM interview_invitations 
+          WHERE application_id IS NOT NULL
+          GROUP BY application_id
+        ) interview_count ON interview_count.application_id = ja.id
         WHERE jp.recruiter_id = $1
       `;
 
@@ -115,9 +123,16 @@ router.get('/applications', async (req: Request, res: Response) => {
 
       const result = await db.query(query, params);
 
+      const applications = result.rows.map(row => ({
+        ...row,
+        interviewCount: parseInt(row.interview_count) || 0,
+        currentRound: parseInt(row.current_round) || 0,
+        hasScheduledInterview: parseInt(row.interview_count) > 0
+      }));
+
       res.json({
         success: true,
-        data: result.rows
+        data: applications
       });
     } catch (error) {
       console.error('Error fetching applications:', error);

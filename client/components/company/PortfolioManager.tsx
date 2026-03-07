@@ -117,24 +117,24 @@ export function PortfolioManager({ clients, projects, awards, achievements, onUp
   return (
     <div className="space-y-6">
       {/* Clients Section */}
-      <Card>
-        <CardHeader>
+      <Card className="premium-card border-0 shadow-xl">
+        <CardHeader className="premium-card-header">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <CardTitle className="flex items-center gap-2 text-lg font-jakarta font-medium text-white">
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               Trusted Clients
             </CardTitle>
-            <Button onClick={() => setActiveModal('client')} size="sm">
+            <Button onClick={() => setActiveModal('client')} size="sm" className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
               <Plus className="h-4 w-4 mr-2" />
               Add Client
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="premium-card-content">
           {clients.length === 0 ? (
             <div className="text-center py-16 px-6">
               <div className="max-w-sm mx-auto">
@@ -227,27 +227,27 @@ export function PortfolioManager({ clients, projects, awards, achievements, onUp
       </Card>
 
       {/* Projects Section */}
-      <Card>
-        <CardHeader>
+      <Card className="premium-card border-0 shadow-xl">
+        <CardHeader className="premium-card-header">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <CardTitle className="flex items-center gap-2 text-lg font-jakarta font-medium text-white">
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
               <div>
-                <span className="text-slate-900">Featured Projects</span>
-                <p className="text-sm text-slate-500 font-normal mt-0.5">Showcase your technical expertise</p>
+                <span className="text-white">Featured Projects</span>
+                <p className="text-sm text-white/80 font-normal mt-0.5">Showcase your technical expertise</p>
               </div>
             </CardTitle>
-            <Button onClick={() => setActiveModal('project')} size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={() => setActiveModal('project')} size="sm" className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
               <Plus className="h-4 w-4 mr-2" />
               Add Project
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="premium-card-content">
           {projects.length === 0 ? (
             <div className="text-center py-16 px-6">
               <div className="max-w-sm mx-auto">
@@ -374,27 +374,27 @@ export function PortfolioManager({ clients, projects, awards, achievements, onUp
       </Card>
 
       {/* Awards Section */}
-      <Card>
-        <CardHeader>
+      <Card className="premium-card border-0 shadow-xl">
+        <CardHeader className="premium-card-header">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <CardTitle className="flex items-center gap-2 text-lg font-jakarta font-medium text-white">
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               </div>
               <div>
-                <span className="text-slate-900">Awards & Recognition</span>
-                <p className="text-sm text-slate-500 font-normal mt-0.5">Highlight your achievements and accolades</p>
+                <span className="text-white">Awards & Recognition</span>
+                <p className="text-sm text-white/80 font-normal mt-0.5">Highlight your achievements and accolades</p>
               </div>
             </CardTitle>
-            <Button onClick={() => setActiveModal('award')} size="sm" className="bg-amber-600 hover:bg-amber-700">
+            <Button onClick={() => setActiveModal('award')} size="sm" className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
               <Plus className="h-4 w-4 mr-2" />
               Add Award
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="premium-card-content">
           {awards.length === 0 ? (
             <div className="text-center py-16 px-6">
               <div className="max-w-sm mx-auto">
@@ -510,27 +510,27 @@ export function PortfolioManager({ clients, projects, awards, achievements, onUp
       </Card>
 
       {/* Achievements Section */}
-      <Card>
-        <CardHeader>
+      <Card className="premium-card border-0 shadow-xl">
+        <CardHeader className="premium-card-header">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <svg className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <CardTitle className="flex items-center gap-2 text-lg font-jakarta font-medium text-white">
+              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
               <div>
-                <span className="text-slate-900">Key Achievements</span>
-                <p className="text-sm text-slate-500 font-normal mt-0.5">Highlight your measurable accomplishments</p>
+                <span className="text-white">Key Achievements</span>
+                <p className="text-sm text-white/80 font-normal mt-0.5">Highlight your measurable accomplishments</p>
               </div>
             </CardTitle>
-            <Button onClick={() => setActiveModal('achievement')} size="sm" className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={() => setActiveModal('achievement')} size="sm" className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
               <Plus className="h-4 w-4 mr-2" />
               Add Achievement
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="premium-card-content">
           {achievements.length === 0 ? (
             <div className="text-center py-16 px-6">
               <div className="max-w-sm mx-auto">

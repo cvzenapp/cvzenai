@@ -102,11 +102,11 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
       return;
     }
 
-    if (!signUpData.companyName.trim()) {
-      setError("Company name is required");
-      setLoading(false);
-      return;
-    }
+    // if (!signUpData.companyName.trim()) {
+    //   setError("Company name is required");
+    //   setLoading(false);
+    //   return;
+    // }
 
     if (!signUpData.jobTitle.trim()) {
       setError("Job title is required");
@@ -114,17 +114,17 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
       return;
     }
 
-    if (!signUpData.companySizeRange) {
-      setError("Company size is required");
-      setLoading(false);
-      return;
-    }
+    // if (!signUpData.companySizeRange) {
+    //   setError("Company size is required");
+    //   setLoading(false);
+    //   return;
+    // }
 
-    if (!signUpData.companyLocation.trim()) {
-      setError("Company location is required");
-      setLoading(false);
-      return;
-    }
+    // if (!signUpData.companyLocation.trim()) {
+    //   setError("Company location is required");
+    //   setLoading(false);
+    //   return;
+    // }
 
     if (!signUpData.acceptTerms) {
       setError("You must accept the terms and conditions");
@@ -410,7 +410,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
             </div>
 
             {/* Company Information */}
-            <div className="space-y-3">
+            {/* <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-900">Company Information</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -506,7 +506,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                   rows={3}
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Account Security */}
             <div className="space-y-3">

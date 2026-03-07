@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { companyApi } from '@/services/companyApi';
 import { PortfolioManager } from '@/components/company/PortfolioManager';
 import CultureManager from '@/components/company/CultureManager';
@@ -18,6 +19,8 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editingBasicInfo, setEditingBasicInfo] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const { toast } = useToast();
 
   // Form state for basic info
   const [formData, setFormData] = useState({
@@ -45,6 +48,61 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
       youtube: '',
     },
   });
+
+  // Validation function
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name?.trim()) {
+      errors.name = 'Company name is required';
+    }
+    
+    if (!formData.industry?.trim()) {
+      errors.industry = 'Industry is required';
+    }
+    
+    if (!formData.description?.trim()) {
+      errors.description = 'Company description is required';
+    } else if (formData.description.length < 50) {
+      errors.description = 'Description must be at least 50 characters';
+    }
+    
+    if (formData.website && !isValidUrl(formData.website)) {
+      errors.website = 'Please enter a valid website URL';
+    }
+    
+    if (formData.socialLinks?.linkedin && !isValidUrl(formData.socialLinks.linkedin)) {
+      errors.linkedin = 'Please enter a valid LinkedIn URL';
+    }
+    
+    if (formData.socialLinks?.twitter && !isValidUrl(formData.socialLinks.twitter)) {
+      errors.twitter = 'Please enter a valid X (Twitter) URL';
+    }
+    
+    if (formData.socialLinks?.facebook && !isValidUrl(formData.socialLinks.facebook)) {
+      errors.facebook = 'Please enter a valid Facebook URL';
+    }
+    
+    if (formData.socialLinks?.instagram && !isValidUrl(formData.socialLinks.instagram)) {
+      errors.instagram = 'Please enter a valid Instagram URL';
+    }
+    
+    if (formData.socialLinks?.youtube && !isValidUrl(formData.socialLinks.youtube)) {
+      errors.youtube = 'Please enter a valid YouTube URL';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const isValidUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     loadCompany();
@@ -104,6 +162,15 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
   const handleSaveBasicInfo = async () => {
     if (!company) return;
 
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors below before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSaving(true);
       console.log('🔵 Starting basic info save...');
@@ -125,12 +192,16 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
       console.log('🔵 Token found:', !!token);
       
       if (!token) {
-        alert('Authentication required. Please log in again.');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in again to continue.",
+          variant: "destructive",
+        });
         setSaving(false);
         return;
       }
       
-      console.log('🔵 Making fetch request to save basic info');
+      // console.log('🔵 Making fetch request to save basic info');
       
       // Direct fetch call like image uploads
       const response = await fetch('/api/recruiter/company/profile', {
@@ -142,29 +213,45 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
         body: JSON.stringify(updateData)
       });
 
-      console.log('🔵 Basic info save response status:', response.status);
+      // console.log('🔵 Basic info save response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔵 Basic info save response data:', data);
+        // console.log('🔵 Basic info save response data:', data);
         
         if (data.success) {
-          console.log('✅ Basic info save successful, updating state...');
+          // console.log('✅ Basic info save successful, updating state...');
           setCompany(data.company);
           setEditingBasicInfo(false);
-          alert('Company information saved successfully!');
+          setValidationErrors({});
+          toast({
+            title: "Success!",
+            description: "Company information saved successfully.",
+          });
         } else {
           console.error('❌ Basic info save failed:', data.message);
-          alert('Save failed: ' + (data.message || 'Unknown error'));
+          toast({
+            title: "Save Failed",
+            description: data.message || 'Unknown error occurred.',
+            variant: "destructive",
+          });
         }
       } else {
         const errorText = await response.text();
         console.error('❌ Basic info save failed with status:', response.status, errorText);
-        alert('Save failed: ' + response.status);
+        toast({
+          title: "Save Failed",
+          description: `Server error: ${response.status}`,
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error('❌ Basic info save error:', err);
-      alert('Save failed: ' + err.message);
+      toast({
+        title: "Save Failed",
+        description: err.message || 'An unexpected error occurred.',
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -216,7 +303,11 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
       console.log('🔵 Token found:', !!token);
       
       if (!token) {
-        alert('Authentication required. Please log in again.');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in again to continue.",
+          variant: "destructive",
+        });
         return;
       }
       
@@ -245,16 +336,28 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
           console.log('✅ Portfolio updated successfully!');
         } else {
           console.error('❌ Portfolio update failed:', responseData.message);
-          alert('Portfolio update failed: ' + (responseData.message || 'Unknown error'));
+          toast({
+            title: "Update Failed",
+            description: responseData.message || 'Unknown error occurred.',
+            variant: "destructive",
+          });
         }
       } else {
         const errorText = await response.text();
         console.error('❌ Portfolio update failed with status:', response.status, errorText);
-        alert('Portfolio update failed: ' + response.status);
+        toast({
+          title: "Update Failed",
+          description: `Server error: ${response.status}`,
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error('❌ Portfolio update error:', err);
-      alert('Portfolio update failed: ' + err.message);
+      toast({
+        title: "Update Failed",
+        description: err.message || 'An unexpected error occurred.',
+        variant: "destructive",
+      });
     }
   };
 
@@ -264,12 +367,20 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
 
     // Validate file
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) { // 2MB limit
-      alert('Image size must be less than 2MB');
+      toast({
+        title: "File Too Large",
+        description: "Image size must be less than 2MB.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -289,7 +400,11 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
           console.log('🔵 Token found:', !!token);
           
           if (!token) {
-            alert('Authentication required. Please log in again.');
+            toast({
+              title: "Authentication Required",
+              description: "Please log in again to continue.",
+              variant: "destructive",
+            });
             setSaving(false);
             return;
           }
@@ -320,19 +435,34 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
               console.log('✅ Upload successful, reloading company data...');
               // Instead of page reload, update the state directly
               await loadCompany();
-              alert('Cover image uploaded successfully!');
+              toast({
+                title: "Success!",
+                description: "Cover image uploaded successfully.",
+              });
             } else {
               console.error('❌ Upload failed:', data.message);
-              alert('Upload failed: ' + (data.message || 'Unknown error'));
+              toast({
+                title: "Upload Failed",
+                description: data.message || 'Unknown error occurred.',
+                variant: "destructive",
+              });
             }
           } else {
             const errorText = await response.text();
             console.error('❌ Upload failed with status:', response.status, errorText);
-            alert('Upload failed: ' + response.status);
+            toast({
+              title: "Upload Failed",
+              description: `Server error: ${response.status}`,
+              variant: "destructive",
+            });
           }
         } catch (err) {
           console.error('❌ Upload error:', err);
-          alert('Upload failed: ' + err.message);
+          toast({
+            title: "Upload Failed",
+            description: err.message || 'An unexpected error occurred.',
+            variant: "destructive",
+          });
         } finally {
           setSaving(false);
         }
@@ -340,14 +470,22 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
       
       reader.onerror = () => {
         console.error('❌ File read error');
-        alert('Failed to read file');
+        toast({
+          title: "File Read Error",
+          description: "Failed to read the selected file.",
+          variant: "destructive",
+        });
         setSaving(false);
       };
       
       reader.readAsDataURL(file);
     } catch (err) {
       console.error('❌ File processing error:', err);
-      alert('Failed to process file');
+      toast({
+        title: "Processing Error",
+        description: "Failed to process the selected file.",
+        variant: "destructive",
+      });
       setSaving(false);
     }
   };
@@ -471,57 +609,70 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-normal text-gray-900">Company Portfolio</h1>
-          <p className="text-gray-600 mt-1">Manage your company's public profile</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+      <div className="p-4 space-y-2 max-w-7xl mx-auto">
+        {/* Enhanced Header with CVZen Branding */}
+        <div className="flex items-center justify-between py-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-brand-main rounded-2xl">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-jakarta font-bold text-brand-background">Company Portfolio</h1>
+                <p className="text-slate-600 mt-1 font-jakarta">Showcase your organization with CVZen's intelligent platform</p>
+              </div>
+            </div>
+          </div>
+          <Button asChild variant="outline" className="border-brand-main text-brand-main hover:bg-brand-main hover:text-white">
+            <a href={`/company/${company.slug}`} target="_blank" rel="noopener noreferrer">
+              <Globe className="h-4 w-4 mr-2" />
+              View Public Profile
+            </a>
+          </Button>
         </div>
-        <Button asChild variant="outline">
-          <a href={`/company/${company.slug}`} target="_blank" rel="noopener noreferrer">
-            <Globe className="h-4 w-4 mr-2" />
-            View Public Profile
-          </a>
-        </Button>
-      </div>
 
-      {/* Cover Image Section */}
-      <Card>
-        <CardHeader>
+      {/* Enhanced Cover Image Section */}
+      <Card className="premium-card border-0 shadow-xl">
+        <CardHeader className="premium-card-header">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-3 text-lg font-jakarta font-medium text-white">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Upload className="h-4 w-4" />
+              </div>
               Cover Image
             </CardTitle>
             {!editingBasicInfo && (
-              <Button size="sm" variant="outline" onClick={() => setEditingBasicInfo(true)}>
+              <Button size="sm" onClick={() => setEditingBasicInfo(true)} className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
                 <Edit2 className="h-4 w-4 mr-2" />
                 Edit
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="relative h-48 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-lg overflow-hidden group">
+        <CardContent className="premium-card-content">
+          <div className="relative h-56 bg-gradient-to-r from-brand-background via-brand-main to-indigo-600 rounded-2xl overflow-hidden group shadow-lg">
             {company.coverImageUrl ? (
               <img
                 src={company.coverImageUrl}
                 alt="Cover"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 style={{ objectPosition: `center ${company.coverImagePosition || '50%'}` }}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-white">
-                <div className="text-center">
-                  <Upload className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm opacity-75">No cover image</p>
+                <div className="text-center space-y-3">
+                  <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm mx-auto w-fit">
+                    <Upload className="h-12 w-12 opacity-80" />
+                  </div>
+                  <p className="text-lg font-jakarta opacity-90">Add your company cover image</p>
+                  <p className="text-sm opacity-70">Showcase your brand with a stunning visual</p>
                 </div>
               </div>
             )}
             
-            {/* Add Cover Button - Always visible */}
-            <div className="absolute bottom-4 right-4">
+            {/* Enhanced Cover Button */}
+            <div className="absolute bottom-6 right-6">
               <input
                 type="file"
                 id="cover-upload"
@@ -532,45 +683,49 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
               />
               <Button
                 size="sm"
-                variant="secondary"
                 onClick={() => document.getElementById('cover-upload')?.click()}
                 disabled={saving}
+                className="bg-white/20 border-white/30 text-white hover:bg-white hover:text-brand-background backdrop-blur-sm shadow-lg"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 {saving ? 'Uploading...' : company.coverImageUrl ? 'Change Cover' : 'Add Cover'}
               </Button>
             </div>
+            
+            {/* Decorative Elements */}
+            <div className="absolute top-4 left-4 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
+            <div className="absolute bottom-4 right-4 w-16 h-16 bg-blue-400/20 rounded-full blur-lg"></div>
           </div>
         </CardContent>
       </Card>
 
       {/* Company Information Section */}
-      <Card>
-        <CardHeader>
+      <Card className="premium-card border-0 shadow-xl">
+        <CardHeader className="premium-card-header">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg font-jakarta font-medium text-white">
+              <Building2 className="h-4 w-4" />
               Company Information
             </CardTitle>
             {editingBasicInfo ? (
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setEditingBasicInfo(false)}>
+                <Button size="sm" variant="outline" onClick={() => setEditingBasicInfo(false)} className="border-white/30 text-white/20 hover:bg-white hover:text-brand-background">
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleSaveBasicInfo} disabled={saving}>
+                <Button size="sm" onClick={handleSaveBasicInfo} disabled={saving} className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                   Save
                 </Button>
               </div>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setEditingBasicInfo(true)}>
+              <Button size="sm" onClick={() => setEditingBasicInfo(true)} className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
                 <Edit2 className="h-4 w-4 mr-2" />
                 Edit
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="premium-card-content">
           {editingBasicInfo ? (
             <div className="grid md:grid-cols-2 gap-4">
               <div>
@@ -578,16 +733,20 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={validationErrors.name ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                 />
+                {validationErrors.name && (
+                  <p className="text-sm text-red-600 mt-1">{validationErrors.name}</p>
+                )}
               </div>
               <div>
                 <Label>Company Logo</Label>
                 <div className="space-y-2">
-                  <Input
+                  {/* <Input
                     value={formData.logoUrl}
                     onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
                     placeholder="https://example.com/logo.png or upload file below"
-                  />
+                  /> */}
                   <div className="flex items-center gap-2">
                     <input
                       type="file"
@@ -623,14 +782,23 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={4}
+                  className={validationErrors.description ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                 />
+                {validationErrors.description && (
+                  <p className="text-sm text-red-600 mt-1">{validationErrors.description}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.description?.length || 0}/500 characters (minimum 50)
+                </p>
               </div>
               <div>
                 <Label>Industry</Label>
                 <select
                   value={formData.industry}
                   onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    validationErrors.industry ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-input"
+                  }`}
                 >
                   <option value="">Select industry...</option>
                   <option value="Technology">Technology</option>
@@ -651,6 +819,9 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                   <option value="Human Resources">Human Resources</option>
                   <option value="Other">Other</option>
                 </select>
+                {validationErrors.industry && (
+                  <p className="text-sm text-red-600 mt-1">{validationErrors.industry}</p>
+                )}
               </div>
               <div>
                 <Label>Location</Label>
@@ -667,14 +838,14 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                   placeholder="https://example.com"
                 />
               </div>
-              <div>
+              {/* <div>
                 <Label>Employee Count</Label>
                 <Input
                   type="number"
                   value={formData.employeeCount}
                   onChange={(e) => setFormData({ ...formData, employeeCount: e.target.value })}
                 />
-              </div>
+              </div> */}
               <div>
                 <Label>Founded Year</Label>
                 <Input
@@ -769,19 +940,27 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                         ...formData, 
                         socialLinks: { ...formData.socialLinks, linkedin: e.target.value }
                       })}
-                      placeholder="https://linkedin.com/company/..."
+                      placeholder="https://linkedin.com/in/company/..."
+                      className={validationErrors.linkedin ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                     />
+                    {validationErrors.linkedin && (
+                      <p className="text-sm text-red-600 mt-1">{validationErrors.linkedin}</p>
+                    )}
                   </div>
                   <div>
-                    <Label>Twitter</Label>
+                    <Label>X</Label>
                     <Input
                       value={formData.socialLinks.twitter}
                       onChange={(e) => setFormData({ 
                         ...formData, 
                         socialLinks: { ...formData.socialLinks, twitter: e.target.value }
                       })}
-                      placeholder="https://twitter.com/..."
+                      placeholder="https://x.com/..."
+                      className={validationErrors.twitter ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                     />
+                    {validationErrors.twitter && (
+                      <p className="text-sm text-red-600 mt-1">{validationErrors.twitter}</p>
+                    )}
                   </div>
                   <div>
                     <Label>Facebook</Label>
@@ -792,7 +971,11 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                         socialLinks: { ...formData.socialLinks, facebook: e.target.value }
                       })}
                       placeholder="https://facebook.com/..."
+                      className={validationErrors.facebook ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                     />
+                    {validationErrors.facebook && (
+                      <p className="text-sm text-red-600 mt-1">{validationErrors.facebook}</p>
+                    )}
                   </div>
                   <div>
                     <Label>Instagram</Label>
@@ -803,7 +986,11 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                         socialLinks: { ...formData.socialLinks, instagram: e.target.value }
                       })}
                       placeholder="https://instagram.com/..."
+                      className={validationErrors.instagram ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                     />
+                    {validationErrors.instagram && (
+                      <p className="text-sm text-red-600 mt-1">{validationErrors.instagram}</p>
+                    )}
                   </div>
                   <div>
                     <Label>YouTube</Label>
@@ -814,7 +1001,11 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                         socialLinks: { ...formData.socialLinks, youtube: e.target.value }
                       })}
                       placeholder="https://youtube.com/..."
+                      className={validationErrors.youtube ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                     />
+                    {validationErrors.youtube && (
+                      <p className="text-sm text-red-600 mt-1">{validationErrors.youtube}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -868,48 +1059,47 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
                   </div>
                 </div>
               )}
+              
+              {/* Social Links Display */}
+              <div>
+                <Label className="mb-2 block">Social Links</Label>
+                <div className="flex flex-wrap gap-3">
+                  <a href={company.socialLinks?.linkedin || "https://linkedin.com/company/your-company"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    LinkedIn
+                  </a>
+                  <a href={company.socialLinks?.twitter || "https://x.com/your-company"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-600 rounded-lg hover:bg-sky-100 transition-colors">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    X (Twitter)
+                  </a>
+                  <a href={company.socialLinks?.facebook || "https://facebook.com/your-company"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </a>
+                  <a href={company.socialLinks?.instagram || "https://instagram.com/your-company"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-pink-50 text-pink-600 rounded-lg hover:bg-pink-100 transition-colors">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987 6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.323-1.297C4.198 14.895 3.708 13.744 3.708 12.447s.49-2.448 1.418-3.323C6.001 8.198 7.152 7.708 8.449 7.708s2.448.49 3.323 1.416c.876.876 1.416 2.027 1.416 3.323s-.54 2.447-1.416 3.323c-.875.807-2.026 1.218-3.323 1.218zm7.718-1.297c-.876.876-2.027 1.297-3.323 1.297s-2.448-.421-3.323-1.297c-.876-.876-1.297-2.027-1.297-3.323s.421-2.448 1.297-3.323c.875-.876 2.027-1.297 3.323-1.297s2.447.421 3.323 1.297c.876.875 1.297 2.027 1.297 3.323s-.421 2.447-1.297 3.323z"/>
+                    </svg>
+                    Instagram
+                  </a>
+                  <a href={company.socialLinks?.youtube || "https://youtube.com/@your-company"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    </svg>
+                    YouTube
+                  </a>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Social Links Section */}
-      {!editingBasicInfo && company.socialLinks && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Social Links</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              {company.socialLinks.linkedin && (
-                <a href={company.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  LinkedIn
-                </a>
-              )}
-              {company.socialLinks.twitter && (
-                <a href={company.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">
-                  Twitter
-                </a>
-              )}
-              {company.socialLinks.facebook && (
-                <a href={company.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">
-                  Facebook
-                </a>
-              )}
-              {company.socialLinks.instagram && (
-                <a href={company.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:underline">
-                  Instagram
-                </a>
-              )}
-              {company.socialLinks.youtube && (
-                <a href={company.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline">
-                  YouTube
-                </a>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Company Assets Section */}
       <PortfolioManager
@@ -931,6 +1121,7 @@ export const RecruiterCompanyPortfolio: React.FC = () => {
         testimonials={company.testimonials || []}
         onUpdate={(testimonials) => handlePortfolioUpdate({ testimonials })}
       />
+      </div>
     </div>
   );
 };

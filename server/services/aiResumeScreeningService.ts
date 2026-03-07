@@ -63,7 +63,7 @@ export class AIResumeScreeningService {
       ref: `Candidate_${idx + 1}`, // Use reference instead of name for privacy
       title: c.title,
       exp: c.experience_years,
-      skills: c.skills.split(', ').slice(0, 8).join(', '), // Max 8 skills
+      skills: (c.skills || '').split(', ').slice(0, 8).join(', '), // Max 8 skills
       edu: c.education,
       proj: c.projects_count
     }));
@@ -185,27 +185,40 @@ IMPORTANT:
   }
 
   /**
+   * Safely parse JSON with fallback to empty array
+   */
+  private safeParseArray(data: any): any[] {
+    if (Array.isArray(data)) {
+      return data;
+    }
+    
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn('Failed to parse JSON data:', error);
+        return [];
+      }
+    }
+    
+    return [];
+  }
+
+  /**
    * Prepare candidate data for screening (removes PII)
    */
   private prepareCandidateData(candidate: any, index: number) {
     const resume = candidate.resume || {};
     
-    // Parse JSONB fields if they're strings
-    const skills = typeof resume.skills === 'string'
-      ? JSON.parse(resume.skills)
-      : (resume.skills || []);
-    const experience = typeof resume.experience === 'string'
-      ? JSON.parse(resume.experience)
-      : (resume.experience || []);
-    const education = typeof resume.education === 'string'
-      ? JSON.parse(resume.education)
-      : (resume.education || []);
-    const projects = typeof resume.projects === 'string'
-      ? JSON.parse(resume.projects)
-      : (resume.projects || []);
+    // Parse JSONB fields safely with error handling
+    const skills = this.safeParseArray(resume.skills);
+    const experience = this.safeParseArray(resume.experience);
+    const education = this.safeParseArray(resume.education);
+    const projects = this.safeParseArray(resume.projects);
 
     // Fallback to candidate profile data if resume is missing
-    const candidateSkills = skills.length > 0 ? skills : (candidate.skills || []);
+    let candidateSkills = skills.length > 0 ? skills : this.safeParseArray(candidate.skills);
     
     // Extract name from candidate object (firstName + lastName or from personal_info)
     let candidateName = 'Unknown Candidate';
@@ -247,7 +260,7 @@ IMPORTANT:
         candidateName === 'Unknown Candidate' || 
         candidateName === 'Unknown' ||
         candidateName.trim() === '') {
-      if (candidate.email) {
+      if (candidate.email && typeof candidate.email === 'string') {
         const emailUsername = candidate.email.split('@')[0];
         candidateName = emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1).replace(/[._-]/g, ' ');
       } else {

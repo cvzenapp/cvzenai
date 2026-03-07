@@ -141,6 +141,7 @@ class ResumeParser {
 MANDATORY REQUIREMENTS:
 - Extract FULL job descriptions and responsibilities for each experience
 - Extract COMPLETE project descriptions with all details
+- Extract Certification names,certification organizations, certification links, dates in any format
 - Generate career objective if it is not found
 - Extract ALL skills, certifications, languages, achievements
 - Extract Project start date and end date in any format
@@ -163,8 +164,8 @@ Extract EVERYTHING and return ONLY complete JSON with full details.`;
         userPrompt,
         {
           temperature: 0.3, // Lower for more consistent extraction
-          maxTokens: 8000, // Increased for complete resumes with all sections
-          model: 'llama-3.3-70b-versatile', // Use versatile model for 12k token limit
+          maxTokens: 50000, // Increased for complete resumes with all sections
+          model: 'llama-3.1-8b-instant', // Use versatile model for 12k token limit
           auditContext: {
             serviceName: 'resumeParser',
             operationType: 'resume_parsing',
@@ -196,8 +197,8 @@ Extract EVERYTHING and return ONLY complete JSON with full details.`;
           userPrompt,
           {
             temperature: 0.3,
-            maxTokens: 12000, // Maximum for versatile model
-            model: 'llama-3.3-70b-versatile',
+            maxTokens: 50000, // Maximum for versatile model
+            model: 'llama-3.1-8b-instant',
             auditContext: {
               serviceName: 'resumeParser',
               operationType: 'resume_parsing_retry',

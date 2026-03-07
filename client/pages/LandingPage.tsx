@@ -28,7 +28,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { authApi } from "@/services/authApi";
 import { SustainabilityPledgeModal } from "@/components/SustainabilityPledgeModal";
-import { QuickSignupModal } from "@/components/QuickSignupModal";
+import QuickSignupModal from "@/components/QuickSignupModal";
 import AuthModal from "@/components/AuthModal";
 import RecruiterAuthModal from "@/components/RecruiterAuthModal";
 import CVZenLogo from "@/components/CVZenLogo";
@@ -192,7 +192,7 @@ export default function LandingPage() {
 
   const handleRecruiterAuthSuccess = () => {
     setRecruiterAuthModalOpen(false);
-    navigate("/recruiter");
+    navigate("/recruiter/dashboard");
   };
 
   const openLoginModal = () => {

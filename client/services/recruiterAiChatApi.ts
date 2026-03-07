@@ -260,6 +260,53 @@ class RecruiterAiChatApiService extends BaseApiClient {
   }
 
   /**
+   * Create a job posting from AI-generated job description
+   */
+  async createJobPosting(jobData: {
+    title: string;
+    department: string;
+    location: string;
+    jobType: 'full-time' | 'part-time' | 'contract' | 'internship';
+    experienceLevel: 'entry' | 'mid' | 'senior' | 'executive';
+    salaryMin?: number;
+    salaryMax?: number;
+    salaryCurrency?: string;
+    description: string;
+    requirements?: string[];
+    benefits?: string[];
+  }): Promise<{
+    success: boolean;
+    message: string;
+    job: any;
+    publicUrl: string;
+    shareData: {
+      url: string;
+      title: string;
+      description: string;
+      jobTitle: string;
+      companyName: string;
+    };
+  }> {
+    const response = await this.post('/create-job', jobData);
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    let errorMessage = 'Failed to create job posting';
+    if (response.error) {
+      if (typeof response.error === 'string') {
+        errorMessage = response.error;
+      } else if (response.error.message) {
+        errorMessage = response.error.message;
+      }
+    } else if (response.message) {
+      errorMessage = response.message;
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  /**
    * Update session name
    */
   async updateSessionName(sessionId: number, sessionName: string): Promise<{ success: boolean }> {

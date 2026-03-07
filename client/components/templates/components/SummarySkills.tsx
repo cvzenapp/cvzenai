@@ -59,7 +59,9 @@ export const SummarySkills: React.FC<SummarySkillsProps> = ({
   const calculateMetrics = () => {
     const totalExperience = resume.experiences?.length || 0;
     const totalProjects = resume.projects?.length || 0;
-    const coreSkills = resume.skills?.filter(skill => skill.isCore).length || 0;
+    const coreSkills = resume.skills?.filter(skill => 
+      typeof skill === 'string' ? false : skill.isCore
+    ).length || 0;
     
     // Calculate years of experience from work history
     const yearsOfExperience = resume.experiences?.reduce((acc, exp) => {
@@ -88,29 +90,29 @@ export const SummarySkills: React.FC<SummarySkillsProps> = ({
       {/* Vertical Bar */}
       <div className="relative w-12 h-32 bg-muted/30 rounded-t-lg flex flex-col justify-end overflow-hidden">
         <div 
-          className={`w-full rounded-t-lg transition-all duration-500 ${getProficiencyColor(skill.level || 0)}`}
-          style={{ height: `${skill.level || 0}%` }}
+          className={`w-full rounded-t-lg transition-all duration-500 ${getProficiencyColor(typeof skill === 'string' ? 70 : (skill.level || 0))}`}
+          style={{ height: `${typeof skill === 'string' ? 70 : (skill.level || 0)}%` }}
           role="progressbar"
-          aria-valuenow={skill.level || 0}
+          aria-valuenow={typeof skill === 'string' ? 70 : (skill.level || 0)}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`${skill.name} proficiency: ${skill.level}%`}
+          aria-label={`${typeof skill === 'string' ? skill : skill.name} proficiency: ${typeof skill === 'string' ? 70 : (skill.level || 0)}%`}
         />
       </div>
       
       {/* Percentage Badge */}
-      {skill.level && (
+      {(typeof skill === 'string' ? false : skill.level) && (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-          {skill.level}%
+          {typeof skill === 'string' ? 70 : skill.level}%
         </span>
       )}
       
       {/* Skill Name */}
       <div className="text-center">
         <span className="text-xs font-medium text-foreground block">
-          {skill.name}
+          {typeof skill === 'string' ? skill : skill.name}
         </span>
-        {skill.isCore && (
+        {(typeof skill === 'string' ? false : skill.isCore) && (
           <span className="text-[10px] text-primary">Core Test</span>
         )}
       </div>
@@ -400,10 +402,10 @@ export const SummarySkills: React.FC<SummarySkillsProps> = ({
                                 key={skill.id || index}
                                 className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
                               >
-                                {skill.name}
-                                {skill.level && (
+                                {typeof skill === 'string' ? skill : skill.name}
+                                {(typeof skill === 'string' ? false : skill.level) && (
                                   <span className="ml-2 text-xs font-bold">
-                                    {skill.level}%
+                                    {typeof skill === 'string' ? 70 : skill.level}%
                                   </span>
                                 )}
                               </span>
@@ -438,15 +440,19 @@ export const SummarySkills: React.FC<SummarySkillsProps> = ({
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {resume.skills
-                    ?.filter(skill => skill.isCore || (skill.level && skill.level >= 70))
+                    ?.filter(skill => 
+                      typeof skill === 'string' 
+                        ? false 
+                        : skill.isCore || (skill.level && skill.level >= 70)
+                    )
                     .slice(0, 8) // Show top 8 skills for quick scanning
                     .map((skill, index) => (
                       <span
                         key={skill.id || index}
                         className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
                       >
-                        {skill.name}
-                        {skill.level && skill.level >= 90 && (
+                        {typeof skill === 'string' ? skill : skill.name}
+                        {(typeof skill === 'string' ? false : (skill.level && skill.level >= 90)) && (
                           <svg 
                             className="w-3 h-3 ml-1 text-green-500" 
                             fill="currentColor" 

@@ -42,7 +42,7 @@ import ClientsSection from "@/components/company/ClientsSection";
 import ProjectsSection from "@/components/company/ProjectsSection";
 import AwardsSection from "@/components/company/AwardsSection";
 import AchievementsSection from "@/components/company/AchievementsSection";
-import QuickApplicationModal from "@/components/QuickApplicationModal";
+import QuickSignupModal from "@/components/QuickSignupModal";
 
 export default function CompanyProfile() {
   const { slug } = useParams<{ slug: string }>();
@@ -74,6 +74,7 @@ export default function CompanyProfile() {
     resumeId?: number;
     shareToken?: string;
     resumeUrl?: string;
+    coverLetter?: string;
   }) => {
     console.log('📤 Quick apply submit:', data);
     
@@ -82,7 +83,7 @@ export default function CompanyProfile() {
     }
 
     try {
-      // Resume is already parsed by QuickApplicationModal
+      // Resume is already parsed by QuickSignupModal
       // Just submit the application with parsed data
       const appResponse = await fetch('/api/job-applications/guest', {
         method: 'POST',
@@ -96,7 +97,8 @@ export default function CompanyProfile() {
           resumeFileUrl: data.resumeUrl || '',
           userId: data.userId,
           resumeId: data.resumeId,
-          shareToken: data.shareToken
+          shareToken: data.shareToken,
+          coverLetter: data.coverLetter // Include cover letter in application
         })
       });
 
@@ -1131,14 +1133,15 @@ export default function CompanyProfile() {
       </AnimatePresence>
 
       {/* Quick Apply Modal */}
-      <QuickApplicationModal
+      <QuickSignupModal
+        mode="job-application"
         isOpen={showQuickApply}
         onClose={() => {
           setShowQuickApply(false);
           setPendingJobId(null);
           setPendingJobTitle('');
         }}
-        onSubmit={handleQuickApplySubmit}
+        onJobApplication={handleQuickApplySubmit}
         jobTitle={pendingJobTitle}
         companyName={company?.name || ''}
       />

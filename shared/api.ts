@@ -92,7 +92,7 @@ export interface Skill {
   yearsOfExperience?: number;
   endorsements?: number;
   isCore?: boolean;
-  proficiency: any;
+  proficiency?: number; // Changed from 'any' to 'number' for better type safety
 }
 
 export interface Certification {
@@ -146,13 +146,20 @@ export interface Resume {
 export interface InterviewInvitation {
   id: number;
   recruiterId: number;
-  candidateId: number;
-  resumeId: number;
+  candidateId?: number; // Optional for guest candidates
+  resumeId?: number; // Optional for guest candidates
   jobPostingId?: number;
+  applicationId?: number;
+  interviewRound?: number;
+  
+  // Guest candidate fields
+  guestCandidateName?: string;
+  guestCandidateEmail?: string;
   
   title: string;
   description?: string;
   interviewType: 'video_call' | 'phone' | 'in_person' | 'technical';
+  interviewRoundType?: string;
   
   proposedDatetime: string;
   durationMinutes: number;
@@ -238,6 +245,7 @@ export interface CreateInterviewRequest {
   candidateId?: number; // Optional for guest candidates
   resumeId?: number; // Optional for guest candidates
   jobPostingId?: number;
+  applicationId?: number; // Link to job application
   
   // Guest candidate fields (required if candidateId is not provided)
   guestCandidateName?: string;
@@ -246,6 +254,7 @@ export interface CreateInterviewRequest {
   title: string;
   description?: string;
   interviewType: 'video_call' | 'phone' | 'in_person' | 'technical';
+  interviewRoundType?: string; // e.g., "Technical", "HR", "Coding", "Final"
   
   proposedDatetime: string;
   durationMinutes?: number;

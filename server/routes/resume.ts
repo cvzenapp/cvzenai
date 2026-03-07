@@ -195,11 +195,12 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
     const { getDatabase } = await import('../database/connection.js');
     const db = await getDatabase();
 
-    // Get user's resumes from database
+    // Get user's resumes from database with shareToken
     const resumesResult = await db.query(`
-      SELECT r.*, u.email, u.avatar
+      SELECT r.*, u.email, u.avatar, rs.share_token
       FROM resumes r
       JOIN users u ON r.user_id = u.id
+      LEFT JOIN resume_shares rs ON r.id = rs.resume_id AND rs.is_active = true
       WHERE r.user_id = $1
       ORDER BY r.is_active DESC NULLS LAST, r.updated_at DESC
     `, [userId]);
@@ -252,6 +253,7 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
         summary: resume.summary || '',
         objective: resume.objective || '',
         templateId: resume.template_id,
+        shareToken: resume.share_token, // Include shareToken from resume_shares table
         atsScore
       };
     });
@@ -524,14 +526,53 @@ export const createResume = async (req: AuthRequest, res: Response) => {
 
     const newResume = insertResult.rows[0];
 
-    console.log('✅ Resume created successfully:', newResume.id);
+    // Generate shareToken automatically using slug
+    const personalInfo = typeof newResume.personal_info === 'string' ? JSON.parse(newResume.personal_info) : (newResume.personal_info || {});
+    const fullName = personalInfo.fullName || personalInfo.name || personalInfo.firstName + ' ' + personalInfo.lastName || 'resume';
+    
+    // Generate unique slug for shareToken
+    const generateUniqueSlug = async (baseName: string): Promise<string> => {
+      const baseSlug = baseName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+      
+      let slug = baseSlug;
+      let counter = 1;
+      
+      while (true) {
+        const existing = await db.query(
+          'SELECT id FROM resume_shares WHERE share_token = $1',
+          [slug]
+        );
+        
+        if (existing.rows.length === 0) {
+          return slug;
+        }
+        
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+    };
+
+    const shareToken = await generateUniqueSlug(fullName);
+    
+    // Create resume share entry
+    await db.query(`
+      INSERT INTO resume_shares (resume_id, user_id, share_token, is_active, expires_at)
+      VALUES ($1, $2, $3, true, NULL)
+    `, [newResume.id, userId, shareToken]);
+
+    console.log('✅ Resume created successfully:', newResume.id, 'with shareToken:', shareToken);
 
     res.status(201).json({
       success: true,
       data: {
         id: newResume.id,
         title: newResume.title,
-        personalInfo: typeof newResume.personal_info === 'string' ? JSON.parse(newResume.personal_info) : (newResume.personal_info || {}),
+        personalInfo: personalInfo,
         summary: newResume.summary,
         objective: newResume.objective,
         skills: parseSkills(newResume.skills),
@@ -540,6 +581,7 @@ export const createResume = async (req: AuthRequest, res: Response) => {
         projects: typeof newResume.projects === 'string' ? JSON.parse(newResume.projects) : (newResume.projects || []),
         certifications: typeof newResume.certifications === 'string' ? JSON.parse(newResume.certifications) : (newResume.certifications || []),
         templateId: newResume.template_id,
+        shareToken: shareToken,
         createdAt: newResume.created_at,
         updatedAt: newResume.updated_at
       },

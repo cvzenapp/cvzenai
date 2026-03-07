@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Edit, Eye, EyeOff, Briefcase, MapPin, Clock, DollarSign, Users, Calendar, Building2 } from "lucide-react";
+import { Plus, Trash2, Edit, Eye, EyeOff, Briefcase, MapPin, Clock, DollarSign, Users, Calendar, Building2, Share2, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -232,6 +232,23 @@ export default function JobPostingManager({ onJobsChange }: JobPostingManagerPro
     });
   };
 
+  const handleShare = (job: JobPosting) => {
+    const jobUrl = `${window.location.origin}/jobs/${job.slug}`;
+    const text = `Check out this job opportunity: ${job.title} at our company`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: `${job.title} - Job Opening`,
+        text: text,
+        url: jobUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(jobUrl);
+      // You would need to add toast notification here
+      console.log('Job link copied to clipboard');
+    }
+  };
+
   const resetForm = () => {
     setActiveModal(null);
     setEditingJob(null);
@@ -379,6 +396,24 @@ export default function JobPostingManager({ onJobsChange }: JobPostingManagerPro
 
                     {/* Action Buttons */}
                     <div className="absolute top-4 right-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShare(job)}
+                        className="h-8 w-8 p-0"
+                        title="Share job posting"
+                      >
+                        <Share2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/jobs/${job.slug}`, '_blank')}
+                        className="h-8 w-8 p-0"
+                        title="View public job page"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

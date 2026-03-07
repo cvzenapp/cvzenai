@@ -254,14 +254,16 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
     
     const shareRecord = shareResult.rows[0];
     
-    // Check if the share link has expired
-    const now = new Date();
-    const expiresAt = new Date(shareRecord.expires_at);
-    if (now > expiresAt) {
-      return res.status(404).json({
-        success: false,
-        error: 'This share link has expired'
-      });
+    // Check if the share link has expired (only if expires_at is set)
+    if (shareRecord.expires_at) {
+      const now = new Date();
+      const expiresAt = new Date(shareRecord.expires_at);
+      if (now > expiresAt) {
+        return res.status(404).json({
+          success: false,
+          error: 'This share link has expired'
+        });
+      }
     }
     
     // Increment view count in both tables (fire and forget, don't wait)
@@ -432,7 +434,23 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
       },
       summary: resumeData.summary || '',
       objective: resumeData.objective || '',
-      skills: parseJsonField(resumeData.skills),
+      skills: (() => {
+        const skillsData = parseJsonField(resumeData.skills);
+        // Use the same parsing logic as the main resume route
+        if (!skillsData) return [];
+        
+        // New format: { skills: [...], categories: {...} }
+        if (skillsData && typeof skillsData === 'object' && 'skills' in skillsData) {
+          return skillsData.skills || [];
+        }
+        
+        // Old format: just an array
+        if (Array.isArray(skillsData)) {
+          return skillsData;
+        }
+        
+        return [];
+      })(),
       experiences: parseJsonField(resumeData.experience),
       education: parseJsonField(resumeData.education),
       projects: parseJsonField(resumeData.projects),

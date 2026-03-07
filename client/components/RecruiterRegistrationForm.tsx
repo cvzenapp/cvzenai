@@ -72,12 +72,12 @@ export default function RecruiterRegistrationForm({
     jobTitle: "",
     phone: "",
     linkedinUrl: "",
-    companyName: "",
-    companyWebsite: "",
-    companyIndustry: "",
-    companySizeRange: "",
-    companyLocation: "",
-    companyDescription: "",
+    // companyName: "",
+    // companyWebsite: "",
+    // companyIndustry: "",
+    // companySizeRange: "",
+    // companyLocation: "",
+    // companyDescription: "",
     acceptTerms: false,
     acceptPrivacyPolicy: false,
   });
@@ -152,15 +152,17 @@ export default function RecruiterRegistrationForm({
         newErrors.confirmPassword = "Passwords don't match";
       }
       if (!formData.jobTitle) newErrors.jobTitle = "Job title is required";
-    } else if (step === 1) {
-      // Company Information validation
-      if (!formData.companyName)
-        newErrors.companyName = "Company name is required";
-      if (!formData.companySizeRange)
-        newErrors.companySizeRange = "Company size is required";
-      if (!formData.companyLocation)
-        newErrors.companyLocation = "Company location is required";
-    } else if (step === 2) {
+    } 
+    // else if (step === 1) {
+    //   // Company Information validation
+    //   if (!formData.companyName)
+    //     newErrors.companyName = "Company name is required";
+    //   if (!formData.companySizeRange)
+    //     newErrors.companySizeRange = "Company size is required";
+    //   if (!formData.companyLocation)
+    //     newErrors.companyLocation = "Company location is required";
+    // } 
+    else if (step === 2) {
       // Final validation
       if (!formData.acceptTerms)
         newErrors.acceptTerms = "You must accept the terms and conditions";
@@ -199,9 +201,9 @@ export default function RecruiterRegistrationForm({
       // Remove empty optional fields completely
       if (!formData.phone?.trim()) delete cleanedFormData.phone;
       if (!formData.linkedinUrl?.trim()) delete cleanedFormData.linkedinUrl;
-      if (!formData.companyWebsite?.trim()) delete cleanedFormData.companyWebsite;
-      if (!formData.companyIndustry?.trim()) delete cleanedFormData.companyIndustry;
-      if (!formData.companyDescription?.trim()) delete cleanedFormData.companyDescription;
+      // if (!formData.companyWebsite?.trim()) delete cleanedFormData.companyWebsite;
+      // if (!formData.companyIndustry?.trim()) delete cleanedFormData.companyIndustry;
+      // if (!formData.companyDescription?.trim()) delete cleanedFormData.companyDescription;
       
       const response = await recruiterAuthApi.register(cleanedFormData);
       
@@ -460,20 +462,20 @@ export default function RecruiterRegistrationForm({
             <Label htmlFor="companyName">Company Name *</Label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
+              {/* <Input
                 id="companyName"
                 placeholder="Enter your company name"
                 value={formData.companyName}
                 onChange={(e) => handleInputChange("companyName", e.target.value)}
                 className={`pl-10 ${errors.companyName ? "border-red-500" : ""}`}
-              />
+              /> */}
             </div>
             {errors.companyName && (
               <p className="text-sm text-red-600">{errors.companyName}</p>
             )}
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="companySizeRange">Company Size *</Label>
             <Select
               value={formData.companySizeRange}
@@ -493,9 +495,9 @@ export default function RecruiterRegistrationForm({
             {errors.companySizeRange && (
               <p className="text-sm text-red-600">{errors.companySizeRange}</p>
             )}
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="companyIndustry">Industry</Label>
             <Select
               value={formData.companyIndustry}
@@ -512,9 +514,9 @@ export default function RecruiterRegistrationForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="companyLocation">Company Location *</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -529,7 +531,7 @@ export default function RecruiterRegistrationForm({
             {errors.companyLocation && (
               <p className="text-sm text-red-600">{errors.companyLocation}</p>
             )}
-          </div>
+          </div> */}
         </div>
       )}
 

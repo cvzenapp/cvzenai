@@ -18,6 +18,7 @@ export interface JobPosting {
   isActive: boolean;
   applicationsCount: number;
   viewsCount: number;
+  slug: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -111,6 +112,17 @@ class JobPostingsApiService extends BaseApiClient {
       return response.data;
     }
     throw new Error(response.error as string || 'Failed to fetch public jobs');
+  }
+
+  // Get public job by slug - no auth required
+  async getJobBySlug(slug: string): Promise<{ success: boolean; job: any }> {
+    const response = await fetch(`/api/jobs/public/${slug}`);
+    const data = await response.json();
+    
+    if (response.ok) {
+      return data;
+    }
+    throw new Error(data.message || 'Failed to fetch job posting');
   }
 }
 

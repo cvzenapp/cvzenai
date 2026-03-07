@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { jobSearchApi } from '../services/jobSearchApi';
 import { JobSearchResult, JobDetails } from '@shared/api';
+import { formatJobContent } from '../lib/jobContentFormatter';
 import { cn } from '../lib/utils';
 
 interface JobSearchInterfaceProps {
@@ -317,9 +318,9 @@ export function JobSearchInterface({ className }: JobSearchInterfaceProps) {
                 {/* Description */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Description</h4>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {job.description}
-                  </p>
+                  <div className="text-sm text-gray-600 leading-relaxed prose max-w-none">
+                    {formatJobContent(job.description)}
+                  </div>
                 </div>
 
                 {/* Requirements */}

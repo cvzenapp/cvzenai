@@ -140,7 +140,8 @@ router.post('/parse', upload.single('resume'), async (req, res) => {
         shareToken: result.shareToken,
         resumeUrl: result.resumeUrl,
         accountCreated: result.accountCreated,
-        accountExisted: result.accountExisted
+        accountExisted: result.accountExisted,
+        parsedData: result.parsedData // Include parsed data for cover letter generation
       }
     });
     

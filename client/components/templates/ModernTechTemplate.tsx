@@ -380,12 +380,16 @@ export default function ModernTechTemplate({
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {resume.skills.map((skill, index) => (
                       <div key={index} className="bg-slate-50 rounded-lg p-3">
-                        <div className="font-medium text-slate-900">{skill.name}</div>
-                        <div className="text-sm text-slate-600">{skill.category}</div>
+                        <div className="font-medium text-slate-900">
+                          {typeof skill === 'string' ? skill : skill.name}
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          {typeof skill === 'string' ? 'Other' : skill.category}
+                        </div>
                         <div className="mt-2 bg-slate-200 rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${skill.level || 70}%` }}
+                            style={{ width: `${typeof skill === 'string' ? 70 : (skill.level || 70)}%` }}
                           ></div>
                         </div>
                       </div>

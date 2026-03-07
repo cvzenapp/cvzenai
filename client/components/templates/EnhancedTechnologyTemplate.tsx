@@ -215,14 +215,32 @@ export default function EnhancedTechnologyTemplate({
 
   const getTopSkills = () => {
     if (!resume.skills || resume.skills.length === 0) return [];
-    return resume.skills
+    
+    // Handle both string array (legacy) and skill object array formats
+    const skillObjects = resume.skills.map(skill => {
+      if (typeof skill === 'string') {
+        return { name: skill, proficiency: 0, category: 'Other', isCore: false };
+      }
+      return skill;
+    });
+    
+    return skillObjects
       .sort((a, b) => (b.proficiency || 0) - (a.proficiency || 0))
       .slice(0, 8);
   };
 
   const getCoreSkills = () => {
     if (!resume.skills || resume.skills.length === 0) return [];
-    return resume.skills
+    
+    // Handle both string array (legacy) and skill object array formats
+    const skillObjects = resume.skills.map(skill => {
+      if (typeof skill === 'string') {
+        return { name: skill, proficiency: 0, category: 'Other', isCore: false };
+      }
+      return skill;
+    });
+    
+    return skillObjects
       .filter(skill => skill.isCore || (skill.proficiency && skill.proficiency >= 80))
       .slice(0, 6);
   };

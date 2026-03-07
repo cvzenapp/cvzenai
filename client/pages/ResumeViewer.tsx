@@ -31,7 +31,9 @@ import { ExperienceEditModal } from "@/components/resume/ExperienceEditModal";
 import { CertificationsEditModal } from "@/components/resume/CertificationsEditModal";
 import { JobPreferencesModal } from "@/components/resume/JobPreferencesModal";
 import { resumeUpdateApi } from "@/services/resumeUpdateApi";
-// Removed unused import
+import { SocialShareModal } from "@/components/SocialShareModal";
+import { SocialShareIcons } from "@/components/SocialShareIcons";
+import { ResumeMetaTags } from "@/components/ResumeMetaTags";
 
 export default function ResumeViewer() {
   const { id, shareToken } = useParams();
@@ -1479,6 +1481,9 @@ export default function ResumeViewer() {
   // Use shared ResumeDisplay component
   return (
     <>
+      {/* Meta tags for social sharing */}
+      <ResumeMetaTags resume={resume} shareToken={shareToken} />
+      
       <ResumeDisplay
         key={`resume-${resume.id}-${resume.personalInfo?.github || 'no-github'}-${resume.updatedAt || Date.now()}-${JSON.stringify(resume.experiences?.length || 0)}`}
         resume={resume}

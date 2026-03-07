@@ -13,6 +13,7 @@ interface GuestResumeResult {
   error?: string;
   accountCreated?: boolean;
   accountExisted?: boolean;
+  parsedData?: ParsedResumeData;
 }
 
 class GuestResumeService {
@@ -127,7 +128,7 @@ class GuestResumeService {
     mimeType: string,
     guestName: string,
     guestEmail: string
-  ): Promise<GuestResumeResult> {
+  ): Promise<GuestResumeResult & { parsedData?: ParsedResumeData }> {
     const { initializeDatabase, closeDatabase } = await import('../database/connection.js');
     let db;
     
@@ -278,7 +279,8 @@ class GuestResumeService {
         resumeUrl,
         password: accountCreated ? password : undefined,
         accountCreated,
-        accountExisted
+        accountExisted,
+        parsedData // Include parsed data for cover letter generation
       };
       
     } catch (error) {

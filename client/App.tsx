@@ -34,6 +34,7 @@ import JobSeekerSubscription from "./pages/JobSeekerSubscription";
 import JobSeekerSubscriptionPlans from "./pages/JobSeekerSubscriptionPlans";
 import RefereeResponse from "./pages/RefereeResponse";
 import CompanyProfile from "./pages/CompanyProfile";
+import { PublicJobPosting } from "./pages/PublicJobPosting";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Disclaimer from "./pages/Disclaimer";
@@ -115,6 +116,9 @@ const App = () => {
   
               {/* Company Profile Routes */}
               <Route path="/company/:slug" element={<CompanyProfile />} />
+
+              {/* Public Job Posting Routes */}
+              <Route path="/jobs/:slug" element={<PublicJobPosting />} />
 
               {/* Public Tools */}
               <Route path="/tools/fake-job-detector" element={<FakeJobDetectorPublic />} />

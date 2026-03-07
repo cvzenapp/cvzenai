@@ -4,6 +4,7 @@ import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { emailService } from "../services/emailService";
 import {
   RecruiterAuthResponse,
   Recruiter,
@@ -147,14 +148,13 @@ router.post("/register", async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(validatedData.password, saltRounds);
     
     const insertUserQuery = `
-      INSERT INTO users (email, username, password_hash, first_name, last_name, user_type)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO users (email, password_hash, first_name, last_name, user_type)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
 
     const userResult = await client.query(insertUserQuery, [
       validatedData.email.toLowerCase(),
-      validatedData.email.toLowerCase(), // Use email as username
       hashedPassword,
       validatedData.firstName,
       validatedData.lastName,
@@ -196,6 +196,21 @@ router.post("/register", async (req: Request, res: Response) => {
     };
 
     console.log("✅ REGISTRATION SUCCESS for recruiter:", validatedData.email);
+    
+    // Send welcome email asynchronously
+    setImmediate(async () => {
+      try {
+        await emailService.sendAccountCreationEmail(
+          validatedData.email.toLowerCase(),
+          `${validatedData.firstName} ${validatedData.lastName}`,
+          user.id.toString()
+        );
+        console.log("✅ Welcome email sent to:", validatedData.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send welcome email:", emailError);
+      }
+    });
+    
     res.status(201).json(response);
     
   } catch (error) {

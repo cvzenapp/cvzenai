@@ -259,33 +259,77 @@ router.put("/profile", async (req: Request, res: Response) => {
     console.log('🔵 Raw request body type:', typeof req.body);
     console.log('🔵 Raw request body keys:', Object.keys(req.body));
     
-    // Check specifically for portfolio fields
-    if (req.body.clients) {
-      console.log('🔵 Clients field found:', Array.isArray(req.body.clients), req.body.clients);
-    }
-    if (req.body.projects) {
-      console.log('🔵 Projects field found:', Array.isArray(req.body.projects), req.body.projects);
-    }
-    if (req.body.awards) {
-      console.log('🔵 Awards field found:', Array.isArray(req.body.awards), req.body.awards);
-    }
-    if (req.body.achievements) {
-      console.log('🔵 Achievements field found:', Array.isArray(req.body.achievements), req.body.achievements);
-    }
+    // // Check specifically for portfolio fields
+    // if (req.body.clients) {
+    //   console.log('🔵 Clients field found:', Array.isArray(req.body.clients), req.body.clients);
+    // }
+    // if (req.body.projects) {
+    //   console.log('🔵 Projects field found:', Array.isArray(req.body.projects), req.body.projects);
+    // }
+    // if (req.body.awards) {
+    //   console.log('🔵 Awards field found:', Array.isArray(req.body.awards), req.body.awards);
+    // }
+    // if (req.body.achievements) {
+    //   console.log('🔵 Achievements field found:', Array.isArray(req.body.achievements), req.body.achievements);
+    // }
     
     const validatedData = companyUpdateSchema.parse(req.body);
-    console.log('✅ Validation passed');
-    console.log('🔵 Validated data keys:', Object.keys(validatedData));
-    console.log('🔵 Validated data full:', JSON.stringify(validatedData, null, 2));
+    // console.log('✅ Validation passed');
+    // console.log('🔵 Validated data keys:', Object.keys(validatedData));
+    // console.log('🔵 Validated data full:', JSON.stringify(validatedData, null, 2));
     
     await client.connect();
-    console.log('✅ Database connected');
+    
+    // First, check if the recruiter has a company
+    const recruiterQuery = `
+      SELECT rp.id as recruiter_profile_id, rp.company_id 
+      FROM recruiter_profiles rp 
+      WHERE rp.user_id = $1
+    `;
+    const recruiterResult = await client.query(recruiterQuery, [userId]);
+    
+    if (recruiterResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Recruiter profile not found",
+      });
+    }
+    
+    const recruiterProfile = recruiterResult.rows[0];
+    let companyId = recruiterProfile.company_id;
+    
+    // If no company exists, create one
+    if (!companyId) {
+      const createCompanyQuery = `
+        INSERT INTO companies (name, slug, created_by, created_at, updated_at)
+        VALUES ($1, $2, $3, NOW(), NOW())
+        RETURNING id
+      `;
+      const defaultName = "My Company";
+      const defaultSlug = `company-${recruiterProfile.recruiter_profile_id}`;
+      
+      const createResult = await client.query(createCompanyQuery, [
+        defaultName,
+        defaultSlug,
+        recruiterProfile.recruiter_profile_id
+      ]);
+      
+      companyId = createResult.rows[0].id;
+      
+      // Update recruiter profile with the new company_id
+      await client.query(
+        'UPDATE recruiter_profiles SET company_id = $1 WHERE user_id = $2',
+        [companyId, userId]
+      );
+      
+      console.log('🔵 Created new company with ID:', companyId);
+    }
 
     // Fetch existing company data to check if name changed
     const existingCompanyQuery = `
-      SELECT name, slug FROM companies WHERE recruiter_id = $1
+      SELECT name, slug FROM companies WHERE id = $1
     `;
-    const existingResult = await client.query(existingCompanyQuery, [userId]);
+    const existingResult = await client.query(existingCompanyQuery, [companyId]);
     const existingCompany = existingResult.rows[0];
     console.log('🔵 Existing company data:', existingCompany);
 
@@ -432,22 +476,22 @@ router.put("/profile", async (req: Request, res: Response) => {
       console.log('🔵 Adding testimonials field, count:', validatedData.testimonials?.length || 0);
     }
 
-    console.log('🔵 Total update fields detected:', updateFields.length);
+    // console.log('🔵 Total update fields detected:', updateFields.length);
 
     if (updateFields.length > 0) {
       updateFields.push(`updated_at = NOW()`);
-      values.push(userId);
+      values.push(companyId);
 
       const updateQuery = `
         UPDATE companies 
         SET ${updateFields.join(', ')}
-        WHERE id = (SELECT company_id FROM recruiter_profiles WHERE user_id = $${paramIndex})
+        WHERE id = $${paramIndex}
         RETURNING *
       `;
 
-      console.log('🔵 Executing update query with', updateFields.length, 'fields');
+      // console.log('🔵 Executing update query with', updateFields.length, 'fields');
       const updateResult = await client.query(updateQuery, values);
-      console.log('✅ Update successful, rows affected:', updateResult.rowCount);
+      // console.log('✅ Update successful, rows affected:', updateResult.rowCount);
 
       if (updateResult.rowCount === 0) {
         return res.status(404).json({
@@ -513,7 +557,7 @@ router.put("/profile", async (req: Request, res: Response) => {
         testimonials: parseJsonField(updatedCompany.testimonials),
       };
 
-      console.log('🔵 Constructed updated company object with saved data');
+      // console.log('🔵 Constructed updated company object with saved data');
 
       res.json({
         success: true,

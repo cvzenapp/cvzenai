@@ -59,27 +59,27 @@ export default function TestimonialManager({ testimonials, onUpdate }: Testimoni
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="premium-card border-0 shadow-xl">
+      <CardHeader className="premium-card-header">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-teal-100 rounded-lg">
-              <svg className="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <CardTitle className="flex items-center gap-2 text-lg font-jakarta font-medium text-white">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
             <div>
-              <span className="text-slate-900">Client Testimonials</span>
-              <p className="text-sm text-slate-500 font-normal mt-0.5">Showcase what clients say about your work</p>
+              <span className="text-white">Client Testimonials</span>
+              <p className="text-sm text-white/80 font-normal mt-0.5">Showcase what clients say about your work</p>
             </div>
           </CardTitle>
-          <Button onClick={() => setActiveModal(true)} size="sm" className="bg-teal-600 hover:bg-teal-700">
+          <Button onClick={() => setActiveModal(true)} size="sm" className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
             <Plus className="h-4 w-4 mr-2" />
             Add Testimonial
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="premium-card-content">
         {safeTestimonials.length === 0 ? (
           <div className="text-center py-16 px-6">
             <div className="max-w-sm mx-auto">

@@ -25,7 +25,7 @@ export const CVZenLogo: React.FC<CVZenLogoProps> = ({
       />
       {showCaption && (
         <span className="text-xs sm:text-xs text-white font-jakarta font-normal tracking-wide">
-          Intelligent Hiring Enzen
+          Intelligent Hiring OS
         </span>
       )}
     </div>

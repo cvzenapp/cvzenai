@@ -13,6 +13,19 @@ import { fileProcessingService } from "../services/fileProcessingService.js";
 
 const router = Router();
 
+// Generate URL-friendly slug from title
+function generateSlug(title: string, id?: number): string {
+  const baseSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim()
+    .substring(0, 50); // Limit length
+  
+  return id ? `${baseSlug}-${id}` : baseSlug;
+}
+
 // Configure multer for file uploads
 const storage = multer.memoryStorage(); // Store files in memory for processing
 const upload = multer({
@@ -553,17 +566,19 @@ Work Type: ${jobDescResult.workType}
       success: true,
       response: {
         type: 'job_description',
-        content: `I've created a job description for ${jobDescResult.jobTitle}. You can review it below and use the "Screen with AI" button to find matching candidates.`,
+        content: `I've created a job description for ${jobDescResult.jobTitle}. You can review it below and either use the "Screen with AI" button to find matching candidates, or click "Create Job Posting" to publish it with a shareable public URL.`,
         jobDescription: jobDescriptionTemplate,
         suggestions: [
           'Screen candidates with AI for this role',
+          'Create job posting to get a shareable public URL',
           'Customize the job description for your company',
           'Post this job on multiple platforms'
         ],
         actionItems: [
           'Review and edit the job description',
+          'Create the job posting to make it public',
           'Add your company branding and culture',
-          'Post to job boards and LinkedIn'
+          'Share the job URL on social media and job boards'
         ]
       }
     };
@@ -1078,7 +1093,7 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
         })}\n\n`);
         
         // Send a brief confirmation message instead of the full formatted text
-        const confirmationMessage = `I've created a job description for ${jobDescResult.jobTitle}. You can review it in the card below and use the "Screen with AI" button to find matching candidates.`;
+        const confirmationMessage = `I've created a job description for ${jobDescResult.jobTitle}. You can review it in the card below and either use the "Screen with AI" button to find matching candidates, or click "Create Job Posting" to publish it with a shareable public URL.`;
         
         // Stream the confirmation message word by word
         const words = confirmationMessage.split(' ');
@@ -1097,13 +1112,15 @@ router.post("/stream", requireAuth, async (req: Request, res: Response) => {
           type: 'complete',
           suggestions: [
             'Screen candidates with AI for this role',
+            'Create job posting to get a shareable public URL',
             'Customize the job description for your company',
             'Post this job on multiple platforms'
           ],
           actionItems: [
             'Review and edit the job description',
+            'Create the job posting to make it public',
             'Add your company branding and culture',
-            'Post to job boards and LinkedIn'
+            'Share the job URL on social media and job boards'
           ]
         })}\n\n`);
         
@@ -1719,6 +1736,189 @@ router.post("/upload", requireAuth, upload.single('file'), async (req: Request, 
       success: false,
       error: 'Failed to upload file. Please try again.'
     });
+  }
+});
+
+// POST /api/recruiter-ai-chat/create-job - Create job posting from AI-generated description
+router.post("/create-job", requireAuth, async (req: Request, res: Response) => {
+  let db;
+  
+  try {
+    const user = getAuthenticatedUser(req);
+    console.log('✅ Recruiter found in database (from token type):', {
+      id: user?.id,
+      email: user?.email,
+      userType: user?.userType
+    });
+
+    if (!user || user.userType !== 'recruiter') {
+      return res.status(401).json({ error: "Recruiter authentication required" });
+    }
+
+    const {
+      title,
+      department,
+      location,
+      jobType,
+      experienceLevel,
+      salaryMin,
+      salaryMax,
+      salaryCurrency = 'USD',
+      description,
+      requirements = [],
+      benefits = []
+    } = req.body;
+
+    console.log('🔍 Job creation request data:', {
+      title,
+      department,
+      location,
+      jobType,
+      experienceLevel,
+      hasDescription: !!description,
+      requirementsCount: requirements.length,
+      benefitsCount: benefits.length
+    });
+
+    // Validate required fields
+    if (!title || !department || !location || !jobType || !experienceLevel) {
+      console.log('❌ Missing required fields:', { title: !!title, department: !!department, location: !!location, jobType: !!jobType, experienceLevel: !!experienceLevel });
+      return res.status(400).json({ 
+        success: false,
+        message: "Missing required fields: title, department, location, jobType, experienceLevel" 
+      });
+    }
+
+    db = await initializeDatabase();
+    console.log('✅ Database connection established');
+
+    // Get recruiter's company information
+    const recruiterQuery = `
+      SELECT rp.company_id, c.name as company_name
+      FROM recruiter_profiles rp
+      INNER JOIN companies c ON c.id = rp.company_id
+      WHERE rp.user_id = $1
+    `;
+    console.log('🔍 Querying recruiter profile for user:', user.id);
+    const recruiterResult = await db.query(recruiterQuery, [user.id]);
+    console.log('🔍 Recruiter query result:', recruiterResult.rows.length, 'rows found');
+    
+    if (recruiterResult.rows.length === 0) {
+      console.log('❌ No recruiter profile found for user:', user.id);
+      await closeDatabase(db);
+      return res.status(400).json({
+        success: false,
+        message: "Recruiter profile not found. Please complete your company profile first.",
+      });
+    }
+
+    const companyId = recruiterResult.rows[0].company_id;
+    const companyName = recruiterResult.rows[0].company_name;
+    
+    console.log('✅ Company info found:', { companyId, companyName });
+
+    // Create job posting
+    const query = `
+      INSERT INTO job_postings (
+        recruiter_id, company_id, company, title, department, location, job_type, experience_level,
+        salary_min, salary_max, salary_currency, description, requirements, benefits, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING *
+    `;
+
+    const values = [
+      user.id,
+      companyId,
+      companyName,
+      title,
+      department,
+      location,
+      jobType,
+      experienceLevel,
+      salaryMin || null,
+      salaryMax || null,
+      salaryCurrency,
+      description || '',
+      JSON.stringify(requirements),
+      JSON.stringify(benefits),
+      true, // is_active
+    ];
+
+    console.log('🔍 Inserting job with values:', values.map((v, i) => `${i}: ${typeof v === 'string' && v.length > 50 ? v.substring(0, 50) + '...' : v}`));
+
+    const result = await db.query(query, values);
+    const createdJob = result.rows[0];
+    
+    console.log('✅ Job created with ID:', createdJob.id);
+
+    // Generate and update slug after job creation
+    const slug = generateSlug(createdJob.title, createdJob.id);
+    await db.query('UPDATE job_postings SET slug = $1 WHERE id = $2', [slug, createdJob.id]);
+    
+    console.log('✅ Slug updated:', slug);
+
+    // Use environment variable for app URL or fallback to request host
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const jobUrl = `${appUrl}/jobs/${slug}`;
+
+    const formattedJob = {
+      id: createdJob.id,
+      title: createdJob.title,
+      company: createdJob.company,
+      department: createdJob.department,
+      location: createdJob.location,
+      type: createdJob.job_type,
+      level: createdJob.experience_level,
+      salary: {
+        min: createdJob.salary_min,
+        max: createdJob.salary_max,
+        currency: createdJob.salary_currency || 'USD',
+      },
+      description: createdJob.description || '',
+      requirements: createdJob.requirements ? (typeof createdJob.requirements === 'string' ? JSON.parse(createdJob.requirements) : createdJob.requirements) : [],
+      benefits: createdJob.benefits ? (typeof createdJob.benefits === 'string' ? JSON.parse(createdJob.benefits) : createdJob.benefits) : [],
+      createdAt: createdJob.created_at,
+      isActive: createdJob.is_active,
+      applicationsCount: 0,
+      viewsCount: 0,
+      slug: slug,
+      publicUrl: jobUrl
+    };
+
+    console.log('✅ Job creation successful, returning response');
+
+    await closeDatabase(db);
+    db = null; // Prevent double close
+
+    res.status(201).json({
+      success: true,
+      job: formattedJob,
+      publicUrl: jobUrl,
+      shareData: {
+        url: jobUrl,
+        title: `${title} - Job Opening`,
+        description: `Join our team! We're hiring for ${title}. Apply now at CVZen.`,
+        jobTitle: title,
+        companyName: companyName
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Create job from AI error:", error);
+    if (db) {
+      await closeDatabase(db);
+      db = null;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Failed to create job posting. Please try again."
+    });
+  } finally {
+    if (db) {
+      console.log('🔍 Closing database connection in finally');
+      await closeDatabase(db);
+      console.log('✅ Database connection closed');
+    }
   }
 });
 

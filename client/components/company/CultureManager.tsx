@@ -87,22 +87,22 @@ export default function CultureManager({ values, onUpdate }: CultureManagerProps
   };
 
   return (
-    <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
+    <Card className="premium-card border-0 shadow-xl">
+      <div className="premium-card-header">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#cfe2f3' }}>
-              <Heart className="h-5 w-5" style={{ color: '#0a0a37' }} />
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <Heart className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-normal text-slate-900">Culture & Values</h3>
-              <p className="text-sm text-slate-500">Define what makes your company unique</p>
+              <h3 className="text-lg font-jakarta font-medium text-white">Culture & Values</h3>
+              <p className="text-sm text-white/80">Define what makes your company unique</p>
             </div>
           </div>
 
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" style={{ backgroundColor: '#0a0a37', color: 'white' }} className="hover:opacity-90">
+              <Button size="sm" className="bg-white/20 text-white hover:bg-white hover:text-brand-background">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Value
               </Button>
@@ -315,94 +315,65 @@ export default function CultureManager({ values, onUpdate }: CultureManagerProps
             </DialogContent>
           </Dialog>
         </div>
-
-        {/* Enhanced Empty State */}
-        {safeValues.length === 0 ? (
+      </div>
+      
+      <CardContent className="premium-card-content">
+        {values.length === 0 ? (
           <div className="text-center py-16 px-6">
             <div className="max-w-sm mx-auto">
               <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-rose-100 to-rose-200 rounded-2xl mx-auto flex items-center justify-center">
-                  <Heart className="h-10 w-10 text-rose-600" />
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-200 rounded-2xl mx-auto flex items-center justify-center">
+                  <Heart className="h-10 w-10 text-purple-600" />
                 </div>
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-pink-100 border-2 border-white rounded-full flex items-center justify-center">
-                  <svg className="h-3 w-3 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-rose-100 border-2 border-white rounded-full flex items-center justify-center">
+                  <Plus className="h-3 w-3 text-rose-600" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Define Your Culture</h3>
-              <p className="text-slate-500 mb-6 leading-relaxed">
-                Share the core values and principles that guide your company and make it a great place to work.
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Add Your Values</h3>
+              <p className="text-slate-500 text-sm mb-6">
+                Share the values and principles that drive your organization forward.
               </p>
-              <div className="space-y-3 text-sm text-slate-400">
-                <div className="flex items-center gap-2 justify-center">
-                  <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+              <div className="space-y-2 text-sm text-slate-600">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                   <span>Attracts aligned talent</span>
                 </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                   <span>Builds company identity</span>
                 </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                   <span>Differentiates your brand</span>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          /* Enhanced Culture Value Cards */
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {safeValues.map((value) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {values.map((value) => {
               const IconComponent = getIcon(value.icon);
-              const iconOption = getIconOption(value.icon);
               return (
                 <div
                   key={value.id}
-                  className="group relative bg-white border border-slate-200 rounded-xl p-5 hover:shadow-xl hover:border-rose-200 transition-all duration-300 hover:-translate-y-1"
+                  className="group relative bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 border border-slate-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                 >
-                  {/* Delete Button */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8 p-0 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 shadow-sm"
-                    onClick={() => handleDelete(value.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-
-                  {/* Value Content */}
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors" style={{ backgroundColor: '#cfe2f3' }}>
-                      <IconComponent className="h-6 w-6" style={{ color: '#0a0a37' }} />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl">
+                      <IconComponent className="h-6 w-6 text-purple-600" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-normal text-slate-900 mb-2 line-clamp-2">
-                        {value.title}
-                      </h4>
-                      <p className="text-sm text-slate-600 line-clamp-4 leading-relaxed">
-                        {value.description}
-                      </p>
-                      <div className="mt-3 text-xs text-slate-400 flex items-center gap-1">
-                        <IconComponent className="h-3 w-3" />
-                        <span>{iconOption.description}</span>
-                      </div>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(value.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-
-                  {/* Culture Badge */}
-                  <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="w-6 h-6 bg-rose-100 border-2 border-white rounded-full flex items-center justify-center">
-                      <svg className="h-3 w-3 text-rose-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                      </svg>
-                    </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-2">{value.title}</h4>
+                    <p className="text-sm text-slate-600 leading-relaxed">{value.description}</p>
                   </div>
                 </div>
               );

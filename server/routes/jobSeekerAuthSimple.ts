@@ -4,6 +4,7 @@ import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import { emailService } from "../services/emailService";
 
 dotenv.config();
 
@@ -150,6 +151,21 @@ router.post("/register", async (req: Request, res: Response) => {
     };
 
     console.log("✅ JOB SEEKER REGISTRATION SUCCESS:", validatedData.email);
+    
+    // Send welcome email asynchronously
+    setImmediate(async () => {
+      try {
+        await emailService.sendAccountCreationEmail(
+          validatedData.email.toLowerCase(),
+          `${validatedData.firstName} ${validatedData.lastName}`,
+          user.id.toString()
+        );
+        console.log("✅ Welcome email sent to:", validatedData.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send welcome email:", emailError);
+      }
+    });
+    
     res.status(201).json(response);
 
   } catch (error) {

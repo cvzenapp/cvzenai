@@ -28,6 +28,10 @@ export interface JobApplication {
   ai_strengths?: string[];
   ai_concerns?: string[];
   ai_screened_at?: string;
+  // Interview fields
+  interviewCount?: number;
+  currentRound?: number;
+  hasScheduledInterview?: boolean;
 }
 
 export interface ApplicationFilters {

@@ -22,6 +22,7 @@ import {
 import { ATSScoreDisplay } from "@/components/ATSScoreDisplay";
 import { atsApi } from "@/services/atsApi";
 import { useSectionImprovement } from "@/hooks/useSectionImprovement";
+import { SocialShareIcons } from "@/components/SocialShareIcons";
 
 interface ResumeDisplayProps {
   resume: Resume;
@@ -472,47 +473,59 @@ export default function ResumeDisplay({
           {/* Contact Info Section */}
           {resume.personalInfo.email && (
             <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-8 py-4 border-b border-gray-200">
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                {resume.personalInfo.email && (
-                  <a 
-                    href={`mailto:${resume.personalInfo.email}`}
-                    className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
-                  >
-                    <span>📧</span>
-                    <span>{resume.personalInfo.email}</span>
-                  </a>
-                )}
-                {resume.personalInfo.phone && (
-                  <a 
-                    href={`tel:${resume.personalInfo.phone}`}
-                    className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
-                  >
-                    <span>📞</span>
-                    <span>{resume.personalInfo.phone}</span>
-                  </a>
-                )}
-                {resume.personalInfo.linkedin && (
-                  <a 
-                    href={resume.personalInfo.linkedin.startsWith('http') ? resume.personalInfo.linkedin : `https://${resume.personalInfo.linkedin}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
-                  >
-                    <span>💼</span>
-                    <span>LinkedIn</span>
-                  </a>
-                )}
-                {resume.personalInfo.github && (
-                  <a 
-                    href={resume.personalInfo.github.startsWith('http') ? resume.personalInfo.github : `https://${resume.personalInfo.github}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
-                  >
-                    <span>🔗</span>
-                    <span>GitHub</span>
-                  </a>
-                )}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  {resume.personalInfo.email && (
+                    <a 
+                      href={`mailto:${resume.personalInfo.email}`}
+                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
+                    >
+                      <span>📧</span>
+                      <span>{resume.personalInfo.email}</span>
+                    </a>
+                  )}
+                  {resume.personalInfo.phone && (
+                    <a 
+                      href={`tel:${resume.personalInfo.phone}`}
+                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
+                    >
+                      <span>📞</span>
+                      <span>{resume.personalInfo.phone}</span>
+                    </a>
+                  )}
+                  {resume.personalInfo.linkedin && (
+                    <a 
+                      href={resume.personalInfo.linkedin.startsWith('http') ? resume.personalInfo.linkedin : `https://${resume.personalInfo.linkedin}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
+                    >
+                      <span>💼</span>
+                      <span>LinkedIn</span>
+                    </a>
+                  )}
+                  {resume.personalInfo.github && (
+                    <a 
+                      href={resume.personalInfo.github.startsWith('http') ? resume.personalInfo.github : `https://${resume.personalInfo.github}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
+                    >
+                      <span>🔗</span>
+                      <span>GitHub</span>
+                    </a>
+                  )}
+                </div>
+                
+                {/* Social Share Icons */}
+                <div className="flex-shrink-0">
+                  <SocialShareIcons 
+                    resume={resume} 
+                    size="sm" 
+                    variant="icons"
+                    className="border-l border-gray-300 pl-4"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -563,6 +576,7 @@ export default function ResumeDisplay({
               <DialogTitle>Recruiter Access Required</DialogTitle>
             </DialogHeader>
             <RecruiterAuthModal
+              isOpen={showRecruiterAuth}
               onSuccess={handleRecruiterAuthSuccess}
               onCancel={handleRecruiterAuthCancel}
               message={`To ${pendingAction === 'upvote' ? 'like' : 'shortlist'} this resume, please sign in as a recruiter or create a recruiter account.`}

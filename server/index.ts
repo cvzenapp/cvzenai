@@ -48,6 +48,7 @@ import jobApplicationsRouter from "./routes/jobApplications";
 import fileUploadRouter from "./routes/fileUpload";
 import resumeSharingRouter from "./routes/resumeSharing";
 import resumeUpvotesRouter from "./routes/resumeUpvotes";
+import resumeMetadataRouter from "./routes/resumeMetadata";
 import recruiterShortlistRouter from "./routes/recruiterShortlist";
 import adminUsersRouter from "./routes/adminUsers";
 import interviewsRouter from "./routes/interviews";
@@ -72,6 +73,9 @@ import jobMatchingRouter from "./routes/jobMatching.js";
 import resumeOptimizationRouter from "./routes/resumeOptimization.js";
 import aiSummaryRouter from "./routes/aiSummary.js";
 import jobPreferencesRouter from "./routes/jobPreferences.js";
+import locationSearchRouter from "./routes/locationSearch.js";
+import recruiterActionsRouter from "./routes/recruiterActions";
+import emailTestRouter from "./routes/emailTest";
 import { requireAuth } from "./middleware/unifiedAuth";
 import { getDatabase, initializeDatabase, closeDatabase } from "./database/connection";
 import { seedDatabase } from "./database/seedData";
@@ -118,6 +122,35 @@ export function createServer() {
   app.use((req, res, next) => {
     console.log(`🔍 Express received: ${req.method} ${req.path}`);
     next();
+  });
+
+  // Shared resume HTML pages (for social media crawlers)
+  app.get("/share/:shareToken", async (req, res) => {
+    try {
+      const { shareToken } = req.params;
+      const userAgent = req.get('User-Agent') || '';
+      
+      // Check if this is a social media crawler
+      const isCrawler = /bot|crawler|spider|crawling|facebook|twitter|linkedin|whatsapp|telegram/i.test(userAgent);
+      
+      if (isCrawler) {
+        // Serve HTML with meta tags for crawlers
+        const response = await fetch(`${req.protocol}://${req.get('host')}/api/resume/share-preview/${shareToken}`);
+        if (response.ok) {
+          const html = await response.text();
+          res.setHeader('Content-Type', 'text/html');
+          res.send(html);
+        } else {
+          res.status(404).send('Resume not found');
+        }
+      } else {
+        // Serve the React app for regular users
+        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+      }
+    } catch (error) {
+      console.error('Error serving shared resume:', error);
+      res.status(500).send('Error loading resume');
+    }
   });
 
   // Health check and debug routes
@@ -188,11 +221,17 @@ export function createServer() {
   // Job postings routes
   app.use("/api/recruiter/jobs", jobPostingsRouter);
   
+  // Public job routes (no auth required)
+  app.use("/api/jobs", jobPostingsRouter);
+  
   // Candidates routes
   app.use("/api/recruiter/candidates", candidatesRouter);
   
   // Recruiter applications routes
   app.use("/api/recruiter", recruiterApplicationsRouter);
+  
+  // Recruiter actions routes (shortlisting, etc.)
+  app.use("/api/recruiter", recruiterActionsRouter);
   
   // Application AI Screening routes (recruiter only)
   app.use("/api/recruiter/applications", applicationScreeningRouter);
@@ -288,6 +327,7 @@ export function createServer() {
   // Resume sharing routes
   app.use("/api/resume-sharing", resumeSharingRouter);
   app.use("/api/resume-upvotes", resumeUpvotesRouter);
+  app.use("/api/resume", resumeMetadataRouter);
   
   // Recruiter shortlist routes (handles authentication internally)
   app.use("/api/recruiter/shortlist", recruiterShortlistRouter);
@@ -336,6 +376,12 @@ export function createServer() {
 
   // Job preferences routes
   app.use("/api/job-preferences", jobPreferencesRouter);
+
+  // Location search routes (for interview scheduling)
+  app.use("/api/location", locationSearchRouter);
+
+  // Email testing routes (development only)
+  app.use("/api/email", emailTestRouter);
 
   // Add 404 handler for unmatched API routes
   app.use('/api/*', (req, res) => {

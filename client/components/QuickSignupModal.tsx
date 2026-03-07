@@ -4,12 +4,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Loader2, CheckCircle, AlertCircle, FileText, Shield, Zap, X, Settings } from "lucide-react";
+import { Upload, Loader2, CheckCircle, AlertCircle, FileText, Shield, Zap, X, Settings, Eye } from "lucide-react";
 import ResumeParsingAnalysis from "./dashboard/ResumeParsingAnalysis";
+import ConfettiEffect from "./ConfettiEffect";
 
 interface QuickSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  mode?: 'signup' | 'job-application';
+  jobTitle?: string;
+  companyName?: string;
+  onJobApplication?: (data: { 
+    name: string; 
+    email: string; 
+    resumeFile: File;
+    userId?: string;
+    resumeId?: number;
+    shareToken?: string;
+    resumeUrl?: string;
+    coverLetter?: string; // Add cover letter to the interface
+  }) => Promise<void>;
 }
 
 interface ValidationErrors {
@@ -18,7 +32,7 @@ interface ValidationErrors {
   resume?: string;
 }
 
-export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
+export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', jobTitle, companyName, onJobApplication }: QuickSignupModalProps) {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,6 +43,93 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
   const [step, setStep] = useState<"form" | "uploading" | "analysis" | "success">("form");
   const [touched, setTouched] = useState({ fullName: false, email: false, resume: false });
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [showCoverLetter, setShowCoverLetter] = useState(false);
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
+  const [scanningTimer, setScanningTimer] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const generateCoverLetter = async () => {
+    if (!uploadResult || mode !== 'job-application') return;
+
+    setGeneratingCoverLetter(true);
+    try {
+      const pathParts = window.location.pathname.split('/');
+      const slug = pathParts[pathParts.length - 1];
+      const jobIdMatch = slug.match(/-(\d+)$/);
+      const jobId = jobIdMatch ? parseInt(jobIdMatch[1]) : null;
+
+      if (!jobId) {
+        throw new Error('Could not determine job ID');
+      }
+
+      console.log('🔍 Cover letter generation data:', {
+        jobId,
+        jobTitle,
+        companyName,
+        hasUploadResult: !!uploadResult,
+        hasParsedData: !!uploadResult.parsedData,
+        parsedDataKeys: uploadResult.parsedData ? Object.keys(uploadResult.parsedData) : [],
+        skillsCount: uploadResult.parsedData?.skills?.length || 0,
+        experienceCount: uploadResult.parsedData?.experience?.length || 0
+      });
+
+      const response = await fetch('/api/cover-letter/generate-guest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          resumeData: uploadResult.parsedData, // Use the actual parsed data
+          jobId: jobId,
+          jobTitle: jobTitle,
+          companyName: companyName,
+          candidateName: fullName.trim() // Add candidate name for proper signature
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate cover letter');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setCoverLetter(result.coverLetter);
+        setShowCoverLetter(true);
+      } else {
+        throw new Error(result.error || 'Failed to generate cover letter');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to generate cover letter');
+    } finally {
+      setGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleJobApplicationSubmit = async () => {
+    if (!uploadResult || !onJobApplication) return;
+
+    setLoading(true);
+    try {
+      await onJobApplication({
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        resumeFile: resumeFile!,
+        userId: uploadResult.userId,
+        resumeId: uploadResult.resumeId,
+        shareToken: uploadResult.shareToken,
+        resumeUrl: uploadResult.resumeUrl,
+        coverLetter: showCoverLetter ? coverLetter : undefined // Include cover letter if generated
+      });
+
+      setStep("success");
+    } catch (error: any) {
+      setError(error.message || 'Failed to submit application');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Reset form when modal closes
   useEffect(() => {
@@ -41,8 +142,36 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
       setStep("form");
       setTouched({ fullName: false, email: false, resume: false });
       setUploadResult(null);
+      setScanningTimer(0);
+      setShowConfetti(false);
     }
   }, [isOpen]);
+
+  // Timer effect for scanning screen
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (step === "uploading") {
+      setScanningTimer(0);
+      interval = setInterval(() => {
+        setScanningTimer(prev => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step]);
+
+  // Confetti effect when analysis step is reached
+  useEffect(() => {
+    if (step === "analysis" && uploadResult) {
+      setShowConfetti(true);
+      // Hide confetti after 3 seconds
+      const timeout = setTimeout(() => {
+        setShowConfetti(false);
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [step, uploadResult]);
 
   // Real-time validation
   const validateFullName = (name: string): string | undefined => {
@@ -156,35 +285,67 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
     setStep("uploading");
 
     try {
-      const formData = new FormData();
-      formData.append("fullName", fullName.trim());
-      formData.append("email", email.trim().toLowerCase());
-      formData.append("resume", resumeFile!);
+      if (mode === 'job-application' && onJobApplication) {
+        // Handle job application flow
+        const formData = new FormData();
+        formData.append('resume', resumeFile!);
+        formData.append('name', fullName.trim());
+        formData.append('email', email.trim().toLowerCase());
 
-      const response = await fetch("/api/auth/quick-signup", {
-        method: "POST",
-        body: formData,
-      });
+        const parseResponse = await fetch('/api/guest/resume/parse', {
+          method: 'POST',
+          body: formData
+        });
 
-      const data = await response.json();
+        if (!parseResponse.ok) {
+          const errorData = await parseResponse.json();
+          throw new Error(errorData.error || 'Failed to parse resume');
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || "Signup failed. Please try again.");
-      }
+        const parseResult = await parseResponse.json();
 
-      // Store auth token securely
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("userId", data.userId);
+        if (!parseResult.success) {
+          throw new Error(parseResult.error || 'Failed to parse resume');
+        }
 
-      // Store upload result for analysis display
-      setUploadResult(data);
-      
-      // Show analysis if parsedData is available
-      if (data.parsedData && data.resumeId) {
+        console.log('🔍 Guest resume parse result:', parseResult.data);
+        setUploadResult(parseResult.data);
         setStep("analysis");
+
+        // Don't call onJobApplication here - wait for user to submit from analysis step
       } else {
-        setStep("success");
-        // Redirect after short delay
+        // Handle signup flow
+        const formData = new FormData();
+        formData.append("fullName", fullName.trim());
+        formData.append("email", email.trim().toLowerCase());
+        formData.append("resume", resumeFile!);
+
+        const response = await fetch("/api/auth/quick-signup", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Signup failed. Please try again.");
+        }
+
+        // Store auth token securely
+        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("userId", data.userId);
+
+        // Store upload result for analysis display
+        setUploadResult(data);
+        
+        // Show analysis if parsedData is available
+        if (data.parsedData && data.resumeId) {
+          setStep("analysis");
+        } else {
+          setStep("success");
+        }
+
+        // Redirect after short delay for signup mode
         setTimeout(() => {
           if (data.resumeId) {
             navigate(`/resume/${data.resumeId}`);
@@ -228,9 +389,14 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[95vh] overflow-hidden border-brand-main/30">
         <DialogHeader className="pb-2 bg-gradient-to-r from-brand-background to-brand-background/95 -mx-6 -mt-6 px-6 pt-6 mb-4 rounded-t-lg">
-          <DialogTitle className="text-lg font-bold text-brand-auxiliary-1">Get Started Free</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-brand-auxiliary-1">
+            {mode === 'job-application' ? `Apply for ${jobTitle}` : 'Get Started Free'}
+          </DialogTitle>
           <DialogDescription className="text-sm text-brand-auxiliary-1/80">
-            Create your account in seconds and start building your professional resume
+            {mode === 'job-application' 
+              ? `at ${companyName}` 
+              : 'Create your account in seconds and start building your professional resume'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -451,31 +617,53 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
         )}
 
         {step === "uploading" && (
-          <div className="py-8 text-center space-y-6">
+          <div className="py-8 text-center space-y-6 relative">
             {/* Document Scanning Animation */}
             <div className="relative mx-auto w-32 h-40">
-              {/* Document Background */}
-              <div className="absolute inset-0 bg-white border-2 border-slate-200 rounded-lg shadow-lg">
-                {/* Document Lines */}
+              {/* Document Background with enhanced styling */}
+              <div className="absolute inset-0 bg-white border-2 border-brand-main/30 rounded-lg shadow-xl transform hover:scale-105 transition-transform duration-300">
+                {/* Document Lines with animated loading */}
                 <div className="p-4 space-y-2">
-                  <div className="h-2 bg-slate-100 rounded"></div>
-                  <div className="h-2 bg-slate-100 rounded w-4/5"></div>
-                  <div className="h-2 bg-slate-100 rounded w-3/4"></div>
-                  <div className="h-2 bg-slate-100 rounded w-5/6"></div>
-                  <div className="h-2 bg-slate-100 rounded w-2/3"></div>
-                  <div className="h-2 bg-slate-100 rounded w-4/5"></div>
-                  <div className="h-2 bg-slate-100 rounded w-3/4"></div>
-                  <div className="h-2 bg-slate-100 rounded w-5/6"></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded animate-pulse"></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-4/5 animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-3/4 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-5/6 animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-2/3 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-4/5 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-3/4 animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+                  <div className="h-2 bg-gradient-to-r from-slate-200 to-brand-main/20 rounded w-5/6 animate-pulse" style={{ animationDelay: '0.7s' }}></div>
                 </div>
               </div>
               
-              {/* Scanning Line with Shimmer Effect */}
+              {/* Scanning Line with enhanced effect */}
               <div className="absolute inset-0 overflow-hidden rounded-lg">
-                <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-brand-main to-transparent opacity-80 animate-scan-down"></div>
+                <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-brand-main to-transparent opacity-90 animate-scan-down shadow-lg"></div>
               </div>
               
-              {/* Scanning Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-b from-brand-main/10 via-transparent to-transparent rounded-lg animate-pulse"></div>
+              {/* Scanning Glow Effect with brand colors */}
+              <div className="absolute inset-0 bg-gradient-to-b from-brand-main/20 via-transparent to-brand-background/10 rounded-lg animate-pulse"></div>
+              
+              {/* Corner badge */}
+              <div className="absolute -top-2 -right-2 bg-brand-main text-white text-xs px-2 py-1 rounded-full shadow-lg">
+                AI
+              </div>
+            </div>
+
+            {/* Prominent Timer Display */}
+            <div className="bg-gradient-to-r from-brand-main via-brand-background to-brand-main rounded-2xl p-6 mx-4 shadow-xl border border-white/20">
+              <div className="text-center space-y-3">
+                <div className="text-5xl font-bold text-white tabular-nums tracking-wider drop-shadow-lg">
+                  {Math.floor(scanningTimer / 60).toString().padStart(2, '0')}:
+                  {(scanningTimer % 60).toString().padStart(2, '0')}
+                </div>
+                <div className="text-white/90 text-sm font-medium uppercase tracking-wide">
+                  AI Processing Time
+                </div>
+                <div className="flex items-center justify-center gap-2 text-white/80 text-xs">
+                  <Zap className="h-3 w-3" />
+                  <span>Powered by CVZen AI</span>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -485,24 +673,169 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
               </p>
             </div>
 
-            {/* Progress Shimmer Bar */}
-            <div className="w-48 mx-auto">
-              <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-brand-main via-brand-main/60 to-brand-main bg-[length:200%_100%] animate-shimmer rounded-full"></div>
+            {/* Enhanced Progress Shimmer Bar */}
+            <div className="w-64 mx-auto">
+              <div className="h-2 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                <div className="h-full bg-gradient-to-r from-brand-main via-brand-background to-brand-main bg-[length:200%_100%] animate-shimmer rounded-full shadow-sm"></div>
+              </div>
+              <div className="text-center mt-2">
+                <span className="text-xs text-slate-500 font-medium">Processing your resume...</span>
               </div>
             </div>
           </div>
         )}
 
-        {step === "analysis" && uploadResult?.parsedData && uploadResult?.resumeId && (
-          <div className="max-h-[60vh] overflow-y-auto">
-            <ResumeParsingAnalysis
-              parsedData={uploadResult.parsedData}
-              resumeId={uploadResult.resumeId}
-              onContinue={handleEditInBuilder}
-              onPreview={handlePreview}
-              onCancel={onClose}
-            />
+        {step === "analysis" && uploadResult && (
+          <div className="max-h-[60vh] overflow-y-auto relative">
+            {/* Confetti Effect */}
+            <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
+
+            {mode === 'signup' ? (
+              uploadResult.parsedData && uploadResult.resumeId ? (
+                <ResumeParsingAnalysis
+                  parsedData={uploadResult.parsedData}
+                  resumeId={uploadResult.resumeId}
+                  onContinue={handleEditInBuilder}
+                  onPreview={handlePreview}
+                  onCancel={onClose}
+                />
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-slate-600">Resume data not available</p>
+                </div>
+              )
+            ) : (
+              // Job application analysis view
+              <div className="py-6 space-y-6">
+                <div className="text-center">
+                  <div className="h-16 w-16 mx-auto rounded-full bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center mb-4 animate-pulse">
+                    <CheckCircle className="h-10 w-10 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 bg-gradient-to-r from-brand-main to-brand-background bg-clip-text text-transparent">
+                    🎉 Resume Processed Successfully!
+                  </h3>
+                  <p className="text-sm text-slate-600 max-w-sm mx-auto mt-2">
+                    Your resume has been analyzed and is ready for your job application.
+                  </p>
+                </div>
+
+                {/* Resume Analysis Summary - Show if parsedData is available */}
+                {uploadResult.parsedData && (
+                  <div className="bg-white border rounded-lg p-4">
+                    <h4 className="font-medium text-slate-900 mb-3">Resume Analysis Summary</h4>
+                    <ResumeParsingAnalysis
+                      parsedData={uploadResult.parsedData}
+                      resumeId={uploadResult.resumeId}
+                      onContinue={() => {}} // No action needed in job application mode
+                      onPreview={() => {}} // No action needed in job application mode
+                      onCancel={() => {}} // No action needed in job application mode
+                      hideButtons={true} // Hide buttons in job application mode
+                    />
+                  </div>
+                )}
+
+                {/* Resume Preview and Share URLs */}
+                <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-slate-900 flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Your Resume
+                  </h4>
+                  {uploadResult.shareToken && (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between bg-white rounded p-2">
+                        <span className="text-slate-600">Shared Resume:</span>
+                        <a 
+                          href={`/shared/resume/${uploadResult.shareToken}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand-main hover:underline flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Preview
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
+                    <p className="text-xs text-blue-800">
+                      <strong>Note:</strong> Your shared resume with cover letter will be sent to the recruiter. 
+                      Meanwhile, you can modify your resume by logging in to CVZen using the password activation link sent to your email.
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Cover Letter Generation */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-slate-900">Cover Letter (Optional)</h4>
+                  {!showCoverLetter ? (
+                    <button
+                      onClick={generateCoverLetter}
+                      disabled={generatingCoverLetter}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {generatingCoverLetter ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating AI Cover Letter...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          Generate AI Cover Letter
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="bg-white border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium text-slate-900">Generated Cover Letter</h5>
+                        <button
+                          onClick={() => setShowCoverLetter(false)}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        <textarea
+                          value={coverLetter}
+                          onChange={(e) => setCoverLetter(e.target.value)}
+                          className="w-full h-40 p-3 text-sm border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-brand-main focus:border-brand-main"
+                          placeholder="Your cover letter will appear here..."
+                        />
+                        <p className="text-xs text-slate-500">
+                          You can edit the cover letter above before submitting your application.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    onClick={onClose}
+                    className="flex-1 px-4 py-2 text-slate-600 hover:text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleJobApplicationSubmit}
+                    disabled={loading}
+                    className="flex-1 px-6 py-2 bg-brand-main text-white rounded-lg hover:bg-brand-main/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Application'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -514,15 +847,36 @@ export function QuickSignupModal({ isOpen, onClose }: QuickSignupModalProps) {
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-slate-900">Welcome to CVZen!</h3>
-              <p className="text-sm text-slate-600 max-w-sm mx-auto">
-                Your account has been created successfully. Check your email to set up your password and access all features.
-              </p>
+              {mode === 'job-application' ? (
+                <>
+                  <h3 className="text-lg font-semibold text-slate-900">Application Submitted!</h3>
+                  <p className="text-sm text-slate-600 max-w-sm mx-auto">
+                    Your application for {jobTitle} at {companyName} has been submitted successfully. The recruiter will review your application and get back to you soon.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold text-slate-900">Welcome to CVZen!</h3>
+                  <p className="text-sm text-slate-600 max-w-sm mx-auto">
+                    Your account has been created successfully. Check your email to set up your password and access all features.
+                  </p>
+                </>
+              )}
             </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Redirecting to your dashboard...</span>
-            </div>
+            {mode === 'signup' && (
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Redirecting to your dashboard...</span>
+              </div>
+            )}
+            {mode === 'job-application' && (
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-brand-main text-white rounded-lg hover:bg-brand-main/90"
+              >
+                Close
+              </button>
+            )}
           </div>
         )}
       </DialogContent>

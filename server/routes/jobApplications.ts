@@ -1,16 +1,16 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import unifiedAuth, { AuthRequest } from '../middleware/unifiedAuth.js';
-import { jobApplicationEmailService } from '../services/jobApplicationEmailService.js';
+import { emailService } from '../services/emailService.js';
 
 const router = Router();
 
 // Validation schema
 const createApplicationSchema = z.object({
-  jobId: z.number(),
-  resumeId: z.number(),
+  jobId: z.number().positive(),
+  resumeId: z.number().positive(),
   coverLetter: z.string().optional(),
-  resumeFileUrl: z.string().optional() // Accept any string (relative or absolute URL)
+  resumeFileUrl: z.string().optional()
 });
 
 // POST /api/job-applications - Submit job application
@@ -37,7 +37,7 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
       });
     }
 
-    // Verify resume belongs to user and get user name
+    // Verify resume belongs to user
     const resumeCheck = await db.query(
       `SELECT r.id, r.personal_info, u.email 
        FROM resumes r 
@@ -47,9 +47,9 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
     );
 
     if (resumeCheck.rows.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        error: 'Resume not found'
+        error: 'Resume not found or access denied'
       });
     }
 
@@ -123,60 +123,71 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
         jp.title, 
         jp.company_id,
         c.name as company_name,
-        c.email as company_email,
-        r.email as recruiter_email,
-        r.first_name as recruiter_first_name,
-        r.last_name as recruiter_last_name
+        u.email as recruiter_email,
+        u.first_name as recruiter_first_name,
+        u.last_name as recruiter_last_name
        FROM job_postings jp
        LEFT JOIN companies c ON jp.company_id = c.id
-       LEFT JOIN recruiters r ON c.recruiter_id = r.id
+       LEFT JOIN users u ON c.created_by::text = u.id::text
        WHERE jp.id = $1`,
       [validatedData.jobId]
     );
 
-    // Send email notification to recruiter
-    if (jobDetails.rows.length > 0) {
-      const job = jobDetails.rows[0];
-      const recruiterEmail = job.recruiter_email || job.company_email;
-      const recruiterName = job.recruiter_first_name && job.recruiter_last_name
-        ? `${job.recruiter_first_name} ${job.recruiter_last_name}`
-        : 'Recruiter';
+    // Send email notification and track usage asynchronously
+    setImmediate(async () => {
+      try {
+        // Send email notification to recruiter
+        if (jobDetails.rows.length > 0) {
+          const job = jobDetails.rows[0];
+          const recruiterEmail = job.recruiter_email;
+          const recruiterName = job.recruiter_first_name && job.recruiter_last_name
+            ? `${job.recruiter_first_name} ${job.recruiter_last_name}`
+            : 'Recruiter';
 
-      if (recruiterEmail) {
-        // Send email notification asynchronously (don't wait for it)
-        jobApplicationEmailService.sendApplicationNotification({
-          recruiterEmail,
-          recruiterName,
-          candidateName: candidateName,
-          candidateEmail: resume.email,
-          jobTitle: job.title,
-          companyName: job.company_name || 'Your Company',
-          resumeUrl: validatedData.resumeFileUrl || `${process.env.FRONTEND_URL || 'http://localhost:8080'}/shared/resume/${shareToken}`,
-          coverLetter: validatedData.coverLetter,
-          appliedAt: new Date()
-        }).catch(err => {
-          console.error('Failed to send application email:', err);
-          // Don't fail the application if email fails
-        });
-      }
-    }
+          if (recruiterEmail) {
+            await emailService.sendJobApplicationEmail(
+              recruiterEmail,
+              recruiterName,
+              candidateName,
+              resume.email,
+              job.title,
+              job.company_name || 'Your Company',
+              validatedData.resumeFileUrl || `${process.env.APP_URL || 'http://localhost:3000'}/shared/resume/${shareToken}`,
+              validatedData.coverLetter,
+              validatedData.jobId,
+              application.id,
+              userId.toString()
+            );
 
-    // Track usage for subscription
-    try {
-      const { SubscriptionService } = await import('../services/subscriptionService.js');
-      const subscription = await SubscriptionService.getUserSubscription(userId);
-      if (subscription) {
-        await SubscriptionService.incrementUsage(
-          subscription.id,
-          'user',
-          'job_applications_monthly',
-          1
-        );
+            // Send confirmation email to candidate
+            await emailService.sendApplicationConfirmationEmail(
+              resume.email,
+              candidateName,
+              job.title,
+              job.company_name || 'Your Company',
+              validatedData.resumeFileUrl || `${process.env.APP_URL || 'http://localhost:3000'}/shared/resume/${shareToken}`,
+              validatedData.jobId,
+              application.id,
+              userId.toString()
+            );
+          }
+        }
+
+        // Track usage for subscription
+        const { SubscriptionService } = await import('../services/subscriptionService.js');
+        const subscription = await SubscriptionService.getUserSubscription(userId);
+        if (subscription) {
+          await SubscriptionService.incrementUsage(
+            subscription.id,
+            'user',
+            'job_applications_monthly',
+            1
+          );
+        }
+      } catch (asyncError) {
+        console.error('Background task error:', asyncError);
       }
-    } catch (usageError) {
-      console.error('Error tracking job application usage:', usageError);
-      // Don't fail the request if usage tracking fails
-    }
+    });
 
     res.json({
       success: true,
@@ -195,11 +206,15 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
     });
   } catch (error) {
     console.error('Job application error:', error);
+    console.log('Request body:', req.body);
+    console.log('User ID:', req.user?.id);
     
     if (error instanceof z.ZodError) {
+      console.log('Zod validation errors:', error.errors);
       return res.status(400).json({
         success: false,
-        error: 'Invalid application data'
+        error: 'Invalid application data',
+        details: error.errors
       });
     }
 
@@ -300,7 +315,8 @@ const guestApplicationSchema = z.object({
   resumeFileUrl: z.string(),
   userId: z.string().optional(), // From guest resume parsing
   resumeId: z.number().optional(), // From guest resume parsing
-  shareToken: z.string().optional() // From guest resume parsing
+  shareToken: z.string().optional(), // From guest resume parsing
+  coverLetter: z.string().optional() // Cover letter from job application
 });
 
 // POST /api/job-applications/guest - Submit guest job application (no auth required)
@@ -344,9 +360,10 @@ router.post('/guest', async (req, res: Response) => {
         guest_email, 
         resume_file_url,
         shared_token,
+        cover_letter,
         status
       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
        RETURNING *`,
       [
         validatedData.jobId,
@@ -355,31 +372,48 @@ router.post('/guest', async (req, res: Response) => {
         validatedData.name,
         validatedData.email,
         validatedData.resumeFileUrl,
-        validatedData.shareToken || null
+        validatedData.shareToken || null,
+        validatedData.coverLetter || null
       ]
     );
 
     const application = result.rows[0];
 
-    // Send email notification to recruiter
+    // Send email notifications
     try {
       const recruiterEmail = job.recruiter_email;
       if (recruiterEmail) {
-        await jobApplicationEmailService.sendApplicationNotification({
+        // Send email to recruiter about new application
+        await emailService.sendJobApplicationEmail(
           recruiterEmail,
-          recruiterName: job.company_name || 'Recruiter',
-          candidateName: validatedData.name,
-          candidateEmail: validatedData.email,
-          jobTitle: job.title,
-          companyName: job.company_name,
-          resumeUrl: validatedData.shareToken 
-            ? `${process.env.FRONTEND_URL || 'http://localhost:8080'}/shared/resume/${validatedData.shareToken}`
+          job.company_name || 'Recruiter',
+          validatedData.name,
+          validatedData.email,
+          job.title,
+          job.company_name || 'Company',
+          validatedData.shareToken 
+            ? `${process.env.APP_URL || 'http://localhost:3000'}/shared/resume/${validatedData.shareToken}`
             : validatedData.resumeFileUrl,
-          appliedAt: new Date()
-        });
+          validatedData.coverLetter,
+          validatedData.jobId,
+          application.id
+        );
+
+        // Send confirmation email to candidate
+        await emailService.sendApplicationConfirmationEmail(
+          validatedData.email,
+          validatedData.name,
+          job.title,
+          job.company_name || 'Company',
+          validatedData.shareToken 
+            ? `${process.env.APP_URL || 'http://localhost:3000'}/shared/resume/${validatedData.shareToken}`
+            : validatedData.resumeFileUrl,
+          validatedData.jobId,
+          application.id
+        );
       }
     } catch (emailError) {
-      console.error('Failed to send email notification:', emailError);
+      console.error('Failed to send email notifications:', emailError);
       // Don't fail the application if email fails
     }
 

@@ -20,6 +20,7 @@ interface ResumeParsingAnalysisProps {
   onContinue: () => void;
   onPreview: () => void;
   onCancel: () => void;
+  hideButtons?: boolean; // Add option to hide buttons for job application mode
 }
 
 interface AnalysisItem {
@@ -34,7 +35,8 @@ export default function ResumeParsingAnalysis({
   resumeId,
   onContinue,
   onPreview,
-  onCancel 
+  onCancel,
+  hideButtons = false
 }: ResumeParsingAnalysisProps) {
   
   const analyzeResume = (): AnalysisItem[] => {
@@ -251,7 +253,7 @@ export default function ResumeParsingAnalysis({
         ))}
       </div>
 
-      {(incompleteCount > 0 || missingCount > 0) && (
+      {(incompleteCount > 0 || missingCount > 0) && !hideButtons && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
           <p className="text-xs text-amber-800">
             <strong>Note:</strong> You can add missing information and fix incomplete data in the resume builder.
@@ -259,31 +261,35 @@ export default function ResumeParsingAnalysis({
         </div>
       )}
 
-      <div className="flex gap-2 pt-2">
-        <Button
-          onClick={onPreview}
-          variant="outline"
-          className="flex-1 h-9 text-sm border-brand-main/30 text-brand-main hover:bg-brand-main/10"
-        >
-          <Eye className="h-3 w-3 mr-1" />
-          Preview Resume
-        </Button>
-        <Button
-          onClick={onContinue}
-          className="flex-1 h-9 text-sm bg-brand-main hover:bg-brand-main/90 text-white"
-        >
-          <Edit className="h-3 w-3 mr-1" />
-          Edit in Builder
-        </Button>
-      </div>
-      
-      <Button
-        onClick={onCancel}
-        variant="ghost"
-        className="w-full h-8 text-sm"
-      >
-        Cancel
-      </Button>
+      {!hideButtons && (
+        <>
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={onPreview}
+              variant="outline"
+              className="flex-1 h-9 text-sm border-brand-main/30 text-brand-main hover:bg-brand-main/10"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Preview Resume
+            </Button>
+            <Button
+              onClick={onContinue}
+              className="flex-1 h-9 text-sm bg-brand-main hover:bg-brand-main/90 text-white"
+            >
+              <Edit className="h-3 w-3 mr-1" />
+              Edit in Builder
+            </Button>
+          </div>
+          
+          <Button
+            onClick={onCancel}
+            variant="ghost"
+            className="w-full h-8 text-sm"
+          >
+            Cancel
+          </Button>
+        </>
+      )}
     </div>
   );
 }

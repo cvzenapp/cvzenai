@@ -219,9 +219,12 @@ export class AuthErrorHandler {
     // Determine error type based on status code and response data
     switch (status) {
       case 400:
-        // Check for "email already exists" error first (most specific)
-        if (responseData?.message?.toLowerCase().includes('already exists') || 
-            responseData?.error?.toLowerCase().includes('already exists')) {
+        // Check for specific error messages first
+        if (responseData?.error?.toLowerCase().includes('already applied') || 
+            responseData?.message?.toLowerCase().includes('already applied')) {
+          errorType = AuthErrorType.VALIDATION_ERROR;
+        } else if (responseData?.error?.toLowerCase().includes('already exists') || 
+            responseData?.message?.toLowerCase().includes('already exists')) {
           errorType = AuthErrorType.EMAIL_ALREADY_EXISTS;
         } else if (responseData?.error?.includes('email') || responseData?.message?.includes('email')) {
           errorType = AuthErrorType.INVALID_EMAIL;
@@ -230,7 +233,7 @@ export class AuthErrorHandler {
         } else if (responseData?.error?.includes('validation') || responseData?.errors) {
           errorType = AuthErrorType.VALIDATION_ERROR;
         } else {
-          errorType = AuthErrorType.MISSING_FIELDS;
+          errorType = AuthErrorType.VALIDATION_ERROR;
         }
         break;
         

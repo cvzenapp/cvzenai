@@ -3,12 +3,13 @@ import {
   Calendar, Clock, Video, Phone, MapPin, Monitor, 
   CheckCircle, XCircle, AlertCircle, User, Building, 
   Filter, Search, ChevronDown, RefreshCw, Download,
-  ArrowUpDown, ArrowUp, ArrowDown
+  ArrowUpDown, ArrowUp, ArrowDown, Edit
 } from 'lucide-react';
 import { interviewApi } from '../../services/interviewApi';
 import { recruiterInterviewApi } from '../../services/recruiterInterviewApi';
 import { InterviewResponseModal } from './InterviewResponseModal';
 import { VideoCallLauncher } from '../video/VideoCallLauncher';
+import { ScheduleInterviewForm } from './ScheduleInterviewForm';
 import type { InterviewInvitation } from '@shared/api';
 
 interface EnterpriseInterviewManagerProps {
@@ -71,6 +72,7 @@ export const EnterpriseInterviewManager: React.FC<EnterpriseInterviewManagerProp
   const [error, setError] = useState<string | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<InterviewInvitation | null>(null);
   const [videoCallInterview, setVideoCallInterview] = useState<InterviewInvitation | null>(null);
+  const [editingInterview, setEditingInterview] = useState<InterviewInvitation | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -215,6 +217,15 @@ export const EnterpriseInterviewManager: React.FC<EnterpriseInterviewManagerProp
       sortBy,
       sortOrder: prev.sortBy === sortBy && prev.sortOrder === 'desc' ? 'asc' : 'desc'
     }));
+  };
+
+  const handleEditInterview = (interview: InterviewInvitation) => {
+    setEditingInterview(interview);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingInterview(null);
+    loadInterviews(); // Reload interviews to get updated data
   };
 
   const loadMore = () => {
@@ -552,22 +563,20 @@ export const EnterpriseInterviewManager: React.FC<EnterpriseInterviewManagerProp
 
                   {/* Actions */}
                   <div className="ml-4 flex flex-col space-y-2">
+                    {/* Edit button for recruiters - Always show for testing */}
+                    <button
+                      onClick={() => handleEditInterview(interview)}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm flex items-center space-x-2 whitespace-nowrap"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>Edit ({userType})</span>
+                    </button>
+                    
                     {userType === 'job_seeker' && interview.status === 'pending' && (
                       <button
                         onClick={() => setSelectedInterview(interview)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
-                      >
-                        Respond
-                      </button>
-                    )}
-                    
-                    {interview.status === 'accepted' && interview.interviewType === 'video_call' && (
-                      <button
-                        onClick={() => setVideoCallInterview(interview)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center space-x-2 whitespace-nowrap"
-                      >
-                        <Video className="w-4 h-4" />
-                        <span>Join Call</span>
+                      > <span>Join Call</span>
                       </button>
                     )}
                   </div>

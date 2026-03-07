@@ -63,18 +63,26 @@ export async function initializeDatabase(): Promise<Client> {
     keepAliveInitialDelayMillis: 10000
   });
 
-  await db.connect();
+  try {
+    await db.connect();
+  } catch (error) {
+    console.error('Failed to connect to database:', error);
+    db = null;
+    throw error;
+  }
 
   // Set up error handlers to detect connection issues
-  db.on('error', (err) => {
-    console.error('Database connection error:', err);
-    db = null; // Force reconnection on next request
-  });
+  if (db) {
+    db.on('error', (err) => {
+      console.error('Database connection error:', err);
+      db = null; // Force reconnection on next request
+    });
 
-  db.on('end', () => {
-    console.log('Database connection ended');
-    db = null; // Force reconnection on next request
-  });
+    db.on('end', () => {
+      console.log('Database connection ended');
+      db = null; // Force reconnection on next request
+    });
+  }
 
   return db;
 }

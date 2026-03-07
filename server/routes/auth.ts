@@ -671,6 +671,48 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
       if (storeResult.success && storeResult.resumeId) {
         resumeId = storeResult.resumeId.toString();
         console.log('✅ Resume parsed and stored with ID:', resumeId);
+        
+        // Generate shareToken automatically using slug
+        const { getDatabase } = await import('../database/connection.js');
+        const db = await getDatabase();
+        const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || fullName || 'resume';
+        
+        // Generate unique slug for shareToken
+        const generateUniqueSlug = async (baseName: string): Promise<string> => {
+          const baseSlug = baseName
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim();
+          
+          let slug = baseSlug;
+          let counter = 1;
+          
+          while (true) {
+            const existing = await db.query(
+              'SELECT id FROM resume_shares WHERE share_token = $1',
+              [slug]
+            );
+            
+            if (existing.rows.length === 0) {
+              return slug;
+            }
+            
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+          }
+        };
+
+        const shareToken = await generateUniqueSlug(fullName);
+        
+        // Create resume share entry
+        await db.query(`
+          INSERT INTO resume_shares (resume_id, user_id, share_token, is_active, expires_at)
+          VALUES ($1, $2, $3, true, NULL)
+        `, [storeResult.resumeId, userId, shareToken]);
+
+        console.log('✅ ShareToken created:', shareToken, 'for resume:', resumeId);
       }
     } catch (parseError) {
       console.error('❌ Resume parsing error during quick signup:', parseError);

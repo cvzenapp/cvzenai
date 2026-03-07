@@ -17,6 +17,7 @@ import { recruiterAiChatStreamingService } from '@/services/recruiterAiChatStrea
 import { AIScreeningModal } from '@/components/recruiter/AIScreeningModal';
 import { candidatesApi } from '@/services/candidatesApi';
 import { jobPostingsApi, JobPostingCreateRequest } from '@/services/jobPostingsApi';
+import { JobPostingSuccessCard } from '@/components/JobPostingSuccessCard';
 import { 
   Send, 
   Bot, 
@@ -76,6 +77,16 @@ interface Message {
     employment_type: string;
     status: string;
   }>;
+  jobPostingSuccess?: {
+    message: string;
+    shareData: {
+      url: string;
+      title: string;
+      description: string;
+      jobTitle: string;
+      companyName: string;
+    };
+  };
 }
 
 const QUICK_ACTIONS = [
@@ -636,20 +647,32 @@ export default function RecruiterChatInterface() {
   const handleSaveJobPosting = async () => {
     try {
       setSavingJobPosting(true);
-      const response = await jobPostingsApi.createJobPosting(jobPostingFormData);
+      const response = await recruiterAiChatApi.createJobPosting(jobPostingFormData);
       if (response.success) {
         setShowJobPostingModal(false);
-        // Show success message
+        // Show success message with job posting success card
         const successMessage: Message = {
           id: Date.now().toString(),
           type: 'assistant',
-          content: `Great! I've created the job posting for "${jobPostingFormData.title}". You can view and manage it in the Jobs tab.`,
-          timestamp: new Date()
+          content: response.message,
+          timestamp: new Date(),
+          jobPostingSuccess: {
+            message: response.message,
+            shareData: response.shareData
+          }
         };
         setMessages(prev => [...prev, successMessage]);
       }
     } catch (err) {
       console.error('Failed to save job posting:', err);
+      // Show error message
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `Sorry, I couldn't create the job posting. ${err instanceof Error ? err.message : 'Please try again.'}`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setSavingJobPosting(false);
     }
@@ -1674,6 +1697,16 @@ export default function RecruiterChatInterface() {
                     </div>
                   )}
                 </div>
+                
+                {/* Job Posting Success Card */}
+                {message.jobPostingSuccess && (
+                  <div className="mt-3">
+                    <JobPostingSuccessCard 
+                      message={message.jobPostingSuccess.message}
+                      shareData={message.jobPostingSuccess.shareData}
+                    />
+                  </div>
+                )}
                 
                 {/* Job Selection UI */}
                 {message.jobSelectionRequired && message.availableJobs && (

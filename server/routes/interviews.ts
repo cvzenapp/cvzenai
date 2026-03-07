@@ -1,6 +1,7 @@
 import express from "express";
 import { getDatabase } from "../database/connection.js";
 import jwt from 'jsonwebtoken';
+import { emailService } from "../services/emailService.js";
 import type { Request, Response } from "express";
 import type { 
   CreateInterviewRequest, 
@@ -100,9 +101,11 @@ router.post("/create", async (req: Request, res: Response) => {
       candidateId: rawCandidateId,
       resumeId,
       jobPostingId,
+      applicationId: requestApplicationId,
       title,
       description,
       interviewType,
+      interviewRoundType,
       proposedDatetime,
       durationMinutes = 60,
       timezone = 'UTC',
@@ -194,7 +197,13 @@ router.post("/create", async (req: Request, res: Response) => {
     
     if (!isGuestCandidate && candidateId) {
       const candidateCheck = await db.query(
-        `SELECT u.id, u.email, COALESCE(r.personal_info->>'name', u.email) as name, r.id as resume_id, r.title as resume_title
+        `SELECT u.id, u.email, 
+         COALESCE(
+           NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
+           NULLIF(TRIM(u.first_name), ''),
+           SPLIT_PART(u.email, '@', 1)
+         ) as name, 
+         r.id as resume_id, r.title as resume_title
          FROM users u
          LEFT JOIN resumes r ON r.user_id = u.id
          WHERE u.id = $1 AND u.user_type = 'job_seeker'`,
@@ -227,12 +236,89 @@ router.post("/create", async (req: Request, res: Response) => {
       }
     }
 
+    // Find the application_id and next round for this candidate and job
+    let applicationId = requestApplicationId; // Use the provided applicationId first
+    let nextRound = 1;
+    
+    if (jobPostingId) {
+      // If applicationId was provided, use it and find the next round
+      if (applicationId) {
+        const roundQuery = await db.query(
+          'SELECT COALESCE(MAX(interview_round), 0) + 1 as next_round FROM interview_invitations WHERE application_id = $1',
+          [applicationId]
+        );
+        nextRound = roundQuery.rows[0]?.next_round || 1;
+        console.log('✅ Using provided applicationId:', applicationId, 'next round:', nextRound);
+      } else {
+        // Fallback: try to find application by candidate and job
+        if (isGuestCandidate) {
+          // For guest candidates, find by email and job_id
+          const appQuery = await db.query(
+            'SELECT id FROM job_applications WHERE applicant_email = $1 AND job_id = $2',
+            [guestCandidateEmail, jobPostingId]
+          );
+          applicationId = appQuery.rows[0]?.id || null;
+        } else if (candidateId) {
+          // For registered candidates, find by user_id and job_id
+          const appQuery = await db.query(
+            'SELECT id FROM job_applications WHERE user_id = $1 AND job_id = $2',
+            [candidateId, jobPostingId]
+          );
+          applicationId = appQuery.rows[0]?.id || null;
+        }
+        
+        // Find the next round number for this application
+        if (applicationId) {
+          const roundQuery = await db.query(
+            'SELECT COALESCE(MAX(interview_round), 0) + 1 as next_round FROM interview_invitations WHERE application_id = $1',
+            [applicationId]
+          );
+          nextRound = roundQuery.rows[0]?.next_round || 1;
+        } else {
+          // If no application found, try to create one for this interview
+          console.log('🔧 Creating application record for interview');
+          try {
+            if (isGuestCandidate) {
+              const newAppResult = await db.query(
+                'INSERT INTO job_applications (job_id, guest_name, guest_email, applicant_name, applicant_email, status, applied_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id',
+                [jobPostingId, guestCandidateName, guestCandidateEmail, guestCandidateName, guestCandidateEmail, 'shortlisted']
+              );
+              applicationId = newAppResult.rows[0]?.id;
+            } else if (candidateId) {
+              const newAppResult = await db.query(
+                'INSERT INTO job_applications (job_id, user_id, applicant_name, applicant_email, status, applied_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id',
+                [jobPostingId, candidateId, candidateName, candidateEmail, 'shortlisted']
+              );
+              applicationId = newAppResult.rows[0]?.id;
+            }
+            console.log('✅ Created application:', applicationId);
+          } catch (appError) {
+            console.error('❌ Failed to create application:', appError);
+          }
+        }
+      }
+      
+      console.log('🔍 Final application_id:', applicationId, 'next round:', nextRound);
+      
+      if (!applicationId) {
+        console.log('⚠️ Warning: No application_id found for candidate/job combination');
+        console.log('Debug info:', {
+          isGuestCandidate,
+          candidateId,
+          guestCandidateEmail,
+          jobPostingId,
+          requestApplicationId
+        });
+      }
+    }
+
     // Create interview invitation
     console.log('📝 Creating interview invitation with values:', {
       recruiter_id: auth.userId,
       candidate_id: candidateId,
       resume_id: resumeId,
       job_posting_id: jobPostingId,
+      application_id: applicationId,
       title,
       interview_type: interviewType || 'video_call',
       proposed_datetime: proposedDatetime,
@@ -244,30 +330,30 @@ router.post("/create", async (req: Request, res: Response) => {
     const result = await db.query(
       isGuestCandidate ? `
         INSERT INTO interview_invitations (
-          recruiter_id, guest_candidate_name, guest_candidate_email, job_posting_id,
+          recruiter_id, guest_candidate_name, guest_candidate_email, job_posting_id, application_id, interview_round, interview_round_type,
           title, description, interview_type,
           proposed_datetime, duration_minutes, timezone,
           meeting_link, meeting_location, meeting_instructions,
           recruiter_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING id, created_at`
       : `
         INSERT INTO interview_invitations (
-          recruiter_id, candidate_id, resume_id, job_posting_id,
+          recruiter_id, candidate_id, resume_id, job_posting_id, application_id, interview_round, interview_round_type,
           title, description, interview_type,
           proposed_datetime, duration_minutes, timezone,
           meeting_link, meeting_location, meeting_instructions,
           recruiter_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING id, created_at`,
       isGuestCandidate ? [
-        auth.userId, guestCandidateName, guestCandidateEmail, jobPostingId,
+        auth.userId, guestCandidateName, guestCandidateEmail, jobPostingId, applicationId, nextRound, interviewRoundType,
         title, description, interviewType || 'video_call',
         proposedDatetime, durationMinutes, timezone,
         meetingLink, meetingLocation, meetingInstructions,
         recruiterNotes
       ] : [
-        auth.userId, candidateId, resumeId, jobPostingId,
+        auth.userId, candidateId, resumeId, jobPostingId, applicationId, nextRound, interviewRoundType,
         title, description, interviewType || 'video_call',
         proposedDatetime, durationMinutes, timezone,
         meetingLink, meetingLocation, meetingInstructions,
@@ -301,6 +387,62 @@ router.post("/create", async (req: Request, res: Response) => {
       meetingLink: finalMeetingLink
     });
 
+    // Send email notification to candidate
+    try {
+      if (candidateEmail && candidateName) {
+        console.log('📧 Sending interview invitation email...');
+        
+        // Get recruiter details for email
+        const recruiterQuery = await db.query(
+          'SELECT email, COALESCE(first_name || \' \' || last_name, email) as name FROM users WHERE id = $1',
+          [auth.userId]
+        );
+        
+        const recruiterInfo = recruiterQuery.rows[0];
+        const recruiterName = recruiterInfo?.name || 'Recruiter';
+        
+        // Get company name from job posting if available
+        let companyName = 'Company';
+        if (jobPostingId) {
+          const jobQuery = await db.query(
+            'SELECT company FROM job_postings WHERE id = $1',
+            [jobPostingId]
+          );
+          companyName = jobQuery.rows[0]?.company || 'Company';
+        }
+
+        const emailResult = await emailService.sendInterviewInvitationEmail(
+          candidateEmail,
+          candidateName,
+          recruiterName,
+          companyName,
+          {
+            title,
+            description,
+            interviewType: interviewType || 'video_call',
+            proposedDatetime,
+            durationMinutes,
+            timezone,
+            meetingLink: finalMeetingLink,
+            meetingLocation,
+            meetingInstructions
+          },
+          interviewId,
+          candidateId || undefined,
+          recruiterInfo?.email
+        );
+
+        if (emailResult.success) {
+          console.log('✅ Interview invitation email sent successfully');
+        } else {
+          console.error('❌ Failed to send interview invitation email:', emailResult.error);
+        }
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending interview invitation email:', emailError);
+      // Don't fail the interview creation if email fails
+    }
+
     res.json({
       success: true,
       message: 'Interview invitation sent successfully',
@@ -328,6 +470,338 @@ router.post("/create", async (req: Request, res: Response) => {
       success: false,
       error: 'Failed to create interview invitation',
       message: 'There was an issue creating the interview. Please try again later.'
+    });
+  }
+});
+
+// Generate AI interview preparation content
+router.post("/prepare-ai", async (req: Request, res: Response) => {
+  try {
+    const auth = await authenticateUser(req);
+    
+    if (!auth || auth.userType !== 'recruiter') {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized - Recruiter access required'
+      });
+    }
+
+    const {
+      jobPostingId,
+      candidateId,
+      resumeId,
+      interviewType = 'technical',
+      interviewMode = 'video_call',
+      interviewDateTime,
+      durationMinutes
+    } = req.body;
+
+    if (!jobPostingId || (!candidateId && !resumeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: jobPostingId and (candidateId or resumeId)'
+      });
+    }
+
+    const db = await getDatabase();
+
+    // Get job posting details
+    const jobQuery = await db.query(
+      'SELECT title, description, requirements, company FROM job_postings WHERE id = $1 AND recruiter_id = $2',
+      [jobPostingId, auth.userId]
+    );
+
+    if (jobQuery.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job posting not found or not owned by recruiter'
+      });
+    }
+
+    const job = jobQuery.rows[0];
+
+    // Get candidate resume details
+    let resumeQuery;
+    if (candidateId) {
+      resumeQuery = await db.query(
+        `SELECT r.*, r.personal_info->>'name' as candidate_name, r.summary, r.skills, r.experience
+         FROM resumes r 
+         WHERE r.user_id = $1 
+         ORDER BY r.updated_at DESC 
+         LIMIT 1`,
+        [candidateId]
+      );
+    } else {
+      resumeQuery = await db.query(
+        `SELECT r.*, r.personal_info->>'name' as candidate_name, r.summary, r.skills, r.experience
+         FROM resumes r 
+         WHERE r.id = $1`,
+        [resumeId]
+      );
+    }
+
+    if (resumeQuery.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Resume not found'
+      });
+    }
+
+    const resume = resumeQuery.rows[0];
+
+    // Prepare data for AI with better error handling
+    const jobDescription = `${job.description || 'No description provided'}\n\nRequirements:\n${job.requirements || 'Not specified'}`;
+    const candidateName = resume.candidate_name || 'Candidate';
+    const candidateResume = `Name: ${candidateName}\n\nSummary: ${resume.summary || 'Not provided'}\n\nExperience: ${JSON.stringify(resume.experiences || [])}`;
+    
+    // Handle skills array safely
+    let candidateSkills: string[] = [];
+    try {
+      if (Array.isArray(resume.skills)) {
+        candidateSkills = resume.skills.map((skill: any) => {
+          if (typeof skill === 'string') return skill;
+          if (skill && skill.name) return skill.name;
+          return String(skill);
+        }).filter(Boolean);
+      }
+    } catch (skillError) {
+      console.warn('⚠️ Error processing candidate skills:', skillError);
+      candidateSkills = [];
+    }
+
+    try {
+      // Import groqService
+      const { groqService } = await import('../services/groqService.js');
+
+      // Generate AI content
+      console.log('🤖 Generating AI interview preparation...');
+      const aiContent = await groqService.generateInterviewPreparation(
+        jobDescription,
+        job.title,
+        candidateResume,
+        candidateSkills,
+        interviewType,
+        interviewMode,
+        interviewDateTime,
+        durationMinutes
+      );
+
+      console.log('✅ AI interview preparation generated successfully');
+
+      res.json({
+        success: true,
+        data: {
+          description: aiContent.description,
+          instructions: aiContent.instructions,
+          internalNotes: aiContent.internalNotes,
+          jobTitle: job.title,
+          candidateName: candidateName
+        }
+      });
+
+    } catch (aiError) {
+      console.error('❌ AI generation error:', aiError);
+      
+      // Return fallback content instead of error
+      res.json({
+        success: true,
+        data: {
+          description: `This interview will assess the candidate's qualifications for the ${job.title} position. We'll discuss their experience, technical skills, and cultural fit through a collaborative conversation.`,
+          instructions: `Please prepare by:\n• Reviewing the job description and company information\n• Preparing examples of relevant experience with specific details\n• Having thoughtful questions ready about the role and company culture\n• Ensuring stable internet connection for video calls\n• Being authentic and honest - this is a mutual evaluation process\n• Avoiding any form of misrepresentation or dishonesty\n• Remember: this is a professional conversation, not an interrogation\n• Feel comfortable to ask for clarification if needed`,
+          internalNotes: `Focus areas:\n• Technical competency assessment\n• Cultural fit evaluation\n• Communication skills and authenticity\n• Problem-solving approach\n• Create a welcoming, collaborative atmosphere\n• Encourage open dialogue rather than one-sided questioning\n• Assess genuine interest and motivation\n• Questions about role expectations and growth opportunities`,
+          jobTitle: job.title,
+          candidateName: candidateName
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Error generating AI interview preparation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate interview preparation content',
+      message: error.message
+    });
+  }
+});
+
+// Update interview invitation (recruiter only)
+router.put("/:interviewId/update", async (req: Request, res: Response) => {
+  try {
+    const auth = await authenticateUser(req);
+    
+    if (!auth || auth.userType !== 'recruiter') {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized - Recruiter access required'
+      });
+    }
+
+    const { interviewId } = req.params;
+    const updateData = req.body;
+
+    const db = await getDatabase();
+
+    // Verify interview exists and belongs to recruiter
+    const interviewCheck = await db.query(
+      'SELECT id, recruiter_id, status FROM interview_invitations WHERE id = $1',
+      [interviewId]
+    );
+
+    if (interviewCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Interview not found'
+      });
+    }
+
+    const interview = interviewCheck.rows[0];
+
+    if (interview.recruiter_id !== auth.userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to update this interview'
+      });
+    }
+
+    // Build update query dynamically
+    const updateFields = [];
+    const updateValues = [];
+    let paramIndex = 1;
+
+    const allowedFields = [
+      'title', 'description', 'interview_type', 'interview_round_type',
+      'proposed_datetime', 'duration_minutes', 'timezone',
+      'meeting_link', 'meeting_location', 'meeting_instructions',
+      'recruiter_notes'
+    ];
+
+    const fieldMapping = {
+      'interviewType': 'interview_type',
+      'interviewRoundType': 'interview_round_type',
+      'proposedDatetime': 'proposed_datetime',
+      'durationMinutes': 'duration_minutes',
+      'meetingLink': 'meeting_link',
+      'meetingLocation': 'meeting_location',
+      'meetingInstructions': 'meeting_instructions',
+      'recruiterNotes': 'recruiter_notes'
+    };
+
+    for (const [key, value] of Object.entries(updateData)) {
+      if (value !== undefined && value !== null) {
+        const dbField = fieldMapping[key] || key;
+        if (allowedFields.includes(dbField)) {
+          updateFields.push(`${dbField} = $${paramIndex}`);
+          updateValues.push(value);
+          paramIndex++;
+        }
+      }
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid fields to update'
+      });
+    }
+
+    // Add updated_at
+    updateFields.push(`updated_at = NOW()`);
+
+    const updateQuery = `
+      UPDATE interview_invitations 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, updated_at
+    `;
+    updateValues.push(interviewId);
+
+    console.log('🔄 Updating interview:', {
+      interviewId,
+      updateFields,
+      updateValues: updateValues.slice(0, -1) // Don't log the ID
+    });
+
+    const result = await db.query(updateQuery, updateValues);
+
+    console.log('✅ Interview updated successfully:', result.rows[0]);
+
+    // Send reschedule email notification to candidate
+    try {
+      // Get updated interview details with candidate info
+      const updatedInterviewQuery = await db.query(`
+        SELECT 
+          i.*,
+          COALESCE(
+            NULLIF(TRIM(CONCAT(c.first_name, ' ', c.last_name)), ''),
+            NULLIF(TRIM(c.first_name), ''),
+            SPLIT_PART(c.email, '@', 1),
+            i.guest_candidate_name
+          ) as candidate_name,
+          COALESCE(c.email, i.guest_candidate_email) as candidate_email,
+          rec.first_name || ' ' || rec.last_name as recruiter_name,
+          rec.email as recruiter_email,
+          jp.company as company_name
+        FROM interview_invitations i
+        LEFT JOIN users c ON i.candidate_id = c.id
+        LEFT JOIN users rec ON i.recruiter_id = rec.id
+        LEFT JOIN job_postings jp ON i.job_posting_id = jp.id
+        WHERE i.id = $1
+      `, [interviewId]);
+
+      if (updatedInterviewQuery.rows.length > 0) {
+        const interview = updatedInterviewQuery.rows[0];
+        
+        if (interview.candidate_email && interview.candidate_name) {
+          console.log('📧 Sending reschedule notification email...');
+          
+          const emailResult = await emailService.sendInterviewRescheduleEmail(
+            interview.candidate_email,
+            interview.candidate_name,
+            interview.recruiter_name || 'Recruiter',
+            interview.company_name || 'Company',
+            {
+              title: interview.title,
+              description: interview.description,
+              interviewType: interview.interview_type,
+              proposedDatetime: interview.proposed_datetime,
+              durationMinutes: interview.duration_minutes,
+              timezone: interview.timezone,
+              meetingLink: interview.meeting_link,
+              meetingLocation: interview.meeting_location,
+              meetingInstructions: interview.meeting_instructions
+            },
+            interviewId,
+            interview.candidate_id,
+            interview.recruiter_email
+          );
+
+          if (emailResult.success) {
+            console.log('✅ Reschedule notification email sent successfully');
+          } else {
+            console.error('❌ Failed to send reschedule notification email:', emailResult.error);
+          }
+        }
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending reschedule notification email:', emailError);
+      // Don't fail the update if email fails
+    }
+
+    res.json({
+      success: true,
+      message: 'Interview updated successfully',
+      data: {
+        interviewId,
+        updatedAt: result.rows[0].updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating interview:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update interview'
     });
   }
 });
@@ -726,10 +1200,13 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
             candidateId: row.candidate_id,
             resumeId: row.resume_id,
             jobPostingId: row.job_posting_id,
+            applicationId: row.application_id,
+            interviewRound: row.interview_round,
             
             title: row.title,
             description: row.description,
             interviewType: row.interview_type,
+            interviewRoundType: row.interview_round_type,
             
             proposedDatetime: row.proposed_datetime,
             durationMinutes: row.duration_minutes,
@@ -778,10 +1255,13 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
         candidateId: row.candidate_id,
         resumeId: row.resume_id,
         jobPostingId: row.job_posting_id,
+        applicationId: row.application_id,
+        interviewRound: row.interview_round,
         
         title: row.title,
         description: row.description,
         interviewType: row.interview_type,
+        interviewRoundType: row.interview_round_type,
         
         proposedDatetime: row.proposed_datetime,
         durationMinutes: row.duration_minutes,
@@ -912,10 +1392,13 @@ router.get("/:interviewId", async (req: Request, res: Response) => {
       candidateId: row.candidate_id,
       resumeId: row.resume_id,
       jobPostingId: row.job_posting_id,
+      applicationId: row.application_id,
+      interviewRound: row.interview_round,
       
       title: row.title,
       description: row.description,
       interviewType: row.interview_type,
+      interviewRoundType: row.interview_round_type,
       
       proposedDatetime: row.proposed_datetime,
       durationMinutes: row.duration_minutes,

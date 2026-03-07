@@ -168,6 +168,38 @@ TASK: Prepare users for interviews.
 FOCUS: Common questions, technical prep, behavioral strategies, follow-up.
 
 Help users feel confident and prepared.`;
+
+      case 'interview_preparation':
+        return `${basePrompt}
+
+TASK: Generate contextual interview content for recruiters to send to job seekers.
+FOCUS: Create specific interview description, candidate instructions, and internal notes based on job requirements and candidate profile.
+PERSPECTIVE: Write Interview Description and Instructions in SECOND PERSON (addressing the candidate directly with "you", "your"). Write Internal Notes in first person for the recruiter.
+PERSONALIZATION: Always use the candidate's actual name when provided. Replace generic terms like "Candidate" with their real name.
+
+RESPONSE FORMAT:
+Interview Description:
+[2-3 paragraphs written directly to the candidate using "you" and "your". If candidate name is provided, start with "Hello [CandidateName]," or use their name naturally in the text. Explain what you will discuss together, what areas you'll explore, and what the candidate can expect. Use language like "We will discuss your experience with...", "You'll have the opportunity to...", "I'm looking forward to learning about your..."]
+
+Instructions for Candidate:
+• [Direct instructions using "you" and the candidate's name when appropriate - "Please prepare...", "You should review...", "Bring your..."]
+• [What you need to set up or prepare]
+• [Technical requirements if applicable]
+• [Timeline and expectations for you]
+• [Encourage honesty and authenticity - mention this is a collaborative discussion, not an interrogation]
+• [Remind you to be genuine and avoid any form of misrepresentation or cheating]
+• [Emphasize that the interview is designed to be a comfortable conversation to assess mutual fit]
+
+Internal Notes:
+[Write from recruiter's perspective using "I should focus on...", "I need to evaluate...", "My approach will be..."]
+• [Key areas for me to evaluate about this specific candidate]
+• [Potential concerns for me to address]
+• [My strategic interview focus points]
+• [My evaluation criteria specific to this role]
+• [Remind myself to create a welcoming, non-intimidating atmosphere]
+• [Focus on collaborative discussion rather than authoritative questioning]
+
+IMPORTANT: Never use generic terms like "Candidate", "the candidate", or "Hello Candidate". Always use the person's actual name when provided. Make the content personal and direct.`;
         
       default:
         return `${basePrompt}
@@ -537,6 +569,140 @@ Provide helpful career and professional development advice. Be conversational an
     }
     
     return analysis;
+  }
+
+  // New method for interview preparation
+  async generateInterviewPreparation(
+    jobDescription: string,
+    jobTitle: string,
+    candidateResume: string,
+    candidateSkills: string[],
+    interviewType: string = 'technical',
+    interviewMode: string = 'video_call',
+    interviewDateTime?: string,
+    interviewDuration?: number
+  ): Promise<{
+    description: string;
+    instructions: string;
+    internalNotes: string;
+  }> {
+    try {
+      const modeDescription = {
+        'video_call': 'Video Call (Online)',
+        'phone': 'Phone Call',
+        'in_person': 'In-Person Meeting'
+      }[interviewMode] || interviewMode;
+
+      const dateTimeInfo = interviewDateTime ? 
+        `\nSCHEDULED: ${new Date(interviewDateTime).toLocaleString()} (${interviewDuration || 60} minutes)` : '';
+
+      const prompt = `Generate interview preparation content for:
+
+JOB TITLE: ${jobTitle}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+CANDIDATE RESUME SUMMARY:
+${candidateResume}
+
+CANDIDATE SKILLS:
+${candidateSkills.join(', ')}
+
+INTERVIEW TYPE: ${interviewType}
+INTERVIEW MODE: ${modeDescription}${dateTimeInfo}
+
+Please provide contextual content that matches this specific role, candidate background, and interview format. Consider the interview mode when providing instructions. Use the candidate's actual name when addressing them directly.`;
+
+      const systemPrompt = this.getSystemPrompt('interview_preparation');
+      
+      const response = await this.generateResponse(systemPrompt, prompt, {
+        temperature: 0.7,
+        maxTokens: 1500,
+        auditContext: {
+          serviceName: 'interview_preparation',
+          operationType: 'generate_content'
+        }
+      });
+
+      if (!response.success || !response.response) {
+        throw new Error('Failed to generate interview preparation content');
+      }
+
+      // Parse the response to extract the three sections
+      const content = response.response;
+      const sections = this.parseInterviewPreparationResponse(content);
+
+      return sections;
+    } catch (error) {
+      console.error('❌ Error generating interview preparation:', error);
+      throw error;
+    }
+  }
+
+  private parseInterviewPreparationResponse(content: string): {
+    description: string;
+    instructions: string;
+    internalNotes: string;
+  } {
+    const sections = {
+      description: '',
+      instructions: '',
+      internalNotes: ''
+    };
+
+    if (!content || typeof content !== 'string') {
+      console.warn('⚠️ Invalid content provided to parseInterviewPreparationResponse');
+      return sections;
+    }
+
+    const lines = content.split('\n');
+    let currentSection = '';
+    let currentContent: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      if (trimmed.toLowerCase().includes('interview description:')) {
+        if (currentSection && currentContent.length > 0) {
+          sections[currentSection as keyof typeof sections] = currentContent.join('\n').trim();
+        }
+        currentSection = 'description';
+        currentContent = [];
+      } else if (trimmed.toLowerCase().includes('instructions for candidate:')) {
+        if (currentSection && currentContent.length > 0) {
+          sections[currentSection as keyof typeof sections] = currentContent.join('\n').trim();
+        }
+        currentSection = 'instructions';
+        currentContent = [];
+      } else if (trimmed.toLowerCase().includes('internal notes:')) {
+        if (currentSection && currentContent.length > 0) {
+          sections[currentSection as keyof typeof sections] = currentContent.join('\n').trim();
+        }
+        currentSection = 'internalNotes';
+        currentContent = [];
+      } else if (currentSection && trimmed) {
+        currentContent.push(line);
+      }
+    }
+
+    // Don't forget the last section
+    if (currentSection && currentContent.length > 0) {
+      sections[currentSection as keyof typeof sections] = currentContent.join('\n').trim();
+    }
+
+    // Provide fallback content if sections are empty
+    if (!sections.description) {
+      sections.description = 'This interview will assess the candidate\'s qualifications and fit for the role.';
+    }
+    if (!sections.instructions) {
+      sections.instructions = 'Please review the job description and prepare examples of relevant experience.';
+    }
+    if (!sections.internalNotes) {
+      sections.internalNotes = 'Focus on technical skills, cultural fit, and communication abilities.';
+    }
+
+    return sections;
   }
 }
 

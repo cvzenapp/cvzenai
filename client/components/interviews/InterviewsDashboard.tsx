@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Video, Phone, MapPin, Monitor, CheckCircle, XCircle, AlertCircle, User, Building, Plus } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, MapPin, Monitor, CheckCircle, XCircle, AlertCircle, User, Building, Plus, Edit } from 'lucide-react';
 import { interviewApi } from '../../services/interviewApi';
 import { recruiterInterviewApi } from '../../services/recruiterInterviewApi';
 import { InterviewResponseModal } from './InterviewResponseModal';
 import { InterviewFeedbackModal } from './InterviewFeedbackModal';
 import { VideoCallLauncher } from '../video/VideoCallLauncher';
 import { ScheduleInterviewWithSelector } from './ScheduleInterviewWithSelector';
+import { ScheduleInterviewForm } from './ScheduleInterviewForm';
 import type { InterviewInvitation } from '@shared/api';
 
 interface InterviewsDashboardProps {
@@ -51,6 +52,7 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
   const [selectedInterview, setSelectedInterview] = useState<InterviewInvitation | null>(null);
   const [feedbackInterview, setFeedbackInterview] = useState<InterviewInvitation | null>(null);
   const [videoCallInterview, setVideoCallInterview] = useState<InterviewInvitation | null>(null);
+  const [editingInterview, setEditingInterview] = useState<InterviewInvitation | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'completed'>('all');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
@@ -136,6 +138,15 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
   const handleScheduleSuccess = () => {
     loadInterviews();
     setShowScheduleModal(false);
+  };
+
+  const handleEditInterview = (interview: InterviewInvitation) => {
+    setEditingInterview(interview);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingInterview(null);
+    loadInterviews();
   };
 
   const handleFeedbackSubmit = async (decision: 'hired' | 'rejected' | 'hold', feedback: string) => {
@@ -372,6 +383,17 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
                       {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                     </div>
                     
+                    {/* Edit button for recruiters */}
+                    {userType === 'recruiter' && (
+                      <button
+                        onClick={() => handleEditInterview(interview)}
+                        className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors text-xs font-normal flex items-center gap-1.5 whitespace-nowrap"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                    
                     {userType === 'job_seeker' && interview.status === 'pending' && (
                       <button
                         onClick={() => setSelectedInterview(interview)}
@@ -478,6 +500,42 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
           onSubmit={handleFeedbackSubmit}
           interviewTitle={feedbackInterview.title}
           candidateName={feedbackInterview.candidate?.name || feedbackInterview.candidate?.email || 'Candidate'}
+        />
+      )}
+
+      {/* Edit Interview Modal */}
+      {editingInterview && (
+        <ScheduleInterviewForm
+          isOpen={true}
+          onClose={() => setEditingInterview(null)}
+          onSuccess={handleEditSuccess}
+          preSelectedCandidate={{
+            candidateId: editingInterview.candidateId || 0,
+            candidateName: editingInterview.candidate?.name || editingInterview.guestCandidateName || 'Unknown',
+            candidateEmail: editingInterview.candidate?.email || editingInterview.guestCandidateEmail || '',
+            resumeId: editingInterview.resumeId || 0,
+            resumeTitle: editingInterview.resume?.title || 'Resume',
+            isGuest: !editingInterview.candidateId,
+            guestName: editingInterview.guestCandidateName,
+            guestEmail: editingInterview.guestCandidateEmail,
+            jobPostingId: editingInterview.jobPostingId,
+            applicationId: editingInterview.applicationId,
+            currentRound: editingInterview.interviewRound || 1
+          }}
+          editingInterview={{
+            id: editingInterview.id.toString(),
+            title: editingInterview.title,
+            description: editingInterview.description,
+            interviewType: editingInterview.interviewType,
+            interviewRoundType: editingInterview.interviewRoundType,
+            proposedDatetime: editingInterview.proposedDatetime,
+            durationMinutes: editingInterview.durationMinutes,
+            timezone: editingInterview.timezone,
+            meetingLink: editingInterview.meetingLink,
+            meetingLocation: editingInterview.meetingLocation,
+            meetingInstructions: editingInterview.meetingInstructions,
+            recruiterNotes: editingInterview.recruiterNotes
+          }}
         />
       )}
     </div>

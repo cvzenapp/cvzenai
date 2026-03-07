@@ -183,7 +183,7 @@ export const ShortlistWithInterviews: React.FC = () => {
                   </button>
                   
                   <a
-                    href={`/resume/${resume.shareToken}`}
+                    href={`/shared/resume/${resume.shareToken}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-center"

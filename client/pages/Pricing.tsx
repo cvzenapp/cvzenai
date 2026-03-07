@@ -404,12 +404,11 @@ export default function Pricing() {
 
       <RecruiterAuthModal
         isOpen={showRecruiterAuthModal}
-        onClose={() => {
+        onCancel={() => {
           setShowRecruiterAuthModal(false);
           setSelectedPlanForAuth(null);
         }}
         onSuccess={handleAuthSuccess}
-        defaultMode="signup"
       />
     </div>
   );

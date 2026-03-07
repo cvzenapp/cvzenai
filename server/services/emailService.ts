@@ -1,559 +1,1347 @@
-/**
- * Email Service using Nodemailer with Gmail SMTP
- */
+import { initializeDatabase, closeDatabase } from '../database/connection';
 
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+interface EmailRecipient {
+  email: string;
+  name?: string;
+}
 
-interface EmailOptions {
-  to: string;
+interface EmailRequest {
+  sender: string;
+  to: string[];
   subject: string;
-  html: string;
-  text?: string;
+  text_body?: string;
+  html_body?: string;
+  cc?: string[];
+  bcc?: string[];
+  reply_to?: string;
+}
+
+interface EmailResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+interface EmailLogData {
+  emailType: 'account_creation' | 'job_application' | 'shortlisted' | 'candidate_notification';
+  senderEmail: string;
+  recipientEmail: string;
+  subject: string;
+  requestData: EmailRequest;
+  responseData?: any;
+  status: 'pending' | 'sent' | 'failed';
+  errorMessage?: string;
+  userId?: string;
+  jobId?: number;
+  applicationId?: number;
 }
 
 class EmailService {
-  private transporter: Transporter | null = null;
+  private apiKey: string;
+  private apiUrl: string;
+  private fromEmail: string;
+  private fromName: string;
 
-  /**
-   * Initialize email transporter with SMTP configuration
-   */
-  private async getTransporter(): Promise<Transporter> {
-    if (this.transporter) {
-      return this.transporter;
+  constructor() {
+    this.apiKey = process.env.SMTP2GO_API_KEY || 'api-46E3A066DD694FDA839FA5DD4763F7A6';
+    this.apiUrl = 'https://api.smtp2go.com/v3/email/send';
+    this.fromEmail = process.env.FROM_EMAIL || 'cvzen@cvzen.ai';
+    this.fromName = process.env.FROM_NAME || 'CVZen';
+  }
+
+  private async logEmail(logData: EmailLogData): Promise<number | null> {
+    let db;
+    try {
+      db = await initializeDatabase();
+      
+      const query = `
+        INSERT INTO email_logs (
+          email_type, sender_email, recipient_email, subject, 
+          request_data, response_data, status, error_message,
+          user_id, job_id, application_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING id
+      `;
+
+      const values = [
+        logData.emailType,
+        logData.senderEmail,
+        logData.recipientEmail,
+        logData.subject,
+        JSON.stringify(logData.requestData),
+        logData.responseData ? JSON.stringify(logData.responseData) : null,
+        logData.status,
+        logData.errorMessage || null,
+        logData.userId || null,
+        logData.jobId || null,
+        logData.applicationId || null
+      ];
+
+      const result = await db.query(query, values);
+      return result.rows[0]?.id || null;
+    } catch (error) {
+      console.error('❌ Failed to log email:', error);
+      return null;
+    } finally {
+      if (db) await closeDatabase(db);
+    }
+  }
+
+  private async updateEmailLog(logId: number, responseData: any, status: 'sent' | 'failed', errorMessage?: string): Promise<void> {
+    let db;
+    try {
+      db = await initializeDatabase();
+      
+      const query = `
+        UPDATE email_logs 
+        SET response_data = $1, status = $2, error_message = $3, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4
+      `;
+
+      await db.query(query, [
+        JSON.stringify(responseData),
+        status,
+        errorMessage || null,
+        logId
+      ]);
+    } catch (error) {
+      console.error('❌ Failed to update email log:', error);
+    } finally {
+      if (db) await closeDatabase(db);
+    }
+  }
+
+  private async sendEmail(emailRequest: EmailRequest): Promise<EmailResponse> {
+    try {
+      console.log('📧 Sending email via SMTP2GO:', {
+        to: emailRequest.to,
+        subject: emailRequest.subject,
+        sender: emailRequest.sender
+      });
+
+      // Format request for SMTP2GO API
+      const smtp2goRequest = {
+        api_key: this.apiKey,
+        to: emailRequest.to,
+        sender: emailRequest.sender,
+        subject: emailRequest.subject,
+        text_body: emailRequest.text_body,
+        html_body: emailRequest.html_body,
+        ...(emailRequest.cc && { cc: emailRequest.cc }),
+        ...(emailRequest.bcc && { bcc: emailRequest.bcc }),
+        ...((emailRequest as any).attachments && { attachments: (emailRequest as any).attachments }),
+        ...((emailRequest as any).reply_to && { 
+          custom_headers: [{ 
+            header: "Reply-To", 
+            value: (emailRequest as any).reply_to 
+          }] 
+        })
+      };
+
+      console.log('📧 SMTP2GO request payload:', {
+        api_key: this.apiKey.substring(0, 10) + '...',
+        to: smtp2goRequest.to,
+        sender: smtp2goRequest.sender,
+        subject: smtp2goRequest.subject,
+        hasHtml: !!smtp2goRequest.html_body,
+        hasText: !!smtp2goRequest.text_body,
+        hasAttachments: !!smtp2goRequest.attachments,
+        hasCustomHeaders: !!smtp2goRequest.custom_headers,
+        customHeaders: smtp2goRequest.custom_headers,
+        senderValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtp2goRequest.sender)
+      });
+
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(smtp2goRequest),
+      });
+
+      const responseData = await response.json();
+
+      console.log('📧 SMTP2GO response:', {
+        status: response.status,
+        ok: response.ok,
+        data: responseData,
+        fullResponse: JSON.stringify(responseData, null, 2)
+      });
+
+      if (response.ok && responseData.data && responseData.data.succeeded > 0) {
+        console.log('✅ Email sent successfully:', responseData);
+        return { success: true, data: responseData };
+      } else {
+        console.error('❌ Email sending failed:', {
+          status: response.status,
+          response: responseData,
+          failures: responseData.data?.failures || [],
+          errors: responseData.data?.errors || []
+        });
+        
+        // Extract specific failure message
+        let errorMessage = 'Failed to send email';
+        if (responseData.data?.failures && responseData.data.failures.length > 0) {
+          const failure = responseData.data.failures[0];
+          errorMessage = failure.error || failure.message || errorMessage;
+        } else if (responseData.data?.errors && responseData.data.errors.length > 0) {
+          errorMessage = responseData.data.errors[0];
+        } else if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        
+        return { 
+          success: false, 
+          error: errorMessage
+        };
+      }
+    } catch (error) {
+      console.error('❌ Email service error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async sendAccountCreationEmail(
+    recipientEmail: string, 
+    recipientName: string, 
+    userId?: string
+  ): Promise<EmailResponse> {
+    const subject = 'Welcome to CVZen - Your Account is Ready!';
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to CVZen</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #1565c0 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to CVZen!</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your professional journey starts here</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1891db; margin-top: 0;">Hi ${recipientName}!</h2>
+          
+          <p>Congratulations! Your CVZen account has been successfully created. You're now part of a community that's revolutionizing the way professionals create and share their resumes.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1891db;">
+            <h3 style="margin-top: 0; color: #1891db;">What you can do now:</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Create professional resumes with our AI-powered builder</li>
+              <li>Apply to jobs with one-click applications</li>
+              <li>Get personalized cover letters for each application</li>
+              <li>Track your job applications and responses</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.APP_URL || 'https://cvzen.com'}/dashboard" 
+               style="background: #1891db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Get Started Now
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            Need help? Reply to this email or visit our <a href="${process.env.APP_URL || 'https://cvzen.com'}/support" style="color: #1891db;">support center</a>.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This email was sent by CVZen. If you didn't create an account, please ignore this email.
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      Welcome to CVZen, ${recipientName}!
+      
+      Congratulations! Your CVZen account has been successfully created.
+      
+      What you can do now:
+      • Create professional resumes with our AI-powered builder
+      • Apply to jobs with one-click applications  
+      • Get personalized cover letters for each application
+      • Track your job applications and responses
+      
+      Get started: ${process.env.APP_URL || 'https://cvzen.com'}/dashboard
+      
+      Need help? Reply to this email or visit our support center.
+      
+      Best regards,
+      The CVZen Team
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: this.fromEmail,
+      to: [recipientEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'account_creation',
+      senderEmail: this.fromEmail,
+      recipientEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
     }
 
-    const config = {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+    return result;
+  }
+
+  async sendJobApplicationEmail(
+    recruiterEmail: string,
+    recruiterName: string,
+    candidateName: string,
+    candidateEmail: string,
+    jobTitle: string,
+    companyName: string,
+    resumeUrl: string,
+    coverLetter?: string,
+    jobId?: number,
+    applicationId?: number,
+    userId?: string
+  ): Promise<EmailResponse> {
+    const subject = `New Job Application: ${candidateName} for ${jobTitle}`;
+    
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Job Application</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #1565c0 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">New Job Application</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">You have a new candidate!</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1891db; margin-top: 0;">Hi ${recruiterName}!</h2>
+          
+          <p>Great news! You have received a new job application for the <strong>${jobTitle}</strong> position at ${companyName}.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1891db;">
+            <h3 style="margin-top: 0; color: #1891db;">Candidate Details:</h3>
+            <p><strong>Name:</strong> ${candidateName}</p>
+            <p><strong>Email:</strong> ${candidateEmail}</p>
+            <p><strong>Position:</strong> ${jobTitle}</p>
+            <p><strong>Company:</strong> ${companyName}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resumeUrl}" 
+               style="background: #1891db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-right: 10px;">
+              View Resume
+            </a>
+          </div>
+          
+          ${coverLetter ? `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1891db;">Cover Letter:</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 14px; line-height: 1.5;">
+${coverLetter}
+            </div>
+          </div>
+          ` : ''}
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            You can review this application and respond to the candidate through your CVZen recruiter dashboard.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This email was sent by CVZen. Manage your email preferences in your account settings.
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      New Job Application - ${jobTitle}
+      
+      Hi ${recruiterName}!
+      
+      You have received a new job application:
+      
+      Candidate: ${candidateName}
+      Email: ${candidateEmail}
+      Position: ${jobTitle}
+      Company: ${companyName}
+      
+      Resume: ${resumeUrl}
+      
+      ${coverLetter ? `Cover Letter:\n${coverLetter}\n\n` : ''}
+      
+      Review this application in your CVZen recruiter dashboard.
+      
+      Best regards,
+      The CVZen Team
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: this.fromEmail,
+      to: [recruiterEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'candidate_notification',
+      senderEmail: this.fromEmail,
+      recipientEmail: recruiterEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+      jobId,
+      applicationId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
+    }
+
+    return result;
+  }
+
+  async sendApplicationConfirmationEmail(
+    candidateEmail: string,
+    candidateName: string,
+    jobTitle: string,
+    companyName: string,
+    resumeUrl: string,
+    jobId?: number,
+    applicationId?: number,
+    userId?: string
+  ): Promise<EmailResponse> {
+    const subject = `Application Submitted: ${jobTitle} at ${companyName}`;
+    
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Application Submitted</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #1565c0 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Application Submitted!</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Your application is on its way</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1891db; margin-top: 0;">Hi ${candidateName}!</h2>
+          
+          <p>Great news! Your job application has been successfully submitted and sent to the hiring team.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1891db;">
+            <h3 style="margin-top: 0; color: #1891db;">Application Details:</h3>
+            <p><strong>Position:</strong> ${jobTitle}</p>
+            <p><strong>Company:</strong> ${companyName}</p>
+            <p><strong>Submitted:</strong> ${new Date().toLocaleDateString()}</p>
+          </div>
+          
+          <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #2d5a2d;"><strong>✓ Your resume and cover letter have been sent to the recruiter</strong></p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resumeUrl}" 
+               style="background: #1891db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              View Your Resume
+            </a>
+          </div>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1891db;">What happens next?</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>The hiring team will review your application</li>
+              <li>You'll be notified if you're selected for an interview</li>
+              <li>Keep an eye on your email for updates</li>
+            </ul>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            You can track your applications and create more resumes in your <a href="${process.env.APP_URL || 'https://cvzen.com'}/dashboard" style="color: #1891db;">CVZen dashboard</a>.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This email was sent by CVZen. Good luck with your application!
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      Application Submitted - ${jobTitle}
+      
+      Hi ${candidateName}!
+      
+      Your job application has been successfully submitted:
+      
+      Position: ${jobTitle}
+      Company: ${companyName}
+      Submitted: ${new Date().toLocaleDateString()}
+      
+      ✓ Your resume and cover letter have been sent to the recruiter
+      
+      What happens next?
+      • The hiring team will review your application
+      • You'll be notified if you're selected for an interview
+      • Keep an eye on your email for updates
+      
+      View your resume: ${resumeUrl}
+      
+      Track your applications: ${process.env.APP_URL || 'https://cvzen.com'}/dashboard
+      
+      Good luck!
+      The CVZen Team
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: this.fromEmail,
+      to: [candidateEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'job_application',
+      senderEmail: this.fromEmail,
+      recipientEmail: candidateEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+      jobId,
+      applicationId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
+    }
+
+    return result;
+  }
+
+  async sendShortlistedNotification(
+    candidateEmail: string,
+    candidateName: string,
+    jobTitle: string,
+    companyName: string,
+    recruiterName: string,
+    nextSteps?: string,
+    jobId?: number,
+    applicationId?: number,
+    userId?: string
+  ): Promise<EmailResponse> {
+    const subject = `Great News! You've been shortlisted for ${jobTitle} at ${companyName}`;
+    
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>You've Been Shortlisted!</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">You've been shortlisted!</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #10b981; margin-top: 0;">Hi ${candidateName}!</h2>
+          
+          <p>Excellent news! Your application for the <strong>${jobTitle}</strong> position at <strong>${companyName}</strong> has impressed the hiring team, and you've been shortlisted for the next round.</p>
+          
+          <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h3 style="margin-top: 0; color: #10b981;">Application Status: SHORTLISTED ✓</h3>
+            <p><strong>Position:</strong> ${jobTitle}</p>
+            <p><strong>Company:</strong> ${companyName}</p>
+            <p><strong>Recruiter:</strong> ${recruiterName}</p>
+          </div>
+          
+          ${nextSteps ? `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1891db;">Next Steps:</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 14px; line-height: 1.5;">
+${nextSteps}
+            </div>
+          </div>
+          ` : `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1891db;">What's Next?</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>The hiring team will contact you soon with next steps</li>
+              <li>This may include scheduling an interview or assessment</li>
+              <li>Keep an eye on your email and phone</li>
+              <li>Prepare for potential interview questions</li>
+            </ul>
+          </div>
+          `}
+          
+          <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; color: #92400e;"><strong>💡 Pro Tip:</strong> Research the company and role further to prepare for your interview!</p>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            This is a significant step forward in your job search. Best of luck with the next stages!
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This email was sent by CVZen on behalf of ${companyName}. Congratulations on your progress!
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      🎉 Congratulations! You've been shortlisted!
+      
+      Hi ${candidateName}!
+      
+      Excellent news! Your application for the ${jobTitle} position at ${companyName} has impressed the hiring team, and you've been shortlisted for the next round.
+      
+      Application Status: SHORTLISTED ✓
+      Position: ${jobTitle}
+      Company: ${companyName}
+      Recruiter: ${recruiterName}
+      
+      ${nextSteps ? `Next Steps:\n${nextSteps}\n\n` : `What's Next?
+      • The hiring team will contact you soon with next steps
+      • This may include scheduling an interview or assessment
+      • Keep an eye on your email and phone
+      • Prepare for potential interview questions
+      
+      `}💡 Pro Tip: Research the company and role further to prepare for your interview!
+      
+      This is a significant step forward in your job search. Best of luck with the next stages!
+      
+      Best regards,
+      The CVZen Team
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: this.fromEmail,
+      to: [candidateEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'shortlisted',
+      senderEmail: this.fromEmail,
+      recipientEmail: candidateEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+      jobId,
+      applicationId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
+    }
+
+    return result;
+  }
+  async sendInterviewInvitationEmail(
+    candidateEmail: string,
+    candidateName: string,
+    recruiterName: string,
+    companyName: string,
+    interviewDetails: {
+      title: string;
+      description?: string;
+      interviewType: string;
+      proposedDatetime: string;
+      durationMinutes: number;
+      timezone: string;
+      meetingLink?: string;
+      meetingLocation?: string;
+      meetingInstructions?: string;
+    },
+    interviewId: string,
+    userId?: string,
+    recruiterEmail?: string
+  ): Promise<EmailResponse> {
+    const interviewDate = new Date(interviewDetails.proposedDatetime);
+    const endDate = new Date(interviewDate.getTime() + (interviewDetails.durationMinutes * 60 * 1000));
+    
+    const subject = `Interview Invitation: ${interviewDetails.title}`;
+    
+    // Generate ICS calendar invite
+    const icsContent = this.generateICSInvite({
+      title: interviewDetails.title,
+      description: interviewDetails.description || '',
+      startDate: interviewDate,
+      endDate: endDate,
+      location: this.formatLocationForICS(interviewDetails.meetingLocation || interviewDetails.meetingLink || ''),
+      organizer: {
+        name: recruiterName,
+        email: recruiterEmail || this.fromEmail
+      },
+      attendee: {
+        name: candidateName,
+        email: candidateEmail
+      },
+      uid: `interview-${interviewId}@cvzen.ai`
+    });
+
+    const formatDateTime = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    };
+
+    const getInterviewTypeIcon = (type: string) => {
+      switch (type) {
+        case 'video_call': return '📹';
+        case 'phone': return '📞';
+        case 'in_person': return '🏢';
+        case 'technical': return '💻';
+        default: return '📅';
       }
     };
 
-    // Validate configuration
-    if (!config.auth.user || !config.auth.pass) {
-      throw new Error('SMTP credentials not configured. Please set SMTP_USER and SMTP_PASS in .env');
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Interview Invitation</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #1565c0 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">${getInterviewTypeIcon(interviewDetails.interviewType)} Interview Invitation</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">You're invited to an interview!</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1891db; margin-top: 0;">Hi ${candidateName}!</h2>
+          
+          <p>Great news! ${recruiterName} from <strong>${companyName}</strong> would like to schedule an interview with you.</p>
+          
+          <div style="background: white; padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #1891db; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: #1891db; font-size: 20px;">${interviewDetails.title}</h3>
+            
+            <div style="display: grid; gap: 15px; margin-top: 20px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">📅</span>
+                <div>
+                  <strong>Date & Time:</strong><br>
+                  <span style="color: #1891db; font-weight: 600;">${formatDateTime(interviewDate)}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">⏱️</span>
+                <div>
+                  <strong>Duration:</strong> ${interviewDetails.durationMinutes} minutes
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">${getInterviewTypeIcon(interviewDetails.interviewType)}</span>
+                <div>
+                  <strong>Type:</strong> ${interviewDetails.interviewType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </div>
+              </div>
+              
+              ${interviewDetails.meetingLink ? `
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">🔗</span>
+                <div>
+                  <strong>Meeting Link:</strong><br>
+                  <a href="${interviewDetails.meetingLink}" style="color: #1891db; word-break: break-all;">${interviewDetails.meetingLink}</a>
+                </div>
+              </div>
+              ` : ''}
+              
+              ${interviewDetails.meetingLocation ? `
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">📍</span>
+                <div>
+                  <strong>Location:</strong><br>
+                  ${this.formatLocationWithMapLink(interviewDetails.meetingLocation)}
+                </div>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${interviewDetails.description ? `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1891db;">About this Interview:</h3>
+            <p style="margin: 0; white-space: pre-wrap;">${interviewDetails.description}</p>
+          </div>
+          ` : ''}
+          
+          ${interviewDetails.meetingInstructions ? `
+          <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196f3;">
+            <h3 style="margin-top: 0; color: #1565c0;">📋 Instructions:</h3>
+            <div style="white-space: pre-wrap; color: #1565c0;">${interviewDetails.meetingInstructions}</div>
+          </div>
+          ` : ''}
+          
+          <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; color: #856404;"><strong>📎 Calendar Invite:</strong> A calendar invite (.ics file) is attached to this email. Add it to your calendar to get reminders!</p>
+          </div>
+          
+          // <div style="text-align: center; margin: 30px 0;">
+          //   <p style="margin-bottom: 15px; color: #666;">Please confirm your attendance:</p>
+          //   <div style="display: inline-block;">
+          //     <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept" 
+          //        style="background: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px; display: inline-block;">
+          //       ✅ Accept
+          //     </a>
+          //     <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline" 
+          //        style="background: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+          //       ❌ Decline
+          //     </a>
+          //   </div>
+          // </div>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1891db;">Need to reschedule?</h3>
+            <p style="margin: 0;">If you need to reschedule this interview, please reply to this email or contact ${recruiterName} as soon as possible.</p>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            We're excited to speak with you! If you have any questions, please don't hesitate to reach out.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This interview invitation was sent by CVZen on behalf of ${companyName}.<br>
+            Interview ID: ${interviewId}
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      Interview Invitation: ${interviewDetails.title}
+      
+      Hi ${candidateName}!
+      
+      Great news! ${recruiterName} from ${companyName} would like to schedule an interview with you.
+      
+      Interview Details:
+      • Title: ${interviewDetails.title}
+      • Date & Time: ${formatDateTime(interviewDate)}
+      • Duration: ${interviewDetails.durationMinutes} minutes
+      • Type: ${interviewDetails.interviewType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+      ${interviewDetails.meetingLink ? `• Meeting Link: ${interviewDetails.meetingLink}` : ''}
+      ${interviewDetails.meetingLocation ? `• Location: ${this.formatLocationForText(interviewDetails.meetingLocation)}` : ''}
+      
+      ${interviewDetails.description ? `About this Interview:\n${interviewDetails.description}\n\n` : ''}
+      ${interviewDetails.meetingInstructions ? `Instructions:\n${interviewDetails.meetingInstructions}\n\n` : ''}
+      
+      📎 A calendar invite (.ics file) is attached to this email.
+      
+      Please confirm your attendance:
+      Accept: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept
+      Decline: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline
+      
+      Need to reschedule? Please reply to this email or contact ${recruiterName}.
+      
+      We're excited to speak with you!
+      
+      Best regards,
+      ${recruiterName}
+      ${companyName}
+      
+      ---
+      Interview ID: ${interviewId}
+      Sent via CVZen
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: `"${companyName}" <${this.fromEmail}>`,
+      to: [candidateEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+      ...(recruiterEmail && { reply_to: recruiterEmail })
+    };
+
+    // Add ICS attachment for SMTP2GO format
+    const icsAttachment = {
+      filename: 'interview-invite.ics',
+      fileblob: Buffer.from(icsContent).toString('base64'),
+      mimetype: 'text/calendar'
+    };
+
+    // Add attachment to email request
+    (emailRequest as any).attachments = [icsAttachment];
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'candidate_notification',
+      senderEmail: recruiterEmail || this.fromEmail,
+      recipientEmail: candidateEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
     }
 
-    this.transporter = nodemailer.createTransport(config);
-
-    // Verify connection
-    try {
-      await this.transporter.verify();
-      console.log('✅ Email service connected successfully');
-    } catch (error) {
-      console.error('❌ Email service connection failed:', error);
-      throw new Error('Failed to connect to email service');
-    }
-
-    return this.transporter;
+    return result;
   }
 
-  /**
-   * Send email
-   */
-  async sendEmail(options: EmailOptions): Promise<boolean> {
-    try {
-      const transporter = await this.getTransporter();
+  async sendInterviewRescheduleEmail(
+    candidateEmail: string,
+    candidateName: string,
+    recruiterName: string,
+    companyName: string,
+    interviewDetails: {
+      title: string;
+      description?: string;
+      interviewType: string;
+      proposedDatetime: string;
+      durationMinutes: number;
+      timezone: string;
+      meetingLink?: string;
+      meetingLocation?: string;
+      meetingInstructions?: string;
+    },
+    interviewId: string,
+    userId?: string,
+    recruiterEmail?: string
+  ): Promise<EmailResponse> {
+    const interviewDate = new Date(interviewDetails.proposedDatetime);
+    const endDate = new Date(interviewDate.getTime() + (interviewDetails.durationMinutes * 60 * 1000));
+    
+    const subject = `Interview Rescheduled: ${interviewDetails.title}`;
+    
+    // Generate ICS calendar invite for the rescheduled interview
+    const icsContent = this.generateICSInvite({
+      title: interviewDetails.title,
+      description: interviewDetails.description || '',
+      startDate: interviewDate,
+      endDate: endDate,
+      location: this.formatLocationForICS(interviewDetails.meetingLocation || interviewDetails.meetingLink || 'Online'),
+      organizer: { name: recruiterName, email: recruiterEmail || 'noreply@cvzen.com' },
+      attendee: { name: candidateName, email: candidateEmail },
+      uid: `interview-${interviewId}-${Date.now()}@cvzen.com`
+    });
 
-      const mailOptions = {
-        from: `${process.env.SMTP_FROM_NAME || 'CVZen'} <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text || this.stripHtml(options.html)
-      };
-
-      const info = await transporter.sendMail(mailOptions);
-      
-      console.log('✅ Email sent successfully:', {
-        messageId: info.messageId,
-        to: options.to,
-        subject: options.subject
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
+    };
 
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to send email:', error);
-      return false;
-    }
-  }
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    };
 
-  /**
-   * Send password setup email for new accounts
-   */
-  async sendPasswordSetupEmail(
-    email: string,
-    name: string,
-    setupUrl: string,
-    resumeUrl: string
-  ): Promise<boolean> {
-    const subject = 'Welcome to CVZen - Set Up Your Password';
-    const html = this.generatePasswordSetupEmailHTML(name, setupUrl, resumeUrl);
-    const text = this.generatePasswordSetupEmailText(name, setupUrl, resumeUrl);
-
-    return this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text
-    });
-  }
-
-  /**
-   * Send welcome email with account credentials
-   */
-  async sendWelcomeEmail(
-    email: string,
-    name: string,
-    password: string,
-    resumeUrl: string
-  ): Promise<boolean> {
-    const subject = 'Welcome to CVZen - Your Account Details';
-    const html = this.generateWelcomeEmailHTML(name, email, password, resumeUrl);
-    const text = this.generateWelcomeEmailText(name, email, password, resumeUrl);
-
-    return this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text
-    });
-  }
-
-  /**
-   * Generate HTML email template for password setup email
-   */
-  private generatePasswordSetupEmailHTML(name: string, setupUrl: string, resumeUrl: string): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to CVZen - Set Up Your Password</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background: #ffffff;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .header {
-      background: linear-gradient(135deg, #1891db 0%, #0a0a37 100%);
-      color: white;
-      padding: 40px 30px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .content {
-      padding: 40px 30px;
-    }
-    .setup-box {
-      background: #f0f9ff;
-      border-left: 4px solid #1891db;
-      padding: 20px;
-      margin: 25px 0;
-      border-radius: 4px;
-      text-align: center;
-    }
-    .setup-box h3 {
-      margin-top: 0;
-      color: #0a0a37;
-      font-size: 18px;
-    }
-    .button {
-      display: inline-block;
-      background: #1891db;
-      color: white !important;
-      padding: 16px 32px;
-      text-decoration: none;
-      border-radius: 8px;
-      margin: 15px 5px;
-      font-weight: 600;
-      font-size: 16px;
-      box-shadow: 0 2px 4px rgba(24, 145, 219, 0.3);
-    }
-    .button:hover {
-      background: #0a0a37;
-    }
-    .button-secondary {
-      background: #10b981;
-      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
-    }
-    .warning {
-      background: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 15px;
-      margin: 25px 0;
-      border-radius: 4px;
-    }
-    .warning strong {
-      color: #92400e;
-    }
-    .features {
-      margin: 25px 0;
-    }
-    .features ul {
-      padding-left: 20px;
-    }
-    .features li {
-      margin: 10px 0;
-      color: #4b5563;
-    }
-    .footer {
-      text-align: center;
-      padding: 30px;
-      color: #6b7280;
-      font-size: 14px;
-      background: #f9fafb;
-      border-top: 1px solid #e5e7eb;
-    }
-    .button-container {
-      text-align: center;
-      margin: 30px 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🎉 Welcome to CVZen!</h1>
-    </div>
-    
-    <div class="content">
-      <p>Hello <strong>${name}</strong>,</p>
-      
-      <p>Thank you for joining CVZen! Your account has been created successfully and your resume has been processed by our AI.</p>
-      
-      <div class="setup-box">
-        <h3>🔐 Set Up Your Password</h3>
-        <p>To secure your account, please set up your password by clicking the button below:</p>
-        <a href="${setupUrl}" class="button">
-          Set Up Password
-        </a>
-        <p style="font-size: 14px; color: #6b7280; margin-top: 15px;">
-          This link will expire in 24 hours for security reasons.
-        </p>
-      </div>
-      
-      <div class="features">
-        <h3>What's waiting for you:</h3>
-        <ul>
-          <li>✅ Your resume has been parsed and analyzed</li>
-          <li>🎯 AI-powered job recommendations</li>
-          <li>📄 Professional resume templates</li>
-          <li>🔍 ATS optimization tools</li>
-          <li>📊 Application tracking dashboard</li>
-        </ul>
-      </div>
-      
-      <div class="button-container">
-        <a href="${resumeUrl}" class="button button-secondary">
-          📄 View Your Resume
-        </a>
-      </div>
-      
-      <div class="warning">
-        <strong>⚠️ Security Note:</strong> For your security, this password setup link will expire in 24 hours. If you don't set up your password within this time, you can request a new setup link.
-      </div>
-    </div>
-    
-    <div class="footer">
-      <p><strong>CVZen</strong> - Your AI-Powered Career Partner</p>
-      <p>This is an automated email. Please do not reply to this message.</p>
-      <p>© ${new Date().getFullYear()} CVZen. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-    `.trim();
-  }
-
-  /**
-   * Generate plain text version of password setup email
-   */
-  private generatePasswordSetupEmailText(name: string, setupUrl: string, resumeUrl: string): string {
-    return `
-Welcome to CVZen!
-
-Hello ${name},
-
-Thank you for joining CVZen! Your account has been created successfully and your resume has been processed by our AI.
-
-🔐 Set Up Your Password
-To secure your account, please set up your password using this link:
-${setupUrl}
-
-This link will expire in 24 hours for security reasons.
-
-What's waiting for you:
-✅ Your resume has been parsed and analyzed
-🎯 AI-powered job recommendations
-📄 Professional resume templates
-🔍 ATS optimization tools
-📊 Application tracking dashboard
-
-View Your Resume: ${resumeUrl}
-
-⚠️ Security Note: For your security, this password setup link will expire in 24 hours. If you don't set up your password within this time, you can request a new setup link.
-
----
-CVZen - Your AI-Powered Career Partner
-This is an automated email. Please do not reply to this message.
-© ${new Date().getFullYear()} CVZen. All rights reserved.
-    `.trim();
-  }
-
-  /**
-   * Generate HTML email template for welcome email
-   */
-  private generateWelcomeEmailHTML(name: string, email: string, password: string, resumeUrl: string): string {
-    const loginUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
-    
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to CVZen</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    .container {
-      background: #ffffff;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 40px 30px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    .content {
-      padding: 40px 30px;
-    }
-    .credentials-box {
-      background: #f0f9ff;
-      border-left: 4px solid #3b82f6;
-      padding: 20px;
-      margin: 25px 0;
-      border-radius: 4px;
-    }
-    .credentials-box h3 {
-      margin-top: 0;
-      color: #1e40af;
-      font-size: 18px;
-    }
-    .credential-row {
-      margin: 15px 0;
-      font-size: 15px;
-    }
-    .label {
-      font-weight: 600;
-      color: #1e40af;
-      display: inline-block;
-      min-width: 100px;
-    }
-    .value {
-      color: #1f2937;
-      font-family: 'Courier New', monospace;
-      background: #ffffff;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: 1px solid #d1d5db;
-      display: inline-block;
-    }
-    .button {
-      display: inline-block;
-      background: #667eea;
-      color: white !important;
-      padding: 14px 32px;
-      text-decoration: none;
-      border-radius: 6px;
-      margin: 10px 5px;
-      font-weight: 600;
-      font-size: 16px;
-    }
-    .button-secondary {
-      background: #10b981;
-    }
-    .warning {
-      background: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 15px;
-      margin: 25px 0;
-      border-radius: 4px;
-    }
-    .warning strong {
-      color: #92400e;
-    }
-    .features {
-      margin: 25px 0;
-    }
-    .features ul {
-      padding-left: 20px;
-    }
-    .features li {
-      margin: 10px 0;
-      color: #4b5563;
-    }
-    .footer {
-      text-align: center;
-      padding: 30px;
-      color: #6b7280;
-      font-size: 14px;
-      background: #f9fafb;
-      border-top: 1px solid #e5e7eb;
-    }
-    .button-container {
-      text-align: center;
-      margin: 30px 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🎉 Welcome to CVZen!</h1>
-    </div>
-    
-    <div class="content">
-      <p>Hello <strong>${name}</strong>,</p>
-      
-      <p>Thank you for applying through CVZen! We've created an account for you so you can track your applications and manage your resume.</p>
-      
-      <div class="credentials-box">
-        <h3>Your Login Credentials</h3>
-        <div class="credential-row">
-          <span class="label">Email:</span>
-          <span class="value">${email}</span>
+    // HTML email template for reschedule
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Interview Rescheduled</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #4facfe 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Interview Rescheduled</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your interview has been updated with new details</p>
         </div>
-        <div class="credential-row">
-          <span class="label">Password:</span>
-          <span class="value">${password}</span>
+        
+        <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px; margin-bottom: 20px;">Dear ${candidateName},</p>
+          
+          <p style="font-size: 16px; margin-bottom: 25px;">Your interview with <strong>${companyName}</strong> has been rescheduled. Please find the updated details below:</p>
+          
+          <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #1891db;">
+            <h3 style="color: #1891db; margin: 0 0 15px 0; font-size: 20px;">${interviewDetails.title}</h3>
+            
+            <div style="display: grid; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #495057; min-width: 80px;">📅 Date:</span>
+                <span style="color: #212529;">${formatDate(interviewDate)}</span>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #495057; min-width: 80px;">⏰ Time:</span>
+                <span style="color: #212529;">${formatTime(interviewDate)}</span>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #495057; min-width: 80px;">⏱️ Duration:</span>
+                <span style="color: #212529;">${interviewDetails.durationMinutes} minutes</span>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #495057; min-width: 80px;">📍 Type:</span>
+                <span style="color: #212529;">${interviewDetails.interviewType === 'video_call' ? 'Video Call' : 
+                  interviewDetails.interviewType === 'phone' ? 'Phone Call' : 
+                  interviewDetails.interviewType === 'in_person' ? 'In Person' : 'Technical Interview'}</span>
+              </div>
+              
+              ${interviewDetails.meetingLink ? `
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #495057; min-width: 80px;">🔗 Link:</span>
+                <a href="${interviewDetails.meetingLink}" style="color: #1891db; text-decoration: none;">${interviewDetails.meetingLink}</a>
+              </div>
+              ` : ''}
+              
+              ${interviewDetails.meetingLocation ? `
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #495057; min-width: 80px;">📍 Location:</span>
+                <span style="color: #212529;">${this.formatLocationWithMapLink(interviewDetails.meetingLocation)}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${interviewDetails.description ? `
+          <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h4 style="color: #1565c0; margin: 0 0 10px 0;">Interview Details:</h4>
+            <p style="margin: 0; color: #1976d2;">${interviewDetails.description}</p>
+          </div>
+          ` : ''}
+          
+          ${interviewDetails.meetingInstructions ? `
+          <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h4 style="color: #ef6c00; margin: 0 0 10px 0;">Instructions:</h4>
+            <p style="margin: 0; color: #f57c00;">${interviewDetails.meetingInstructions}</p>
+          </div>
+          ` : ''}
+          
+          <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; color: #856404;"><strong>📎 Calendar Invite:</strong> A calendar invite (.ics file) is attached to this email. Add it to your calendar to get reminders!</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Please confirm your availability for the new time:</p>
+            <div style="display: inline-block; gap: 15px;">
+              <a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}" 
+                 style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 0 10px; display: inline-block;">
+                ✅ Accept New Time
+              </a>
+              <a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}" 
+                 style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 0 10px; display: inline-block;">
+                ❌ Decline
+              </a>
+            </div>
+          </div>
+          
+          <div style="border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px; text-align: center; color: #6c757d;">
+            <p style="margin: 0; font-size: 14px;">Best regards,<br><strong>${recruiterName}</strong><br>${companyName}</p>
+          </div>
         </div>
-      </div>
+        
+        <div style="text-align: center; margin-top: 20px; color: #6c757d; font-size: 12px;">
+          <p>This email was sent by CVZen Interview Scheduler</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Plain text version for reschedule
+    const textContent = `
+      Interview Rescheduled: ${interviewDetails.title}
       
-      <div class="warning">
-        <strong>⚠️ Important:</strong> Please save these credentials in a secure location. We recommend changing your password after your first login for security.
-      </div>
+      Dear ${candidateName},
       
-      <div class="features">
-        <h3>What's Next?</h3>
-        <ul>
-          <li>Log in to your account to track your application status</li>
-          <li>View and edit your parsed resume</li>
-          <li>Apply to more jobs with one click</li>
-          <li>Get AI-powered job recommendations</li>
-          <li>Customize your resume with multiple templates</li>
-        </ul>
-      </div>
+      Your interview with ${companyName} has been rescheduled. Here are the updated details:
       
-      <div class="button-container">
-        <a href="${loginUrl}/login" class="button">
-          🔐 Log In Now
-        </a>
-        <a href="${resumeUrl}" class="button button-secondary">
-          📄 View Your Resume
-        </a>
-      </div>
+      Interview: ${interviewDetails.title}
+      Date: ${formatDate(interviewDate)}
+      Time: ${formatTime(interviewDate)}
+      Duration: ${interviewDetails.durationMinutes} minutes
+      Type: ${interviewDetails.interviewType === 'video_call' ? 'Video Call' : 
+        interviewDetails.interviewType === 'phone' ? 'Phone Call' : 
+        interviewDetails.interviewType === 'in_person' ? 'In Person' : 'Technical Interview'}
       
-      <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-        Your resume has been parsed and is ready to use. You can view it anytime using the link above.
-      </p>
-    </div>
+      ${interviewDetails.meetingLink ? `Meeting Link: ${interviewDetails.meetingLink}\n` : ''}
+      ${interviewDetails.meetingLocation ? `Location: ${this.formatLocationForText(interviewDetails.meetingLocation)}\n` : ''}
+      ${interviewDetails.description ? `\nDetails:\n${interviewDetails.description}\n` : ''}
+      ${interviewDetails.meetingInstructions ? `Instructions:\n${interviewDetails.meetingInstructions}\n\n` : ''}
+      
+      📎 A calendar invite (.ics file) is attached to this email.
+      
+      Please confirm your attendance for the new time:
+      Accept: ${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}
+      Decline: ${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}
+      
+      Best regards,
+      ${recruiterName}
+      ${companyName}
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: `"${companyName}" <${this.fromEmail}>`,
+      to: [candidateEmail],
+      subject,
+      html_body: htmlContent,
+      text_body: textContent,
+      ...(recruiterEmail && { reply_to: recruiterEmail })
+    };
+
+    // Add ICS attachment for SMTP2GO format
+    const icsAttachment = {
+      filename: 'interview-reschedule.ics',
+      fileblob: Buffer.from(icsContent).toString('base64'),
+      mimetype: 'text/calendar'
+    };
+
+    // Add attachment to email request
+    (emailRequest as any).attachments = [icsAttachment];
+
+    // Log email attempt
+    console.log('📧 Sending interview reschedule email:', {
+      to: candidateEmail,
+      subject: subject,
+      hasAttachment: true,
+      interviewId: interviewId
+    });
+
+    const result = await this.sendEmail(emailRequest);
+
+    // Log the result
+    if (result.success) {
+      console.log('✅ Interview reschedule email sent successfully');
+    } else {
+      console.error('❌ Failed to send interview reschedule email:', result.error);
+    }
+
+    return result;
+  }
+
+  private formatLocationWithMapLink(location: string): string {
+    if (!location) return '';
     
-    <div class="footer">
-      <p><strong>CVZen</strong> - Your AI-Powered Career Partner</p>
-      <p>This is an automated email. Please do not reply to this message.</p>
-      <p>© ${new Date().getFullYear()} CVZen. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-    `.trim();
-  }
-
-  /**
-   * Generate plain text version of welcome email
-   */
-  private generateWelcomeEmailText(name: string, email: string, password: string, resumeUrl: string): string {
-    const loginUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    // Check if location contains Google Maps URL
+    const mapUrlMatch = location.match(/Google Maps:\s*(https:\/\/[^\s\n]+)/);
     
-    return `
-Welcome to CVZen!
-
-Hello ${name},
-
-Thank you for applying through CVZen! We've created an account for you so you can track your applications and manage your resume.
-
-Your Login Credentials:
-- Email: ${email}
-- Password: ${password}
-
-⚠️ Important: Please save these credentials in a secure location. We recommend changing your password after your first login for security.
-
-What's Next?
-- Log in to your account to track your application status
-- View and edit your parsed resume
-- Apply to more jobs with one click
-- Get AI-powered job recommendations
-- Customize your resume with multiple templates
-
-Log In: ${loginUrl}/login
-View Your Resume: ${resumeUrl}
-
-Your resume has been parsed and is ready to use.
-
----
-CVZen - Your AI-Powered Career Partner
-This is an automated email. Please do not reply to this message.
-© ${new Date().getFullYear()} CVZen. All rights reserved.
-    `.trim();
+    if (mapUrlMatch) {
+      const mapUrl = mapUrlMatch[1];
+      const address = location.replace(/\n\nGoogle Maps:.*/, '').trim();
+      
+      return `
+        <div>
+          <span style="color: #212529;">${address}</span><br>
+          <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" 
+             style="color: #1891db; text-decoration: none; font-size: 14px; margin-top: 5px; display: inline-flex; align-items: center; gap: 5px;">
+            <span>📍 View on Google Maps</span>
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
+      `;
+    }
+    
+    // If no Google Maps URL, return plain location
+    return `<span style="color: #212529;">${location}</span>`;
   }
 
-  /**
-   * Strip HTML tags for plain text version
-   */
-  private stripHtml(html: string): string {
-    return html
-      .replace(/<style[^>]*>.*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+  private formatLocationForText(location: string): string {
+    if (!location) return '';
+    
+    // Check if location contains Google Maps URL
+    const mapUrlMatch = location.match(/Google Maps:\s*(https:\/\/[^\s\n]+)/);
+    
+    if (mapUrlMatch) {
+      const mapUrl = mapUrlMatch[1];
+      const address = location.replace(/\n\nGoogle Maps:.*/, '').trim();
+      
+      return `${address}\nGoogle Maps: ${mapUrl}`;
+    }
+    
+    // If no Google Maps URL, return plain location
+    return location;
   }
+
+  private formatLocationForICS(location: string): string {
+    if (!location) return '';
+    
+    // Check if location contains Google Maps URL
+    const mapUrlMatch = location.match(/Google Maps:\s*(https:\/\/[^\s\n]+)/);
+    
+    if (mapUrlMatch) {
+      const mapUrl = mapUrlMatch[1];
+      const address = location.replace(/\n\nGoogle Maps:.*/, '').trim();
+      
+      // For ICS files, we can include the URL directly in the location field
+      // Many calendar apps will make this clickable
+      return `${address} - ${mapUrl}`;
+    }
+    
+    // If no Google Maps URL, return plain location
+    return location;
+  }
+
+  private generateICSInvite(details: {
+    title: string;
+    description: string;
+    startDate: Date;
+    endDate: Date;
+    location: string;
+    organizer: { name: string; email: string };
+    attendee: { name: string; email: string };
+    uid: string;
+  }): string {
+    const formatICSDate = (date: Date): string => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const escapeICSText = (text: string): string => {
+      return text
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '');
+    };
+
+    const now = new Date();
+    const timestamp = formatICSDate(now);
+
+    // Enhanced description with location link if available
+    let enhancedDescription = details.description;
+    
+    // Check if location contains Google Maps URL and add it to description
+    const mapUrlMatch = details.location.match(/(https:\/\/[^\s]+)/);
+    if (mapUrlMatch) {
+      const mapUrl = mapUrlMatch[1];
+      const address = details.location.replace(` - ${mapUrl}`, '').trim();
+      
+      enhancedDescription += `\n\n📍 Location: ${address}\n🗺️ Google Maps: ${mapUrl}\n\nClick the Google Maps link to get directions to the interview location.`;
+    }
+
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//CVZen//Interview Scheduler//EN',
+      'METHOD:REQUEST',
+      'BEGIN:VEVENT',
+      `UID:${details.uid}`,
+      `DTSTAMP:${timestamp}`,
+      `DTSTART:${formatICSDate(details.startDate)}`,
+      `DTEND:${formatICSDate(details.endDate)}`,
+      `SUMMARY:${escapeICSText(details.title)}`,
+      `DESCRIPTION:${escapeICSText(enhancedDescription)}`,
+      `LOCATION:${escapeICSText(details.location)}`,
+      `ORGANIZER;CN=${escapeICSText(details.organizer.name)}:MAILTO:${details.organizer.email}`,
+      `ATTENDEE;CN=${escapeICSText(details.attendee.name)};RSVP=TRUE:MAILTO:${details.attendee.email}`,
+      'STATUS:CONFIRMED',
+      'SEQUENCE:0',
+      'BEGIN:VALARM',
+      'TRIGGER:-PT15M',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:Reminder: ${escapeICSText(details.title)}`,
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+  }
+
 }
 
 export const emailService = new EmailService();

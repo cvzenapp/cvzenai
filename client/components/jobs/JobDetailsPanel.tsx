@@ -3,6 +3,7 @@ import { X, MapPin, DollarSign, Briefcase, Clock, Building, ChevronRight, Loader
 import { JobApplicationModal } from './JobApplicationModal';
 import { jobApplicationApi } from '../../services/jobApplicationApi';
 import { jobMatchingApi } from '../../services/jobMatchingApi';
+import { formatJobContent } from '../../lib/jobContentFormatter';
 
 interface JobDetailsPanelProps {
   job: any;
@@ -187,8 +188,8 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
           {/* Job Description */}
           <div>
             <h3 className="text-lg font-semibold text-slate-900 mb-3">Job Description</h3>
-            <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-              {job.description}
+            <div className="text-slate-700 leading-relaxed prose max-w-none">
+              {formatJobContent(job.description)}
             </div>
           </div>
 
@@ -196,14 +197,21 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
           {job.requirements && job.requirements.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-slate-900 mb-3">Requirements</h3>
-              <ul className="space-y-2">
-                {job.requirements.map((req: string, index: number) => (
-                  <li key={index} className="flex items-start gap-2 text-slate-700">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 flex-shrink-0" />
-                    {req}
-                  </li>
-                ))}
-              </ul>
+              <div className="prose max-w-none">
+                {typeof job.requirements === 'string' 
+                  ? formatJobContent(job.requirements)
+                  : (
+                    <ul className="space-y-2">
+                      {job.requirements.map((req: string, index: number) => (
+                        <li key={index} className="flex items-start gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 flex-shrink-0" />
+                          {req}
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                }
+              </div>
             </div>
           )}
 

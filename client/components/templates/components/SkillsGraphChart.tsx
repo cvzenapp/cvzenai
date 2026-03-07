@@ -33,12 +33,20 @@ export const SkillsGraphChart: React.FC<SkillsGraphChartProps> = ({
 
   if (!skills || skills.length === 0) return null;
 
+  // Handle both string array (legacy) and skill object array formats
+  const normalizedSkills = skills.map(skill => {
+    if (typeof skill === 'string') {
+      return { id: skill, name: skill, proficiency: 70, category: 'Other', isCore: false, level: 70 };
+    }
+    return skill;
+  });
+
   // Separate core and non-core skills
-  const coreSkills = skills.filter(skill => skill.isCore);
-  const nonCoreSkills = skills.filter(skill => !skill.isCore);
+  const coreSkills = normalizedSkills.filter(skill => skill.isCore);
+  const nonCoreSkills = normalizedSkills.filter(skill => !skill.isCore);
 
   // Get proficiency value
-  const getSkillLevel = (skill: Resume['skills'][0]) => {
+  const getSkillLevel = (skill: Resume['skills'][0] | { id: string; name: string; proficiency: number; category: string; isCore: boolean; level: number }) => {
     const proficiency = skill.proficiency || skill.level;
     return proficiency && proficiency > 0 ? proficiency : 70;
   };

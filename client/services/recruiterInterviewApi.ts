@@ -78,6 +78,17 @@ export class RecruiterInterviewApiClient {
   }
 
   /**
+   * Update an existing interview invitation (recruiter only)
+   */
+  async updateInterview(interviewId: string, request: Partial<CreateInterviewRequest>): Promise<{ interviewId: string; updatedAt: string }> {
+    const response = await this.request<any>(`/interviews/${interviewId}/update`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    });
+    return response.data || response;
+  }
+
+  /**
    * Get all interviews for the current recruiter
    */
   async getMyInterviews(): Promise<InterviewInvitation[]> {
@@ -176,6 +187,39 @@ export class RecruiterInterviewApiClient {
    */
   async getFeedback(interviewId: number): Promise<InterviewFeedback[]> {
     const response = await this.request<any>(`/interviews/${interviewId}/feedback`);
+    return response.data || response;
+  }
+
+  /**
+   * Generate AI-powered interview preparation content
+   */
+  async generateAIPreparation(
+    jobPostingId: number,
+    candidateId?: number,
+    resumeId?: number,
+    interviewType: string = 'technical',
+    interviewMode: string = 'video_call',
+    interviewDateTime?: string,
+    durationMinutes?: number
+  ): Promise<{
+    description: string;
+    instructions: string;
+    internalNotes: string;
+    jobTitle: string;
+    candidateName: string;
+  }> {
+    const response = await this.request<any>('/interviews/prepare-ai', {
+      method: 'POST',
+      body: JSON.stringify({
+        jobPostingId,
+        candidateId,
+        resumeId,
+        interviewType,
+        interviewMode,
+        interviewDateTime,
+        durationMinutes
+      }),
+    });
     return response.data || response;
   }
 }

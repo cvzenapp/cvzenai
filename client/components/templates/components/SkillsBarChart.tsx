@@ -20,14 +20,27 @@ export const SkillsBarChart: React.FC<SkillsBarChartProps> = ({
 
   // Get the proficiency value (support both 'level' and 'proficiency' fields)
   // Updated: Fixed to properly handle 0 values and prefer proficiency
-  const getSkillLevel = (skill: Resume['skills'][0]) => {
+  const getSkillLevel = (skill: Resume['skills'][0] | string) => {
+    // Handle string skills (legacy format)
+    if (typeof skill === 'string') {
+      return 70; // Default proficiency for string skills
+    }
+    
     // Prefer proficiency over level, fallback to 70 if both are missing or 0
     const proficiency = skill.proficiency || skill.level;
     return proficiency && proficiency > 0 ? proficiency : 70;
   };
 
+  // Handle both string array (legacy) and skill object array formats
+  const normalizedSkills = skills.map(skill => {
+    if (typeof skill === 'string') {
+      return { id: skill, name: skill, proficiency: 70, category: 'Other', isCore: false, level: 70 };
+    }
+    return skill;
+  });
+
   // Sort skills by proficiency (highest first)
-  const sortedSkills = [...skills].sort((a, b) => getSkillLevel(b) - getSkillLevel(a));
+  const sortedSkills = [...normalizedSkills].sort((a, b) => getSkillLevel(b) - getSkillLevel(a));
 
   return (
     <div className="rounded-lg p-6 hover:shadow-sm transition-shadow"

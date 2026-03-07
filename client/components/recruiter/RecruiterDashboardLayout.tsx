@@ -303,7 +303,7 @@ export default function RecruiterDashboardLayout({
 
           {/* Logo */}
           <button
-            onClick={() => navigate('/recruiter')}
+            onClick={() => navigate('/recruiter/dashboard')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <img 

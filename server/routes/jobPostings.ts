@@ -14,6 +14,19 @@ function verifyToken(token: string): any {
   }
 }
 
+// Generate URL-friendly slug from title
+function generateSlug(title: string, id?: number): string {
+  const baseSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .trim()
+    .substring(0, 50); // Limit length
+  
+  return id ? `${baseSlug}-${id}` : baseSlug;
+}
+
 // Validation schema for job posting
 const jobPostingSchema = z.object({
   title: z.string().min(1).max(255),
@@ -86,6 +99,7 @@ router.get("/", async (req: Request, res: Response) => {
       isActive: row.is_active,
       applicationsCount: parseInt(row.applications_count) || 0,
       viewsCount: parseInt(row.views_count) || 0,
+      slug: row.slug || generateSlug(row.title, row.id),
     }));
 
     res.json({
@@ -187,6 +201,10 @@ router.post("/", async (req: Request, res: Response) => {
     const result = await db.query(query, values);
     const createdJob = result.rows[0];
 
+    // Generate and update slug after job creation
+    const slug = generateSlug(createdJob.title, createdJob.id);
+    await db.query('UPDATE job_postings SET slug = $1 WHERE id = $2', [slug, createdJob.id]);
+
     const formattedJob = {
       id: createdJob.id,
       title: createdJob.title,
@@ -207,6 +225,7 @@ router.post("/", async (req: Request, res: Response) => {
       isActive: createdJob.is_active,
       applicationsCount: 0,
       viewsCount: 0,
+      slug: slug,
     };
 
     res.status(201).json({
@@ -541,6 +560,142 @@ router.get("/public/company/:companyId", async (req: Request, res: Response) => 
     res.status(500).json({
       success: false,
       message: "Failed to fetch job postings",
+    });
+  } finally {
+    if (db) await closeDatabase(db);
+  }
+});
+
+// GET /api/jobs/:slug - Get public job posting by slug (no auth required)
+router.get("/public/:slug", async (req: Request, res: Response) => {
+  const slug = req.params.slug;
+  let db;
+
+  try {
+    db = await initializeDatabase();
+
+    // First, let's check what's actually in the companies table
+    const debugQuery = `
+      SELECT id, name, logo, logo_url 
+      FROM companies 
+      WHERE id IN (
+        SELECT company_id FROM job_postings WHERE slug = $1
+      )
+    `;
+    const debugResult = await db.query(debugQuery, [slug]);
+    console.log('🔍 Companies table debug for slug:', slug);
+    if (debugResult.rows.length > 0) {
+      const company = debugResult.rows[0];
+      console.log('🔍 Company data:', {
+        id: company.id,
+        name: company.name,
+        has_logo: !!company.logo,
+        logo_length: company.logo?.length || 0,
+        logo_preview: company.logo?.substring(0, 50) + '...' || 'null',
+        has_logo_url: !!company.logo_url,
+        logo_url_length: company.logo_url?.length || 0,
+        logo_url_preview: company.logo_url?.substring(0, 50) + '...' || 'null'
+      });
+    }
+
+    const query = `
+      SELECT 
+        jp.*,
+        c.name as company_name,
+        c.description as company_description,
+        c.website as company_website,
+        c.location as company_location,
+        c.logo as company_logo_url,
+        (SELECT COUNT(*) FROM job_applications WHERE job_id = jp.id) as applications_count
+      FROM job_postings jp
+      INNER JOIN companies c ON c.id = jp.company_id
+      WHERE jp.slug = $1 AND jp.is_active = true
+    `;
+
+    const result = await db.query(query, [slug]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Job posting not found",
+      });
+    }
+
+    const row = result.rows[0];
+    
+    // Debug logging for logo and requirements data
+    console.log('🔍 Job posting debug:', {
+      company_id: row.company_id,
+      company_name: row.company_name,
+      logo_data_exists: !!row.company_logo_url,
+      logo_data_length: row.company_logo_url?.length || 0,
+      logo_data_preview: row.company_logo_url?.substring(0, 50) + '...' || 'null',
+      requirements_raw: row.requirements,
+      requirements_type: typeof row.requirements,
+      requirements_length: row.requirements?.length || 0,
+      description_exists: !!row.description,
+      description_length: row.description?.length || 0
+    });
+    
+    const job = {
+      id: row.id,
+      title: row.title,
+      department: row.department,
+      location: row.location,
+      jobType: row.job_type,
+      experienceLevel: row.experience_level,
+      salaryMin: row.salary_min,
+      salaryMax: row.salary_max,
+      currency: row.salary_currency || 'USD',
+      description: row.description || '',
+      requirements: (() => {
+        // Handle different requirements data formats
+        if (!row.requirements) return '';
+        
+        if (typeof row.requirements === 'string') {
+          // If it's already a string, check if it's JSON
+          try {
+            const parsed = JSON.parse(row.requirements);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed.map(req => `• ${req}`).join('\n');
+            }
+            return row.requirements;
+          } catch {
+            // Not JSON, return as is
+            return row.requirements;
+          }
+        }
+        
+        if (Array.isArray(row.requirements) && row.requirements.length > 0) {
+          return row.requirements.map(req => `• ${req}`).join('\n');
+        }
+        
+        // Fallback - convert to string
+        return String(row.requirements);
+      })(),
+      isActive: row.is_active,
+      slug: row.slug,
+      company: {
+        id: row.company_id,
+        name: row.company_name,
+        description: row.company_description,
+        website: row.company_website,
+        location: row.company_location,
+        logoUrl: row.company_logo_url,
+      },
+      createdAt: row.created_at,
+    };
+
+    res.json({
+      success: true,
+      job,
+    });
+
+  } catch (error) {
+    console.error("❌ Get job by slug error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch job posting",
     });
   } finally {
     if (db) await closeDatabase(db);

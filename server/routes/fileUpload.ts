@@ -247,6 +247,46 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
           projects: parsedData.projects?.length
         }
       });
+
+      // Generate shareToken automatically using slug
+      const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || 'resume';
+      
+      // Generate unique slug for shareToken
+      const generateUniqueSlug = async (baseName: string): Promise<string> => {
+        const baseSlug = baseName
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+        
+        let slug = baseSlug;
+        let counter = 1;
+        
+        while (true) {
+          const existing = await db.query(
+            'SELECT id FROM resume_shares WHERE share_token = $1',
+            [slug]
+          );
+          
+          if (existing.rows.length === 0) {
+            return slug;
+          }
+          
+          slug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+      };
+
+      const shareToken = await generateUniqueSlug(fullName);
+      
+      // Create resume share entry
+      await db.query(`
+        INSERT INTO resume_shares (resume_id, user_id, share_token, is_active, expires_at)
+        VALUES ($1, $2, $3, true, NULL)
+      `, [resumeId, req.user.id, shareToken]);
+
+      console.log('✅ ShareToken created:', shareToken, 'for resume:', resumeId);
       
     } catch (parseError) {
       console.error('❌ Resume parsing or database insertion failed:', parseError);

@@ -79,6 +79,8 @@ export default {
       },
       fontFamily: {
         russo: ['Russo One', 'sans-serif'],
+        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       keyframes: {
         "accordion-down": {
