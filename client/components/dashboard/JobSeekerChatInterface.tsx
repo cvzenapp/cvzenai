@@ -55,8 +55,8 @@ interface Message {
 
 const QUICK_ACTIONS = [
   { icon: Search, label: 'Find Jobs', query: 'Show me frontend developer jobs in San Francisco', type: 'job_search' },
-  { icon: FileText, label: 'Resume Help', query: 'How can I improve my resume for tech jobs?', type: 'resume_analysis' },
-  { icon: Paperclip, label: 'Upload Resume', query: '', type: 'file_upload' },
+  { icon: FileText, label: 'CV Help', query: 'How can I improve my resume for tech jobs?', type: 'resume_analysis' },
+  { icon: Paperclip, label: 'Upload CV', query: '', type: 'file_upload' },
   { icon: TrendingUp, label: 'Career Advice', query: 'What skills should I learn to advance my career?', type: 'career_advice' },
   { icon: Briefcase, label: 'Interview Tips', query: 'Give me tips for technical interviews', type: 'interview_prep' }
 ];
@@ -1149,7 +1149,7 @@ export default function JobSeekerChatInterface() {
         {showFileUpload && (
           <div className="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="text-sm font-medium text-gray-700">Upload Resume for Analysis</h4>
+              <h4 className="text-sm font-medium text-gray-700">Upload CV for Analysis</h4>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1217,7 +1217,7 @@ export default function JobSeekerChatInterface() {
             onClick={() => setShowFileUpload(!showFileUpload)}
             disabled={isLoading}
             className="h-[60px] px-3"
-            title="Upload resume for analysis"
+            title="Upload cv for analysis"
           >
             <Paperclip className="w-4 h-4" />
           </Button>

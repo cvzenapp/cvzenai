@@ -82,7 +82,7 @@ export default function LandingPage() {
     {
       icon: <FileText className="h-6 w-6" />,
       title: "Smart Resume Parsing",
-      description: "Upload existing resumes and let AI extract and structure your information automatically",
+      description: "Upload existing cvs and let AI extract and structure your information automatically",
     },
     {
       icon: <Target className="h-6 w-6" />,
@@ -357,28 +357,42 @@ export default function LandingPage() {
                     <Link
                       to="/builder"
                       onClick={() => setMobileMenuOpen(false)}
+                      className="w-full"
                     >
-                      <Button variant="outline" className="w-full border-brand-main/30 text-brand-auxiliary-1">
+                      <Button variant="outline" className="w-full border-brand-main/30 text-brand-auxiliary-1 h-12">
                         Resume Builder
                       </Button>
                     </Link>
                     <Link
                       to="/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
+                      className="w-full"
                     >
-                      <Button className="w-full bg-brand-main hover:bg-brand-main/90">Dashboard</Button>
+                      <Button className="w-full bg-brand-main hover:bg-brand-main/90 h-12">Dashboard</Button>
                     </Link>
                   </>
                 ) : (
-                  <Button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleGetStarted();
-                    }}
-                    className="w-full bg-brand-main hover:bg-brand-main/90"
-                  >
-                    Get Started
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        openRecruiterModal();
+                      }}
+                      variant="outline"
+                      className="w-full border-brand-auxiliary-1 bg-transparent text-brand-auxiliary-1 hover:bg-brand-auxiliary-1 hover:text-brand-background h-12"
+                    >
+                      For Recruiters
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleGetStarted();
+                      }}
+                      className="w-full bg-brand-main hover:bg-brand-main/90 h-12"
+                    >
+                      Job Seeker - Get Started
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -402,9 +416,9 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-brand-background">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-background via-brand-background to-brand-main/20" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-20">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
               <div className="space-y-4">
                 <Badge
                   variant="secondary"
@@ -413,58 +427,59 @@ export default function LandingPage() {
                   <Sparkles className="h-3 w-3 mr-1" />
                   Enterprise AI-Powered Platform
                 </Badge>
-                <h1 className="hero-title text-4xl lg:text-6xl tracking-tight text-white">
+                <h1 className="hero-title text-3xl sm:text-4xl lg:text-6xl tracking-tight text-white leading-tight">
                   We went visceral on{" "}
                   <span className="text-brand-main">
                     hiring
                   </span>{" "}
                   so you don't have to
                 </h1>
-                <p className="text-xl text-brand-auxiliary-1 leading-relaxed">
-                  Rebuilding hiring with structured digital profiles that at every step of the hire                </p>
+                <p className="text-lg sm:text-xl text-brand-auxiliary-1 leading-relaxed">
+                  Rebuilding hiring with structured digital profiles that at every step of the hire
+                </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 items-end">
-                <div className="flex flex-col">
-                  <div className="bg-brand-auxiliary-1 text-brand-background px-4 py-1 rounded-t-lg text-sm font-medium text-center">
+              <div className="flex flex-row gap-4 items-end justify-center lg:justify-start">
+                <div className="flex flex-col flex-1 max-w-xs">
+                  <div className="bg-brand-auxiliary-1 text-brand-background px-4 py-2 rounded-t-lg text-sm font-medium text-center">
                     Get Digital CV
                   </div>
                   <Button
                     size="lg"
                     onClick={handleGetStarted}
-                    className="group h-12 px-8 bg-brand-main hover:bg-brand-main/90 text-white rounded-t-none border-t-0"
+                    className="group h-12 px-4 sm:px-6 lg:px-8 bg-brand-main hover:bg-brand-main/90 text-white rounded-t-none border-t-0 w-full text-xs sm:text-sm lg:text-base"
                   >
                     Start for Free
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="ml-1 sm:ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
-                <div className="flex flex-col">
-                  <div className="bg-green-600 text-white px-4 py-1 rounded-t-lg text-sm font-medium text-center">
-                   Go Papreless
+                <div className="flex flex-col flex-1 max-w-xs">
+                  <div className="bg-green-600 text-white px-4 py-2 rounded-t-lg text-sm font-medium text-center">
+                   Go Paperless
                   </div>
                   <Button
                     variant="outline"
                     size="lg"
                     onClick={() => setPledgeModalOpen(true)}
-                    className="h-12 px-8 group border-brand-main text-brand-background hover:bg-brand-main/10 hover:text-brand-auxiliary-1 rounded-t-none border-t-0"
+                    className="h-12 px-4 sm:px-6 lg:px-8 group border-brand-main text-brand-background hover:bg-brand-main/10 hover:text-brand-auxiliary-1 rounded-t-none border-t-0 w-full text-xs sm:text-sm lg:text-base"
                   >
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <Sparkles className="mr-1 sm:mr-2 h-4 w-4" />
                     Take the Pledge
                   </Button>
                 </div>
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-6 sm:pt-8">
                 {stats.map((stat, index) => (
                   <div key={index} className="text-center lg:text-left">
                     <div className="flex items-center justify-center lg:justify-start gap-2 mb-1">
                       <div className="text-brand-main">{stat.icon}</div>
-                      <div className="text-2xl text-white">
+                      <div className="text-xl sm:text-2xl text-white font-semibold">
                         {stat.value}
                       </div>
                     </div>
-                    <div className="text-sm text-brand-auxiliary-1">{stat.label}</div>
+                    <div className="text-xs sm:text-sm text-brand-auxiliary-1">{stat.label}</div>
                   </div>
                 ))}
               </div>
@@ -880,21 +895,21 @@ export default function LandingPage() {
           <p className="text-xl text-brand-auxiliary-1 mb-8 max-w-2xl mx-auto">
             Join thousands of professionals using CVZen's AI-powered platform to land their dream jobs faster.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
             <Button
               size="lg"
               variant="secondary"
               onClick={handleGetStarted}
-              className="group h-12 px-8 bg-white text-brand-background hover:bg-brand-auxiliary-1"
+              className="group h-12 px-6 sm:px-8 bg-white text-brand-background hover:bg-brand-auxiliary-1 w-full sm:flex-1 text-sm sm:text-base"
             >
               Start for Free
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Link to="/tools/fake-job-detector">
+            <Link to="/tools/fake-job-detector" className="w-full sm:flex-1">
               <Button
                 size="lg"
                 variant="outline"
-                className="h-12 px-8 bg-transparent border-white/20 text-white hover:bg-white/10"
+                className="h-12 px-6 sm:px-8 bg-transparent border-white/20 text-white hover:bg-white/10 w-full text-sm sm:text-base"
               >
                 <Shield className="mr-2 h-4 w-4" />
                 Try Fake Job Detector

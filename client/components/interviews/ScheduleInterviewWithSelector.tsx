@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { CandidateSelector } from './CandidateSelector';
-import { ScheduleInterviewModal } from './ScheduleInterviewModal';
+import { ScheduleInterviewForm } from './ScheduleInterviewForm';
 
 interface Candidate {
   id: number;
@@ -14,6 +14,12 @@ interface Candidate {
   skills?: string[];
   experience?: string;
   upvotes?: number;
+  jobPostingId?: number;
+  applicationId?: number;
+  currentRound?: number;
+  isGuest?: boolean;
+  guestName?: string;
+  guestEmail?: string;
 }
 
 interface ScheduleInterviewWithSelectorProps {
@@ -52,15 +58,23 @@ export const ScheduleInterviewWithSelector: React.FC<ScheduleInterviewWithSelect
   // If candidate is selected, show the schedule modal
   if (showScheduleModal && selectedCandidate) {
     return (
-      <ScheduleInterviewModal
+      <ScheduleInterviewForm
         isOpen={true}
         onClose={handleScheduleClose}
-        candidateId={selectedCandidate.id}
-        candidateName={selectedCandidate.name}
-        candidateEmail={selectedCandidate.email}
-        resumeId={selectedCandidate.resumeId}
-        resumeTitle={selectedCandidate.resumeTitle}
         onSuccess={handleScheduleSuccess}
+        preSelectedCandidate={{
+          candidateId: selectedCandidate.id,
+          candidateName: selectedCandidate.name,
+          candidateEmail: selectedCandidate.email,
+          resumeId: selectedCandidate.resumeId,
+          resumeTitle: selectedCandidate.resumeTitle,
+          isGuest: selectedCandidate.isGuest,
+          guestName: selectedCandidate.guestName,
+          guestEmail: selectedCandidate.guestEmail,
+          jobPostingId: selectedCandidate.jobPostingId,
+          applicationId: selectedCandidate.applicationId,
+          currentRound: selectedCandidate.currentRound
+        }}
       />
     );
   }

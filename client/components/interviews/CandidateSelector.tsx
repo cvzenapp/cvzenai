@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, User, Star, Briefcase, ChevronDown } from 'lucide-react';
 import { shortlistApi, type ShortlistedResume } from '../../services/shortlistApi';
+import { recruiterApplicationsApi, type JobApplication } from '../../services/recruiterApplicationsApi';
 
 interface Candidate {
   id: number;
@@ -13,6 +14,12 @@ interface Candidate {
   skills?: string[];
   experience?: string;
   upvotes?: number;
+  jobPostingId?: number;
+  applicationId?: number;
+  currentRound?: number;
+  isGuest?: boolean;
+  guestName?: string;
+  guestEmail?: string;
 }
 
 interface CandidateSelectorProps {
@@ -31,10 +38,32 @@ export const CandidateSelector: React.FC<CandidateSelectorProps> = ({
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'shortlist' | 'applications' | 'all'>('shortlist');
+  const [tabCounts, setTabCounts] = useState({ shortlist: 0, applications: 0, all: 0 });
 
   useEffect(() => {
     loadCandidates();
+    loadTabCounts();
   }, [activeTab]);
+
+  const loadTabCounts = async () => {
+    try {
+      // Load shortlisted count
+      const shortlistResponse = await recruiterApplicationsApi.getApplications({ status: 'shortlisted' });
+      const shortlistCount = shortlistResponse.success ? shortlistResponse.data?.length || 0 : 0;
+
+      // Load all applications count
+      const allResponse = await recruiterApplicationsApi.getApplications();
+      const allCount = allResponse.success ? allResponse.data?.length || 0 : 0;
+
+      setTabCounts({
+        shortlist: shortlistCount,
+        applications: allCount,
+        all: allCount
+      });
+    } catch (error) {
+      console.error('❌ Failed to load tab counts:', error);
+    }
+  };
 
   const loadCandidates = async () => {
     setLoading(true);
@@ -42,30 +71,61 @@ export const CandidateSelector: React.FC<CandidateSelectorProps> = ({
       console.log('🔍 Loading candidates for tab:', activeTab);
       
       if (activeTab === 'shortlist') {
-        console.log('📡 Calling shortlistApi.getMyShortlist()...');
-        const response = await shortlistApi.getMyShortlist();
-        console.log('📋 Shortlist API response:', response);
+        console.log('📡 Calling recruiterApplicationsApi.getApplications with shortlisted status...');
+        const response = await recruiterApplicationsApi.getApplications({ status: 'shortlisted' });
+        console.log('📋 Shortlisted applications API response:', response);
         
         if (response.success && response.data) {
-          const shortlistedCandidates: Candidate[] = response.data.map((resume: ShortlistedResume) => ({
-            id: resume.candidate.id,
-            name: resume.candidate.name,
-            email: resume.candidate.email,
-            resumeId: resume.resumeId,
-            resumeTitle: resume.title,
-            source: 'shortlist' as const,
-            upvotes: resume.upvotes,
-            experience: resume.summary?.substring(0, 100) + '...' || 'No summary available'
+          const shortlistedCandidates: Candidate[] = response.data.map((application: JobApplication) => ({
+            id: application.user_id || 0,
+            name: application.applicant_name || 'Unknown',
+            email: application.applicant_email || '',
+            resumeId: application.resume_id || 0,
+            resumeTitle: application.resume_title || application.job_title || 'Resume',
+            source: 'application' as const,
+            jobPostingId: application.job_id,
+            applicationId: application.id,
+            currentRound: application.currentRound || 0,
+            isGuest: application.is_guest || false,
+            guestName: application.guest_name,
+            guestEmail: application.guest_email,
+            experience: application.resume_content?.summary?.substring(0, 100) + '...' || 'No summary available'
           }));
-          console.log('✅ Mapped candidates:', shortlistedCandidates);
+          console.log('✅ Mapped shortlisted candidates:', shortlistedCandidates);
           setCandidates(shortlistedCandidates);
         } else {
-          console.warn('⚠️ Shortlist API returned no data or failed:', response);
+          console.warn('⚠️ Shortlisted applications API returned no data or failed:', response);
+          setCandidates([]);
+        }
+      } else if (activeTab === 'applications') {
+        console.log('📡 Calling recruiterApplicationsApi.getApplications for all applications...');
+        const response = await recruiterApplicationsApi.getApplications();
+        console.log('📋 All applications API response:', response);
+        
+        if (response.success && response.data) {
+          const allCandidates: Candidate[] = response.data.map((application: JobApplication) => ({
+            id: application.user_id || 0,
+            name: application.applicant_name || 'Unknown',
+            email: application.applicant_email || '',
+            resumeId: application.resume_id || 0,
+            resumeTitle: application.resume_title || application.job_title || 'Resume',
+            source: 'application' as const,
+            jobPostingId: application.job_id,
+            applicationId: application.id,
+            currentRound: application.currentRound || 0,
+            isGuest: application.is_guest || false,
+            guestName: application.guest_name,
+            guestEmail: application.guest_email,
+            experience: application.resume_content?.summary?.substring(0, 100) + '...' || 'No summary available'
+          }));
+          console.log('✅ Mapped all candidates:', allCandidates);
+          setCandidates(allCandidates);
+        } else {
+          console.warn('⚠️ All applications API returned no data or failed:', response);
           setCandidates([]);
         }
       } else {
-        // For now, we'll show shortlisted candidates for all tabs
-        // In a real implementation, you'd fetch from different endpoints
+        // For 'all' tab, we could combine shortlist and applications
         setCandidates([]);
       }
     } catch (error) {
@@ -156,9 +216,9 @@ export const CandidateSelector: React.FC<CandidateSelectorProps> = ({
           {/* Tabs */}
           <div className="flex border-b border-gray-200">
             {[
-              { key: 'shortlist', label: 'Shortlisted', count: candidates.length },
-              { key: 'applications', label: 'Applications', count: 0 },
-              { key: 'all', label: 'All Candidates', count: 0 }
+              { key: 'shortlist', label: 'Shortlisted', count: tabCounts.shortlist },
+              { key: 'applications', label: 'All Applications', count: tabCounts.applications },
+              { key: 'all', label: 'All Candidates', count: tabCounts.all }
             ].map(({ key, label, count }) => (
               <button
                 key={key}
@@ -191,11 +251,17 @@ export const CandidateSelector: React.FC<CandidateSelectorProps> = ({
                 <p className="text-sm text-gray-500">
                   {searchTerm ? 'No candidates match your search' : 
                    activeTab === 'shortlist' ? 'No shortlisted candidates yet' :
+                   activeTab === 'applications' ? 'No job applications yet' :
                    'No candidates available'}
                 </p>
                 {activeTab === 'shortlist' && !searchTerm && (
                   <p className="text-xs text-gray-400 mt-1">
-                    Shortlist candidates from resumes to schedule interviews
+                    Shortlist candidates from job applications to schedule interviews
+                  </p>
+                )}
+                {activeTab === 'applications' && !searchTerm && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Job applications will appear here when candidates apply
                   </p>
                 )}
               </div>

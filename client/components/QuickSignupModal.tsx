@@ -387,18 +387,27 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg max-h-[95vh] overflow-hidden border-brand-main/30">
-        <DialogHeader className="pb-2 bg-gradient-to-r from-brand-background to-brand-background/95 -mx-6 -mt-6 px-6 pt-6 mb-4 rounded-t-lg">
-          <DialogTitle className="text-lg font-bold text-brand-auxiliary-1">
+      <DialogContent className="sm:max-w-lg w-[95vw] max-h-[95vh] flex flex-col border-brand-main/30 p-0 [&>button]:hidden">
+        <DialogHeader className="pb-2 bg-gradient-to-r from-brand-background to-brand-background/95 px-6 pt-6 mb-4 rounded-t-lg flex-shrink-0 relative">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-2 rounded-full hover:bg-white/10 transition-colors z-10"
+            aria-label="Close modal"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+          <DialogTitle className="text-lg font-bold text-brand-auxiliary-1 pr-12">
             {mode === 'job-application' ? `Apply for ${jobTitle}` : 'Get Started Free'}
           </DialogTitle>
-          <DialogDescription className="text-sm text-brand-auxiliary-1/80">
+          <DialogDescription className="text-sm text-brand-auxiliary-1/80 pr-12">
             {mode === 'job-application' 
               ? `at ${companyName}` 
               : 'Create your account in seconds and start building your professional resume'
             }
           </DialogDescription>
         </DialogHeader>
+        
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
 
         {step === "form" && (
           <>
@@ -512,7 +521,7 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
               {/* Resume Upload Field */}
               <div className="space-y-2">
                 <Label htmlFor="resume" className="text-sm font-medium">
-                  Upload Resume <span className="text-red-500">*</span>
+                  Upload CV <span className="text-red-500">*</span>
                 </Label>
                 <div className="space-y-2">
                   {!resumeFile ? (
@@ -686,7 +695,7 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
         )}
 
         {step === "analysis" && uploadResult && (
-          <div className="max-h-[60vh] overflow-y-auto relative">
+          <div className="flex-1 overflow-y-auto">
             {/* Confetti Effect */}
             <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
 
@@ -800,7 +809,7 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
                         <textarea
                           value={coverLetter}
                           onChange={(e) => setCoverLetter(e.target.value)}
-                          className="w-full h-40 p-3 text-sm border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-brand-main focus:border-brand-main"
+                          className="w-full h-32 sm:h-40 p-3 text-sm border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-brand-main focus:border-brand-main"
                           placeholder="Your cover letter will appear here..."
                         />
                         <p className="text-xs text-slate-500">
@@ -812,17 +821,17 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
                   <button
                     onClick={onClose}
-                    className="flex-1 px-4 py-2 text-slate-600 hover:text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-50"
+                    className="flex-1 px-4 py-3 text-slate-600 hover:text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleJobApplicationSubmit}
                     disabled={loading}
-                    className="flex-1 px-6 py-2 bg-brand-main text-white rounded-lg hover:bg-brand-main/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 px-6 py-3 bg-brand-main text-white rounded-lg hover:bg-brand-main/90 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -838,6 +847,7 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
             )}
           </div>
         )}
+        </div>
 
         {step === "success" && (
           <div className="py-8 text-center space-y-4">

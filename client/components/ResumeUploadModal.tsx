@@ -181,7 +181,7 @@ export default function ResumeUploadModal({
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Upload Resume</h2>
+                <h2 className="text-2xl font-bold">Upload CV</h2>
                 <p className="text-blue-100 text-sm mt-1">
                   For: {jobTitle}
                 </p>
@@ -238,7 +238,7 @@ export default function ResumeUploadModal({
                     <div className="flex flex-col items-center">
                       <Upload className="h-12 w-12 text-slate-400 mb-3" />
                       <p className="text-slate-700 font-semibold mb-1">
-                        Click to upload resume
+                        Click to upload cv
                       </p>
                       <p className="text-sm text-slate-500">
                         PDF, DOC, or DOCX (max 5MB)

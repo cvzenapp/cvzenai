@@ -308,7 +308,7 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
     console.error('❌ Resume upload error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to upload resume'
+      error: 'Failed to upload CV'
     });
   }
 });
@@ -344,7 +344,7 @@ router.post('/guest-resume', upload.single('resume'), async (req, res: Response)
     console.error('Guest resume upload error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to upload resume'
+      error: 'Failed to upload CV'
     });
   }
 });
@@ -398,7 +398,7 @@ router.post('/recruiter-resume', upload.single('file'), async (req, res: Respons
     console.error('Recruiter resume upload error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to upload resume'
+      error: 'Failed to upload CV'
     });
   }
 });

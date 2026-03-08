@@ -95,7 +95,7 @@ const QUICK_ACTIONS = [
   { icon: Users, label: 'HR Advice', query: 'Best practices for conducting technical interviews', type: 'hr_guidance' },
   { icon: TrendingUp, label: 'Hiring Strategy', query: 'How to improve our hiring process and reduce time-to-hire?', type: 'process_improvement' },
   { icon: DollarSign, label: 'Compensation', query: 'What should we offer a senior developer in the current market?', type: 'compensation' },
-  { icon: Paperclip, label: 'Upload Resume', query: '', type: 'file_upload' }
+  { icon: Paperclip, label: 'Upload CV', query: '', type: 'file_upload' }
 ];
 
 const EXAMPLE_PROMPTS = [
@@ -1830,7 +1830,7 @@ export default function RecruiterChatInterface() {
         {showFileUpload && (
           <div className="mb-2 p-2 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="text-xs font-medium text-gray-700">Upload Resume/Document</h4>
+              <h4 className="text-xs font-medium text-gray-700">Upload CV/Document</h4>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1898,7 +1898,7 @@ export default function RecruiterChatInterface() {
             onClick={() => setShowFileUpload(!showFileUpload)}
             disabled={isLoading}
             className="h-[60px] px-3"
-            title="Upload resume"
+            title="Upload CV"
           >
             <Paperclip className="w-4 h-4" />
           </Button>
