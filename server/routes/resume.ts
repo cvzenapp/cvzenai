@@ -530,34 +530,9 @@ export const createResume = async (req: AuthRequest, res: Response) => {
     const personalInfo = typeof newResume.personal_info === 'string' ? JSON.parse(newResume.personal_info) : (newResume.personal_info || {});
     const fullName = personalInfo.fullName || personalInfo.name || personalInfo.firstName + ' ' + personalInfo.lastName || 'resume';
     
-    // Generate unique slug for shareToken
-    const generateUniqueSlug = async (baseName: string): Promise<string> => {
-      const baseSlug = baseName
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim();
-      
-      let slug = baseSlug;
-      let counter = 1;
-      
-      while (true) {
-        const existing = await db.query(
-          'SELECT id FROM resume_shares WHERE share_token = $1',
-          [slug]
-        );
-        
-        if (existing.rows.length === 0) {
-          return slug;
-        }
-        
-        slug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-    };
-
-    const shareToken = await generateUniqueSlug(fullName);
+    // Generate unique slug for shareToken using proper slug generator
+    const { generateUniqueSlug } = await import('../lib/slugGenerator.js');
+    const shareToken = await generateUniqueSlug(db, fullName);
     
     // Create resume share entry
     await db.query(`

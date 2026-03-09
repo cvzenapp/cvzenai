@@ -64,9 +64,9 @@ export const CertificationsEditModal: React.FC<CertificationsEditModalProps> = (
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Filter out empty certifications
+      // Filter out empty certifications with proper null checks
       const validCertifications = certifications.filter(cert => 
-        cert.name.trim() !== '' || cert.issuer.trim() !== ''
+        cert.name?.trim() !== '' || cert.issuer?.trim() !== ''
       );
       await onSave(validCertifications);
       onClose();

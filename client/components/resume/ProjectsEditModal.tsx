@@ -328,15 +328,15 @@ export function ProjectsEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="h-5 w-5" />
             Edit Projects
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex h-[70vh] gap-6">
+        <div className="flex flex-1 overflow-hidden gap-6 px-6">
           {/* Left Panel - Project List */}
           <div className="w-1/3 border-r pr-6">
             <div className="flex items-center justify-between mb-4">
@@ -400,7 +400,8 @@ export function ProjectsEditModal({
           </div>
 
           {/* Right Panel - Project Details */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2">
             {(selectedProjectIndex !== null || isAddingNew) ? (
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -624,30 +625,32 @@ export function ProjectsEditModal({
                 </div>
               </div>
             )}
+            </div>
+            
+            {/* Save Buttons - Fixed at bottom of right panel */}
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-200 mt-4 flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isSaving}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="brand-button"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isSaving}
-          >
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="brand-button"
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

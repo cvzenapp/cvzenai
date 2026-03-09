@@ -132,6 +132,7 @@ export interface Resume {
   education: Education[];
   projects: Project[];
   certifications?: Certification[];
+  jobPreferences?: any; // Job preferences data for shared resumes
   upvotes: number;
   rating: number;
   isShortlisted: boolean;

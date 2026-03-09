@@ -220,6 +220,7 @@ export default function ResumeViewer() {
                   education: sharedResume.education || [],
                   projects: sharedResume.projects || [],
                   certifications: sharedResume.certifications || [],
+                  jobPreferences: sharedResume.jobPreferences || null, // Include job preferences
                   upvotes: sharedResume.upvotes || 0,
                   rating: sharedResume.rating || 0,
                   isShortlisted: false,
@@ -239,6 +240,11 @@ export default function ResumeViewer() {
                 } else {
                   console.log("ℹ️ No template customization found for shared resume");
                 }
+                
+                // Debug job preferences data
+                console.log("💼 [DEBUG] Job preferences from shared resume API:", sharedData.data.jobPreferences);
+                console.log("💼 [DEBUG] Job preferences type:", typeof sharedData.data.jobPreferences);
+                console.log("💼 [DEBUG] Job preferences keys:", sharedData.data.jobPreferences ? Object.keys(sharedData.data.jobPreferences) : 'null');
                 
                 setResume(userResumeData);
                 setUserName(userResumeData.personalInfo.name || "User");
@@ -1696,12 +1702,27 @@ export default function ResumeViewer() {
             onSave={handleCertificationsUpdate}
             resumeData={resume}
           />
-
-          <JobPreferencesModal
-            isOpen={isEditingJobPreferences}
-            onClose={() => setIsEditingJobPreferences(false)}
-          />
         </>
+      )}
+
+      {/* Job Preferences Modal - Available for both owners and shared resume viewers */}
+      <JobPreferencesModal
+        isOpen={isEditingJobPreferences}
+        onClose={() => {
+          console.log('💼 [DEBUG] Closing job preferences modal');
+          setIsEditingJobPreferences(false);
+        }}
+        jobPreferences={shareToken ? resume?.jobPreferences : undefined}
+        readOnly={!!shareToken}
+      />
+      
+      {/* Debug job preferences data when modal opens */}
+      {isEditingJobPreferences && shareToken && (
+        <div style={{ display: 'none' }}>
+          {console.log('💼 [DEBUG] Modal opening with job preferences:', resume?.jobPreferences)}
+          {console.log('💼 [DEBUG] ShareToken exists:', !!shareToken)}
+          {console.log('💼 [DEBUG] ReadOnly mode:', !!shareToken)}
+        </div>
       )}
     </>
   );

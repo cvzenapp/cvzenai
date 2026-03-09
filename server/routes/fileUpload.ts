@@ -60,10 +60,18 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   ];
   
+  console.log('📋 File filter check:', {
+    filename: file.originalname,
+    mimetype: file.mimetype,
+    allowed: allowedMimes.includes(file.mimetype)
+  });
+  
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF, DOC, and DOCX files are allowed.'));
+    const error = new Error(`Invalid file type: ${file.mimetype}. Only PDF, DOC, and DOCX files are allowed.`);
+    console.log('❌ File rejected:', error.message);
+    cb(error);
   }
 };
 
@@ -113,8 +121,19 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
     try {
       console.log('🤖 Starting resume parsing with Groq...');
       
-      // Extract text from file
-      const resumeText = await resumeParsingService.extractTextFromFile(filePath, req.file.mimetype);
+      // Extract text from file with error handling for test file interference
+      let resumeText;
+      try {
+        resumeText = await resumeParsingService.extractTextFromFile(filePath, req.file.mimetype);
+        console.log('📄 Text extraction successful:', {
+          textLength: resumeText.length,
+          fileType: req.file.mimetype,
+          preview: resumeText.substring(0, 150) + '...'
+        });
+      } catch (extractError: any) {
+        console.error('❌ Text extraction failed:', extractError.message);
+        throw extractError; // This will be caught by the outer try-catch and handled gracefully
+      }
       
       // Parse with AI
       parsedData = await resumeParsingService.parseResumeWithAI(resumeText);
@@ -248,37 +267,12 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
         }
       });
 
-      // Generate shareToken automatically using slug
+      // Generate shareToken automatically using proper slug generator
       const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || 'resume';
       
-      // Generate unique slug for shareToken
-      const generateUniqueSlug = async (baseName: string): Promise<string> => {
-        const baseSlug = baseName
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .trim();
-        
-        let slug = baseSlug;
-        let counter = 1;
-        
-        while (true) {
-          const existing = await db.query(
-            'SELECT id FROM resume_shares WHERE share_token = $1',
-            [slug]
-          );
-          
-          if (existing.rows.length === 0) {
-            return slug;
-          }
-          
-          slug = `${baseSlug}-${counter}`;
-          counter++;
-        }
-      };
-
-      const shareToken = await generateUniqueSlug(fullName);
+      // Import and use the proper slug generator
+      const { generateUniqueSlug } = await import('../lib/slugGenerator.js');
+      const shareToken = await generateUniqueSlug(db, fullName);
       
       // Create resume share entry
       await db.query(`
@@ -290,7 +284,25 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
       
     } catch (parseError) {
       console.error('❌ Resume parsing or database insertion failed:', parseError);
-      // Don't fail the upload if parsing fails - just log it
+      
+      // Check if it's a text extraction error (PDF/DOCX specific)
+      if (parseError.message.includes('PDF appears to be empty') || 
+          parseError.message.includes('contains mostly images') ||
+          parseError.message.includes('corrupted') ||
+          parseError.message.includes('Password-protected')) {
+        // Return error for PDF-specific issues
+        return res.status(400).json({
+          success: false,
+          error: parseError.message,
+          uploaded: true,
+          url: fileUrl,
+          filename: req.file.originalname,
+          size: req.file.size
+        });
+      }
+      
+      // For other parsing errors, still allow the upload but without parsing
+      console.log('⚠️ Continuing with upload despite parsing failure');
       parsedData = null;
     }
 
@@ -399,6 +411,66 @@ router.post('/recruiter-resume', upload.single('file'), async (req, res: Respons
     res.status(500).json({
       success: false,
       error: 'Failed to upload CV'
+    });
+  }
+});
+
+// POST /api/upload/test-parse - Test resume parsing without saving (authenticated)
+router.post('/test-parse', unifiedAuth.requireAuth, upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    console.log('🧪 Test parsing request received:', {
+      userId: req.user?.id,
+      hasFile: !!req.file,
+      fileSize: req.file?.size,
+      mimeType: req.file?.mimetype
+    });
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    const filePath = req.file.path;
+    
+    try {
+      // Extract text from file
+      const resumeText = await resumeParsingService.extractTextFromFile(filePath, req.file.mimetype);
+      
+      // Clean up the uploaded file
+      await resumeParsingService.cleanupFile(filePath);
+      
+      res.json({
+        success: true,
+        textExtracted: true,
+        textLength: resumeText.length,
+        textPreview: resumeText.substring(0, 500) + (resumeText.length > 500 ? '...' : ''),
+        fileInfo: {
+          filename: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        }
+      });
+    } catch (extractError) {
+      // Clean up the uploaded file even on error
+      await resumeParsingService.cleanupFile(filePath);
+      
+      res.status(400).json({
+        success: false,
+        error: extractError.message,
+        fileInfo: {
+          filename: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        }
+      });
+    }
+  } catch (error) {
+    console.error('❌ Test parsing error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test parse file'
     });
   }
 });

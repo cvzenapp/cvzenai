@@ -123,7 +123,24 @@ export default function ResumeUploadModal({
           return;
         }
         
-        throw new Error(errorData.error || 'Failed to upload file');
+        // Handle PDF-specific errors with better messaging
+        if (response.status === 400 && errorData.error) {
+          if (errorData.error.includes('PDF appears to be empty') || 
+              errorData.error.includes('contains mostly images')) {
+            setError('This PDF appears to contain mostly images or scanned content. Please upload a PDF with selectable text, or try converting it to a text-based PDF first.');
+          } else if (errorData.error.includes('corrupted') || errorData.error.includes('Invalid PDF')) {
+            setError('The PDF file appears to be corrupted or invalid. Please try uploading a different PDF file.');
+          } else if (errorData.error.includes('Password-protected')) {
+            setError('Password-protected PDFs are not supported. Please remove the password protection and try again.');
+          } else if (errorData.error.includes('File not found') || errorData.error.includes('ENOENT')) {
+            setError('There was an issue processing your file. Please try uploading again. If the problem persists, try converting your PDF to a different format.');
+          } else {
+            setError(errorData.error);
+          }
+        } else {
+          throw new Error(errorData.error || 'Failed to upload file');
+        }
+        return;
       }
 
       const data = await response.json();
@@ -242,6 +259,9 @@ export default function ResumeUploadModal({
                       </p>
                       <p className="text-sm text-slate-500">
                         PDF, DOC, or DOCX (max 5MB)
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        For PDFs: Ensure text is selectable (not scanned images)
                       </p>
                     </div>
                   )}

@@ -239,17 +239,19 @@ export const ExperienceProjects: React.FC<ExperienceProjectsProps> = ({
                     key={index} 
                     className="education-item border border-border rounded-lg p-4 hover:border-primary/30 transition-colors"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground">
-                          {edu.degree}
-                        </h3>
-                        <p className="text-primary font-medium">
-                          {edu.institution}
-                        </p>
-                      </div>
-                      <div className="text-sm text-muted-foreground font-medium">
-                        {formatDateRange(edu.startDate, edu.endDate)}
+                    <div className="flex flex-col gap-3 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-foreground leading-tight">
+                            {edu.degree}
+                          </h3>
+                          <p className="text-primary font-medium mt-1">
+                            {edu.institution}
+                          </p>
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium sm:text-right sm:flex-shrink-0">
+                          {formatDateRange(edu.startDate, edu.endDate)}
+                        </div>
                       </div>
                     </div>
 

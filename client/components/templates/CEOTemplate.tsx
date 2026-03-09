@@ -1,6 +1,7 @@
 import React from "react";
 import { Resume } from "@shared/api";
 import { TemplateConfig } from "@/services/templateService";
+import { formatDateRange } from "@/lib/utils";
 import { Star, Heart, GitCompare, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -257,7 +258,7 @@ export default function CEOTemplate({
                           <p className="text-emerald-600 font-medium">{exp.company}</p>
                         </div>
                         <span className="text-sm text-slate-500">
-                          {exp.startDate} - {exp.endDate || "Present"}
+                          {formatDateRange(exp.startDate, exp.endDate)}
                         </span>
                       </div>
                       <p className="text-slate-700 mb-3">{exp.description}</p>
@@ -316,7 +317,7 @@ export default function CEOTemplate({
                         <p className="text-emerald-600">{edu.institution}</p>
                       </div>
                       <span className="text-sm text-slate-500">
-                        {edu.startDate} - {edu.endDate}
+                        {formatDateRange(edu.startDate, edu.endDate)}
                       </span>
                     </div>
                   ))}

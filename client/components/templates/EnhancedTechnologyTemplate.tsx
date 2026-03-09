@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Resume, Project } from "@shared/api";
+import { formatDateRange } from "@/lib/utils";
 
 // Extended Project interface to include achievements for template rendering
 interface ProjectWithAchievements extends Project {
@@ -326,18 +327,18 @@ export default function EnhancedTechnologyTemplate({
                  style={{ backgroundColor: 'var(--template-accent-color)' }}></div>
           </div>
 
-          {/* Header Grid Layout - Symmetrical Design */}
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8 px-8 lg:px-12 py-4 lg:py-6">
+          {/* Header Grid Layout - Responsive Design */}
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 px-4 sm:px-6 lg:px-12 py-4 lg:py-6">
             
             {/* Left: Personal Information */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-start gap-6">
+            <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                 {/* Profile Avatar */}
-                <div className="relative">
-                  <Avatar className="w-24 h-24 border-4 shadow-xl" style={{ borderColor: 'var(--template-background-color)' }}>
+                <div className="relative flex-shrink-0 self-center sm:self-start">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-4 shadow-xl" style={{ borderColor: 'var(--template-background-color)' }}>
                     <AvatarImage src={resume.personalInfo?.avatar} />
                     <AvatarFallback 
-                      className="text-2xl font-bold"
+                      className="text-xl sm:text-2xl font-bold"
                       style={{ 
                         background: `linear-gradient(135deg, var(--template-primary-color), var(--template-accent-color))`,
                         fontFamily: 'var(--template-font-family)',
@@ -348,31 +349,31 @@ export default function EnhancedTechnologyTemplate({
                     </AvatarFallback>
                   </Avatar>
                   {/* Status Indicator */}
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-3 flex items-center justify-center"
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-3 flex items-center justify-center"
                        style={{ 
                          backgroundColor: 'var(--template-accent-color)',
                          borderColor: 'var(--template-background-color)'
                        }}>
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--template-background-color)' }}></div>
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full" style={{ backgroundColor: 'var(--template-background-color)' }}></div>
                   </div>
                 </div>
 
                 {/* Name & Title */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 text-center sm:text-left">
                   <h1 className="font-bold drop-shadow-lg template-name-title"
                       style={{ 
-                        fontSize: `clamp(2.5rem, 5vw, 4rem)`,
+                        fontSize: `clamp(1.75rem, 5vw, 4rem)`,
                         lineHeight: '1.1',
-                        marginBottom: '1rem'
+                        marginBottom: '0.5rem'
                       }}>
                     {resume.personalInfo?.name || "Your Name"}
                   </h1>
                   <p className="font-medium drop-shadow-sm template-job-title" 
                      style={{ 
-                       fontSize: `clamp(1.25rem, 3vw, 1.875rem)`,
+                       fontSize: `clamp(1rem, 3vw, 1.875rem)`,
                        lineHeight: '1.3',
-                       marginTop: '0.75rem',
-                       marginBottom: '1.5rem'
+                       marginTop: '0.5rem',
+                       marginBottom: '1rem'
                      }}>
                     {resume.personalInfo?.title || "Professional Title"}
                   </p>
@@ -391,58 +392,37 @@ export default function EnhancedTechnologyTemplate({
                         </svg>
                       </button>
                     )}
-                    {resume.personalInfo?.email && (
-                      <a href={`mailto:${resume.personalInfo.email}`} 
-                         className="flex items-center gap-3 transition-all duration-300 group hover:bg-white/10 rounded-lg p-2 -m-2">
-                        <div className="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center group-hover:bg-white/25 transition-colors">
-                          <Mail className="w-4 h-4" />
+                    
+                    {resume.personalInfo?.location && (
+                      <div className="flex items-center gap-2 transition-all duration-300 p-2 -m-2 rounded-lg">
+                        <div className="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center">
+                          <MapPin className="w-3.5 h-3.5" />
                         </div>
-                        <span className="font-medium">{resume.personalInfo.email}</span>
-                      </a>
+                        <span className="font-medium text-sm">{resume.personalInfo.location}</span>
+                      </div>
                     )}
                     
-                    <div className="flex items-center gap-6">
-                      {resume.personalInfo?.phone && (
-                        <a href={`tel:${resume.personalInfo.phone}`} 
-                           className="flex items-center gap-2 transition-all duration-300 group hover:bg-white/10 rounded-lg p-2 -m-2">
-                          <div className="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center group-hover:bg-white/25">
-                            <Phone className="w-3.5 h-3.5" />
-                          </div>
-                          <span className="font-medium text-sm">{resume.personalInfo.phone}</span>
-                        </a>
-                      )}
-                      
-                      {resume.personalInfo?.location && (
-                        <div className="flex items-center gap-2 transition-all duration-300 p-2 -m-2 rounded-lg">
-                          <div className="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center">
-                            <MapPin className="w-3.5 h-3.5" />
-                          </div>
-                          <span className="font-medium text-sm">{resume.personalInfo.location}</span>
-                        </div>
-                      )}
-                    </div>
-                    
                     {/* Social Links */}
-                    <div className="flex items-center gap-3 pt-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 justify-center sm:justify-start">
                       {resume.personalInfo?.linkedin && (
                         <a href={resume.personalInfo.linkedin} target="_blank" rel="noopener noreferrer"
-                           className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group">
+                           className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group">
                           <Linkedin className="w-4 h-4" />
-                          <span className="font-medium text-sm">LinkedIn</span>
+                          <span className="font-medium text-xs sm:text-sm">LinkedIn</span>
                         </a>
                       )}
                       {resume.personalInfo?.github && (
                         <a href={resume.personalInfo.github} target="_blank" rel="noopener noreferrer"
-                           className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group">
+                           className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group">
                           <Github className="w-4 h-4" />
-                          <span className="font-medium text-sm">GitHub</span>
+                          <span className="font-medium text-xs sm:text-sm">GitHub</span>
                         </a>
                       )}
                       {resume.personalInfo?.website && (
                         <a href={resume.personalInfo.website} target="_blank" rel="noopener noreferrer"
-                           className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group">
+                           className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors group">
                           <Globe className="w-4 h-4" style={{ color: 'var(--template-background-color)', opacity: 0.8 }} />
-                          <span className="font-medium text-sm" style={{ color: 'var(--template-background-color)', opacity: 0.9 }}>Portfolio</span>
+                          <span className="font-medium text-xs sm:text-sm" style={{ color: 'var(--template-background-color)', opacity: 0.9 }}>Portfolio</span>
                         </a>
                       )}
                     </div>
@@ -695,28 +675,26 @@ export default function EnhancedTechnologyTemplate({
                   <div className="p-6">
                     <div className="max-h-80 overflow-y-auto space-y-3">
                       {resume.education.map((edu, index) => (
-                        <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-4 h-24 flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-4">
-                              <div className="flex-1">
-                                <h3 className="font-bold text-base" style={{ color: 'var(--template-primary-color)' }}>
-                                  {edu.institution}
-                                </h3>
-                                <p className="text-sm text-slate-600">
-                                  {edu.degree} in {edu.field}
+                        <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-4 min-h-[6rem]">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-base leading-tight" style={{ color: 'var(--template-primary-color)' }}>
+                                {edu.institution}
+                              </h3>
+                              <p className="text-sm text-slate-600 mt-1">
+                                {edu.degree} in {edu.field}
+                              </p>
+                            </div>
+                            <div className="sm:text-right flex-shrink-0">
+                              <p className="text-sm text-slate-500">
+                                {formatDateRange(edu.startDate, edu.endDate)}
+                              </p>
+                              {edu.gpa && (
+                                <p className="text-xs font-medium px-2 py-1 bg-slate-100 rounded inline-block mt-1" 
+                                   style={{ color: 'var(--template-primary-color)' }}>
+                                  GPA: {edu.gpa}
                                 </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-slate-500">
-                                  {edu.startDate} - {edu.endDate || 'Present'}
-                                </p>
-                                {edu.gpa && (
-                                  <p className="text-xs font-medium px-2 py-1 bg-slate-100 rounded inline-block mt-1" 
-                                     style={{ color: 'var(--template-primary-color)' }}>
-                                    GPA: {edu.gpa}
-                                  </p>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -931,17 +909,18 @@ export default function EnhancedTechnologyTemplate({
           <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200 bg-gradient-to-br from-white to-slate-50`}>
             {resume.skills && resume.skills.length > 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-2 border-b border-slate-200" 
                      style={{ 
                        background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
                      }}>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                  <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-white" 
                       style={{ 
                         fontFamily: 'var(--template-font-family)',
                         fontWeight: 'var(--template-heading-weight)'
                       }}>
-                    <Code2 size={20} />
-                    Technical Expertise
+                    <Code2 size={18} className="sm:w-5 sm:h-5" />
+                    <span className="hidden sm:inline">Technical Expertise</span>
+                    <span className="sm:hidden">Skills</span>
                   </h2>
                   {/* Edit Button */}
                   {showImproveButtons && (
@@ -957,7 +936,7 @@ export default function EnhancedTechnologyTemplate({
                     </button>
                   )}
                 </div>
-                <div className="p-3">
+                <div className="p-2 sm:p-3">
                   <SkillsGraphChart
                     skills={resume.skills}
                     title=""
@@ -968,17 +947,18 @@ export default function EnhancedTechnologyTemplate({
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-2 border-b border-slate-200" 
                      style={{ 
                        background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
                      }}>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                  <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-white" 
                       style={{ 
                         fontFamily: 'var(--template-font-family)',
                         fontWeight: 'var(--template-heading-weight)'
                       }}>
-                    <Code2 size={20} />
-                    Technical Expertise
+                    <Code2 size={18} className="sm:w-5 sm:h-5" />
+                    <span className="hidden sm:inline">Technical Expertise</span>
+                    <span className="sm:hidden">Skills</span>
                   </h2>
                   {/* Edit Button for empty state */}
                   {showImproveButtons && (
@@ -1009,17 +989,17 @@ export default function EnhancedTechnologyTemplate({
           <div className={`${responsiveValues.horizontalPadding} py-6 border-t border-slate-200 bg-white`}>
             {resume.certifications && resume.certifications.length > 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-6 py-2 border-b border-slate-200" 
+                <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-2 border-b border-slate-200" 
                      style={{ 
                        background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
                      }}>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-white" 
+                  <h2 className="text-base sm:text-xl font-bold flex items-center gap-2 text-white min-w-0" 
                       style={{ 
                         fontFamily: 'var(--template-font-family)',
                         fontWeight: 'var(--template-heading-weight)'
                       }}>
-                    <Award size={20} />
-                    Certifications
+                    <Award size={16} className="sm:w-5 sm:h-5 flex-shrink-0" />
+                    <span className="truncate">Certifications</span>
                   </h2>
                   {/* Edit Button */}
                   {showImproveButtons && (
@@ -1031,7 +1011,7 @@ export default function EnhancedTechnologyTemplate({
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
-                      Edit
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
                   )}
                 </div>
@@ -1045,17 +1025,17 @@ export default function EnhancedTechnologyTemplate({
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-slate-200" 
+                <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-slate-200" 
                      style={{ 
                        background: `linear-gradient(135deg, var(--template-primary-color, #3b82f6), var(--template-accent-color, #8b5cf6))`,
                      }}>
-                  <h2 className="text-2xl font-bold flex items-center gap-2 text-white" 
+                  <h2 className="text-base sm:text-2xl font-bold flex items-center gap-2 text-white min-w-0" 
                       style={{ 
                         fontFamily: 'var(--template-font-family)',
                         fontWeight: 'var(--template-heading-weight)'
                       }}>
-                    <Award size={20} />
-                    Certifications
+                    <Award size={16} className="sm:w-5 sm:h-5 flex-shrink-0" />
+                    <span className="truncate">Certifications</span>
                   </h2>
                   {/* Edit Button for empty state */}
                   {showImproveButtons && (
@@ -1067,7 +1047,7 @@ export default function EnhancedTechnologyTemplate({
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Add
+                      <span className="hidden sm:inline">Add</span>
                     </button>
                   )}
                 </div>

@@ -1,9 +1,13 @@
 import mammoth from 'mammoth';
 import fs from 'fs/promises';
+import path from 'path';
 import { groqService } from './groqService.js';
 import { jsonrepair } from 'jsonrepair';
 import { resumeParser } from './dspy/resumeParser.js';
 import { skillsExtractor } from './dspy/skillsExtractor.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export interface ParsedResumeData {
   personalInfo: {
@@ -59,6 +63,7 @@ export interface ParsedResumeData {
     name: string;
     issuer: string;
     date: string;
+    link?: string;
     expiryDate?: string;
   }>;
   languages?: Array<{
@@ -119,20 +124,60 @@ class ResumeParsingService {
       console.log('✅ Phone extracted locally');
     }
 
-    // Extract LinkedIn URL
+    // Extract LinkedIn URL or username
     const linkedinRegex = /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w-]+\/?/gi;
-    const linkedinMatches = resumeText.match(linkedinRegex);
+    const linkedinUsernameRegex = /linkedin\s*:?\s*([a-zA-Z0-9_-]+)(?:\s|$|\||,|;)/gi;
+    
+    let linkedinMatches = resumeText.match(linkedinRegex);
     if (linkedinMatches && linkedinMatches.length > 0) {
       personalInfo.linkedin = linkedinMatches[0];
-      console.log('✅ LinkedIn extracted locally');
+      console.log('✅ LinkedIn URL extracted locally');
+    } else {
+      // Try to extract LinkedIn username/handle - try multiple patterns
+      const patterns = [
+        /linkedin\s*:?\s*([a-zA-Z0-9_-]+)(?:\s|$|\||,|;)/gi,
+        /linkedin\s*:?\s*([a-zA-Z0-9_-]+)/gi,
+        /linkedin\.com\/in\/([a-zA-Z0-9_-]+)/gi
+      ];
+      
+      for (const pattern of patterns) {
+        pattern.lastIndex = 0; // Reset regex
+        const usernameMatch = pattern.exec(resumeText);
+        if (usernameMatch && usernameMatch[1]) {
+          const username = usernameMatch[1].trim();
+          personalInfo.linkedin = `https://linkedin.com/in/${username}`;
+          console.log('✅ LinkedIn username extracted and converted to URL locally:', username);
+          break;
+        }
+      }
     }
 
-    // Extract GitHub URL
+    // Extract GitHub URL or username
     const githubRegex = /(?:https?:\/\/)?(?:www\.)?github\.com\/[\w-]+\/?/gi;
-    const githubMatches = resumeText.match(githubRegex);
+    const githubUsernameRegex = /github\s*:?\s*([a-zA-Z0-9_-]+)(?:\s|$|\||,|;)/gi;
+    
+    let githubMatches = resumeText.match(githubRegex);
     if (githubMatches && githubMatches.length > 0) {
       personalInfo.github = githubMatches[0];
-      console.log('✅ GitHub extracted locally');
+      console.log('✅ GitHub URL extracted locally');
+    } else {
+      // Try to extract GitHub username/handle - try multiple patterns
+      const patterns = [
+        /github\s*:?\s*([a-zA-Z0-9_-]+)(?:\s|$|\||,|;)/gi,
+        /github\s*:?\s*([a-zA-Z0-9_-]+)/gi,
+        /github\.com\/([a-zA-Z0-9_-]+)/gi
+      ];
+      
+      for (const pattern of patterns) {
+        pattern.lastIndex = 0; // Reset regex
+        const usernameMatch = pattern.exec(resumeText);
+        if (usernameMatch && usernameMatch[1]) {
+          const username = usernameMatch[1].trim();
+          personalInfo.github = `https://github.com/${username}`;
+          console.log('✅ GitHub username extracted and converted to URL locally:', username);
+          break;
+        }
+      }
     }
 
     // Extract website/portfolio URL (excluding LinkedIn, GitHub, email domains)
@@ -310,11 +355,26 @@ class ResumeParsingService {
     console.log('📄 Extracting text from file:', { filePath, mimeType });
     
     try {
+      // Check if file exists first
+      if (!await fs.access(filePath).then(() => true).catch(() => false)) {
+        throw new Error(`File not found: ${filePath}. Please ensure the file was uploaded correctly.`);
+      }
+      
       const fileBuffer = await fs.readFile(filePath);
       return this.extractTextFromBuffer(fileBuffer, mimeType);
     } catch (error: any) {
       console.error('❌ Text extraction failed:', error);
-      throw new Error(`Failed to extract text from file: ${error.message}`);
+      
+      // Provide more specific error messages
+      if (error.code === 'ENOENT') {
+        throw new Error(`File not found: ${filePath}. The uploaded file may have been moved or deleted. Please try uploading again.`);
+      } else if (error.code === 'EACCES') {
+        throw new Error(`Permission denied accessing file: ${filePath}. Please try uploading again.`);
+      } else if (error.message.includes('File not found')) {
+        throw error; // Re-throw our custom file not found error
+      } else {
+        throw new Error(`Failed to extract text from file: ${error.message}`);
+      }
     }
   }
 
@@ -326,25 +386,72 @@ class ResumeParsingService {
     
     try {
       if (mimeType === 'application/pdf') {
-        // Extract from PDF - use dynamic import to avoid initialization issues
-        const pdfParse = (await import('pdf-parse')).default;
-        const pdfData = await pdfParse(fileBuffer);
-        console.log('✅ PDF text extracted:', pdfData.text.length, 'characters');
-        return pdfData.text;
+        // Extract from PDF using pdf-parse v2 (CommonJS require)
+        const { PDFParse } = require('pdf-parse');
+        const parser = new PDFParse({ data: fileBuffer });
+        const result = await parser.getText();
+        await parser.destroy();
+        
+        let cleanText = result.text
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        
+        console.log('✅ PDF text extracted:', {
+          originalLength: result.text.length,
+          cleanedLength: cleanText.length,
+          preview: cleanText.substring(0, 200) + '...'
+        });
+        
+        if (!cleanText || cleanText.length < 50) {
+          throw new Error('PDF appears to be empty or contains mostly images. Please ensure your PDF contains selectable text.');
+        }
+        
+        return cleanText;
       } else if (
         mimeType === 'application/msword' ||
         mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       ) {
         // Extract from DOCX
         const result = await mammoth.extractRawText({ buffer: fileBuffer });
-        console.log('✅ DOCX text extracted:', result.value.length, 'characters');
-        return result.value;
+        
+        // Clean up extracted text
+        let cleanText = result.value
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        
+        console.log('✅ DOCX text extracted:', {
+          originalLength: result.value.length,
+          cleanedLength: cleanText.length,
+          preview: cleanText.substring(0, 200) + '...'
+        });
+        
+        if (!cleanText || cleanText.length < 50) {
+          throw new Error('Document appears to be empty or contains mostly images. Please ensure your document contains readable text.');
+        }
+        
+        return cleanText;
       } else {
-        throw new Error(`Unsupported file type: ${mimeType}`);
+        throw new Error(`Unsupported file type: ${mimeType}. Please upload a PDF, DOC, or DOCX file.`);
       }
     } catch (error: any) {
       console.error('❌ Text extraction failed:', error);
-      throw new Error(`Failed to extract text from buffer: ${error.message}`);
+      
+      // Provide more specific error messages
+      if (error.message.includes('Invalid PDF')) {
+        throw new Error('The uploaded file appears to be corrupted or is not a valid PDF. Please try uploading a different file.');
+      } else if (error.message.includes('Password')) {
+        throw new Error('Password-protected PDFs are not supported. Please upload an unprotected PDF file.');
+      } else if (error.message.includes('empty') || error.message.includes('images')) {
+        throw error; // Re-throw our custom empty content errors
+      } else {
+        throw new Error(`Failed to extract text from file: ${error.message}`);
+      }
     }
   }
 
@@ -423,11 +530,22 @@ class ResumeParsingService {
           technologies: proj.technologies || [],
           link: proj.url || ''
         })),
-        certifications: (parsedData.certifications || []).map(cert => ({
-          name: typeof cert === 'string' ? cert : cert,
-          issuer: '',
-          date: ''
-        })),
+        certifications: (parsedData.certifications || []).map(cert => {
+          if (typeof cert === 'string') {
+            return {
+              name: cert,
+              issuer: '',
+              date: ''
+            };
+          } else {
+            return {
+              name: cert.name || '',
+              issuer: cert.issuer || '',
+              date: cert.date || '',
+              link: cert.link || ''
+            };
+          }
+        }),
         languages: (parsedData.languages || []).map(lang => ({
           language: typeof lang === 'string' ? lang : lang,
           proficiency: ''

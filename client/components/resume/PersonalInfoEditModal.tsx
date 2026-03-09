@@ -196,7 +196,7 @@ export function PersonalInfoEditModal({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !personalInfo.name.trim() || !personalInfo.email.trim()}
+              disabled={isSaving || !personalInfo.name?.trim() || !personalInfo.email?.trim()}
               className="brand-button"
             >
               {isSaving ? (

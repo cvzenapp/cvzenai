@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Briefcase, Calendar, MapPin, Building2 } from 'lucide-react';
 import { Resume } from '@shared/api';
+import { formatDateRange } from '@/lib/utils';
 import './ExperienceCarousel.css';
 
 interface ExperienceCarouselProps {
@@ -71,7 +72,7 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
             </div>
             <span className="experience-dates">
               <Calendar size={16} />
-              {exp.startDate} - {exp.endDate || 'Present'}
+              {formatDateRange(exp.startDate, exp.endDate)}
             </span>
           </div>
           
@@ -162,7 +163,7 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
               </div>
               <span className="experience-dates">
                 <Calendar size={16} />
-                {currentExp.startDate} - {currentExp.endDate || 'Present'}
+                {formatDateRange(currentExp.startDate, currentExp.endDate)}
               </span>
             </div>
             

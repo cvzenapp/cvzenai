@@ -94,6 +94,21 @@ export function EducationEditModal({
     });
   };
 
+  // Update form and reference simultaneously for real-time preview
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Update reference in education list for real-time preview
+    if (editingIndex !== null) {
+      const updatedEducation = [...education];
+      updatedEducation[editingIndex] = {
+        ...updatedEducation[editingIndex],
+        [field]: value
+      };
+      setEducation(updatedEducation);
+    }
+  };
+
   const handleEditEducation = (index: number) => {
     const edu = education[index];
     setFormData({
@@ -145,17 +160,12 @@ export function EducationEditModal({
   };
 
   const handleSave = async () => {
-    console.log('🔍 handleSave clicked');
-    console.log('🔍 Saving education:', education);
-    console.log('🔍 onSave function:', onSave);
     setIsSaving(true);
     try {
-      console.log('🔍 Calling onSave...');
       await onSave(education);
-      console.log('🔍 onSave completed successfully');
       onClose();
     } catch (error) {
-      console.error('🔍 Error saving education:', error);
+      console.error('Error saving education:', error);
     } finally {
       setIsSaving(false);
     }
@@ -168,15 +178,15 @@ export function EducationEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Edit className="h-5 w-5" />
             Edit Education
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex h-[70vh] gap-6">
+        <div className="flex flex-1 overflow-hidden gap-6 px-6">
           {/* Left Panel - Education List */}
           <div className="w-1/3 border-r pr-6">
             <div className="flex items-center justify-between mb-4">
@@ -254,18 +264,19 @@ export function EducationEditModal({
           </div>
 
           {/* Right Panel - Education Details */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-6">
-              <h3 className="font-medium">
-                {editingIndex !== null ? 'Edit Education' : 'Add New Education'}
-              </h3>
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2">
+              <div className="space-y-6">
+                <h3 className="font-medium">
+                  {editingIndex !== null ? 'Edit Education' : 'Add New Education'}
+                </h3>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Institution *</label>
                   <Input
                     value={formData.institution}
-                    onChange={(e) => setFormData({...formData, institution: e.target.value})}
+                    onChange={(e) => handleFormChange('institution', e.target.value)}
                     placeholder="University name"
                   />
                 </div>
@@ -273,7 +284,7 @@ export function EducationEditModal({
                   <label className="text-sm font-medium">Location</label>
                   <Input
                     value={formData.location}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    onChange={(e) => handleFormChange('location', e.target.value)}
                     placeholder="City, State"
                   />
                 </div>
@@ -284,7 +295,7 @@ export function EducationEditModal({
                   <label className="text-sm font-medium">Degree *</label>
                   <Input
                     value={formData.degree}
-                    onChange={(e) => setFormData({...formData, degree: e.target.value})}
+                    onChange={(e) => handleFormChange('degree', e.target.value)}
                     placeholder="Bachelor's, Master's, PhD"
                   />
                 </div>
@@ -292,7 +303,7 @@ export function EducationEditModal({
                   <label className="text-sm font-medium">Field of Study *</label>
                   <Input
                     value={formData.field}
-                    onChange={(e) => setFormData({...formData, field: e.target.value})}
+                    onChange={(e) => handleFormChange('field', e.target.value)}
                     placeholder="Computer Science, Engineering"
                   />
                 </div>
@@ -304,18 +315,7 @@ export function EducationEditModal({
                   <Input
                     type="date"
                     value={formData.startDate}
-                    onChange={(e) => {
-                      setFormData({...formData, startDate: e.target.value});
-                      // Auto-save if editing existing education
-                      if (editingIndex !== null) {
-                        const updatedEducation = [...education];
-                        updatedEducation[editingIndex] = {
-                          ...updatedEducation[editingIndex],
-                          startDate: e.target.value
-                        };
-                        setEducation(updatedEducation);
-                      }
-                    }}
+                    onChange={(e) => handleFormChange('startDate', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -323,25 +323,14 @@ export function EducationEditModal({
                   <Input
                     type="date"
                     value={formData.endDate}
-                    onChange={(e) => {
-                      setFormData({...formData, endDate: e.target.value});
-                      // Auto-save if editing existing education
-                      if (editingIndex !== null) {
-                        const updatedEducation = [...education];
-                        updatedEducation[editingIndex] = {
-                          ...updatedEducation[editingIndex],
-                          endDate: e.target.value
-                        };
-                        setEducation(updatedEducation);
-                      }
-                    }}
+                    onChange={(e) => handleFormChange('endDate', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">GPA</label>
                   <Input
                     value={formData.gpa}
-                    onChange={(e) => setFormData({...formData, gpa: e.target.value})}
+                    onChange={(e) => handleFormChange('gpa', e.target.value)}
                     placeholder="3.8/4.0"
                   />
                 </div>
@@ -351,63 +340,65 @@ export function EducationEditModal({
                 <label className="text-sm font-medium">Description</label>
                 <Textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => handleFormChange('description', e.target.value)}
                   placeholder="Relevant coursework, achievements, honors, or activities..."
                   rows={4}
                 />
               </div>
 
-              {/* Save Education Button */}
+              {/* Update/Add Education Button */}
               <div className="pt-4 border-t">
                 <Button 
                   onClick={handleAddEducation} 
-                  disabled={!formData.institution.trim() || !formData.degree.trim()}
+                  disabled={!formData.institution?.trim() || !formData.degree?.trim()}
                   className="w-full brand-button"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {editingIndex !== null ? 'Update Education' : 'Add Education'}
                 </Button>
               </div>
+              </div>
             </div>
-          </div>
-        </div>
+            
+            {/* Bottom Action Buttons */}
+            <div className="flex items-center justify-between gap-2 pt-4 border-t border-gray-200 mt-4 flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={handleAIGenerate}
+                disabled={isGeneratingAI || !resumeData}
+                className="brand-button-outline flex items-center gap-2"
+              >
+                {isGeneratingAI ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {isGeneratingAI ? 'Generating...' : 'Enhance with AI'}
+              </Button>
 
-        <div className="flex items-center justify-between gap-2 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleAIGenerate}
-            disabled={isGeneratingAI || !resumeData}
-            className="brand-button-outline flex items-center gap-2"
-          >
-            {isGeneratingAI ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            {isGeneratingAI ? 'Generating...' : 'Enhance with AI'}
-          </Button>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="brand-button"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isSaving}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="brand-button"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </DialogContent>

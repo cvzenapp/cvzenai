@@ -135,9 +135,9 @@ export function ExperienceEditModal({
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // Filter out empty experiences
+      // Filter out empty experiences with proper null checks
       const validExperiences = experiences.filter(exp => 
-        exp.company.trim() && exp.position.trim()
+        exp.company?.trim() && exp.position?.trim()
       );
       
       await onSave(validExperiences);
@@ -154,17 +154,17 @@ export function ExperienceEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 flex-shrink-0">
           <DialogTitle className="text-xl font-semibold text-gray-900">
             Edit Professional Experience
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-6 h-[600px]">
+        <div className="flex gap-6 flex-1 overflow-hidden px-6">
           {/* Left Panel - Experience List */}
-          <div className="w-1/3 border-r border-gray-200 pr-4">
-            <div className="flex justify-between items-center mb-4">
+          <div className="w-1/3 border-r border-gray-200 pr-4 flex flex-col">
+            <div className="flex justify-between items-center mb-4 flex-shrink-0">
               <h3 className="font-medium text-gray-900">Experiences</h3>
               <Button
                 onClick={addExperience}
@@ -176,7 +176,7 @@ export function ExperienceEditModal({
               </Button>
             </div>
 
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            <div className="space-y-2 flex-1 overflow-y-auto pr-2">
               {experiences.map((experience, index) => (
                 <div
                   key={experience.id}
@@ -219,7 +219,8 @@ export function ExperienceEditModal({
           </div>
 
           {/* Right Panel - Experience Details */}
-          <div className="flex-1 space-y-4 overflow-y-auto">
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="position">Position *</Label>
@@ -314,24 +315,26 @@ export function ExperienceEditModal({
                 className="resize-none"
               />
             </div>
+            </div>
+            
+            {/* Save Buttons - Fixed at bottom of right panel */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4 flex-shrink-0">
+              <Button
+                onClick={onClose}
+                variant="outline"
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="brand-button"
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
-            className="brand-button"
-          >
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

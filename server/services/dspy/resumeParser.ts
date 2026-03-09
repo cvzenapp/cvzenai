@@ -47,7 +47,12 @@ interface ParsedResume {
     testing?: string[];
     other?: string[];
   };
-  certifications?: string[];
+  certifications?: Array<{
+    name: string;
+    issuer?: string;
+    date?: string;
+    link?: string;
+  }> | string[];
   projects?: Array<{
     name: string;
     description?: string; // Complete detailed project description
@@ -138,21 +143,25 @@ class ResumeParser {
       
       const userPrompt = `Parse this resume completely and extract ALL details. Fill every field with complete information from the resume.
 
-MANDATORY REQUIREMENTS:
-- Extract FULL job descriptions and responsibilities for each experience
-- Extract COMPLETE project descriptions with all details
-- Extract Certification names,certification organizations, certification links, dates in any format
-- Generate career objective if it is not found
+MANDATORY REQUIREMENTS FOR EXPERIENCE SECTION:
+- Extract COMPLETE job descriptions for each role - include ALL paragraphs and bullet points
+- Fill "description" field with the ENTIRE experience text for each job (not just summary)
+- Fill "responsibilities" array with EVERY bullet point, achievement, and task mentioned
+- Include ALL work experience sections: Professional Experience, Work Experience, Employment History, Career History, Company Experience
+- Extract FULL company names, exact job titles, complete locations, and precise dates
+- Do NOT summarize or shorten any experience content - extract everything verbatim
+
+MANDATORY REQUIREMENTS FOR OTHER SECTIONS:
+- Extract FULL project descriptions with all technical details
 - Extract ALL skills, certifications, languages, achievements
-- Extract Project start date and end date in any format
-- Extract ALL project technologies and details
-- Extract ALL project names, descriptions, and technologies
-- Diferrentiate professional experience with project portfolios seperately
+- Generate career objective if not explicitly found
 - Include ALL bullet points and paragraphs exactly as written
-- Fill responsibilities array with every bullet point from each job
-- Fill description field with complete job/project text
-- Extract ALL skills, certifications, languages, achievements from resume
-- Do NOT leave any field empty if information exists in resume
+- Extract ALL project technologies and implementation details
+- Differentiate professional experience from project portfolios separately
+- Extract certification names, organizations, links, dates in any format
+- Extract project start/end dates in any format
+
+CRITICAL: Do NOT leave any field empty if information exists in resume. Extract EVERYTHING.
 
 Resume text:
 ${resumeText}
@@ -266,43 +275,166 @@ Extract EVERYTHING and return ONLY complete JSON with full details.`;
       result.certifications = result.certifications || [];
       result.projects = result.projects || [];
       
-      // Post-process experience entries to ensure they have descriptions and responsibilities
+      // Post-process experience entries to ensure they have complete descriptions and responsibilities
       if (result.experience && result.experience.length > 0) {
         for (let i = 0; i < result.experience.length; i++) {
           const exp = result.experience[i];
           
-          // If experience is missing description or responsibilities, try to extract from resume text
-          if ((!exp.description || exp.description.trim() === '') && 
-              (!exp.responsibilities || exp.responsibilities.length === 0)) {
-            
+          console.log(`🔍 [RESUME PARSER] Processing experience: ${exp.company} - ${exp.title}`);
+          
+          // Always try to enhance experience descriptions, even if some data exists
+          const shouldEnhance = !exp.description || exp.description.trim().length < 100 || 
+                               !exp.responsibilities || exp.responsibilities.length === 0;
+          
+          if (shouldEnhance) {
             console.log(`🔍 [RESUME PARSER] Enhancing experience entry for ${exp.company}...`);
             
-            // Try to find the experience section in the resume text
-            const companyRegex = new RegExp(`${exp.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n\\n|\\n[A-Z]|$)`, 'i');
-            const experienceMatch = resumeText.match(companyRegex);
+            // Try multiple patterns to find experience content
+            const searchPatterns = [
+              // Company name followed by content
+              new RegExp(`${exp.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n\\n|\\n[A-Z][a-z]+:|\\n\\d{4}|$)`, 'i'),
+              // Job title followed by content
+              new RegExp(`${exp.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n\\n|\\n[A-Z][a-z]+:|\\n\\d{4}|$)`, 'i'),
+              // Look for experience sections
+              /(?:professional experience|work experience|employment history|career history|experience)[\\s\\S]*?(?=\\n(?:education|skills|projects|certifications)|$)/gi,
+              // Look for company-title combinations
+              new RegExp(`${exp.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${exp.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n\\n|\\n[A-Z]|$)`, 'i')
+            ];
             
-            if (experienceMatch) {
-              const experienceText = experienceMatch[0];
-              console.log(`📝 [RESUME PARSER] Found experience text for ${exp.company}:`, experienceText.substring(0, 200));
-              
+            let experienceText = '';
+            for (const pattern of searchPatterns) {
+              const match = resumeText.match(pattern);
+              if (match && match[0].length > experienceText.length) {
+                experienceText = match[0];
+                console.log(`📝 [RESUME PARSER] Found experience text using pattern (${experienceText.length} chars)`);
+              }
+            }
+            
+            if (experienceText) {
               // Extract bullet points as responsibilities
-              const bulletPoints = experienceText.match(/[•·▪▫◦‣⁃]\s*(.+)/g) || 
-                                 experienceText.match(/^\s*[-*]\s*(.+)/gm) || 
-                                 experienceText.match(/^\s*\d+\.\s*(.+)/gm);
+              const bulletPatterns = [
+                /[•·▪▫◦‣⁃]\s*(.+)/g,
+                /^\s*[-*]\s*(.+)/gm,
+                /^\s*\d+\.\s*(.+)/gm,
+                /^\s*[a-z]\)\s*(.+)/gmi,
+                /^\s*[ivx]+\.\s*(.+)/gmi
+              ];
               
-              if (bulletPoints && bulletPoints.length > 0) {
-                exp.responsibilities = bulletPoints.map(point => 
-                  point.replace(/^[•·▪▫◦‣⁃\-*\d+\.\s]+/, '').trim()
-                );
-                console.log(`✅ [RESUME PARSER] Extracted ${exp.responsibilities.length} responsibilities for ${exp.company}`);
+              let responsibilities: string[] = [];
+              for (const pattern of bulletPatterns) {
+                const matches = experienceText.match(pattern);
+                if (matches && matches.length > 0) {
+                  const extracted = matches.map(point => 
+                    point.replace(/^[•·▪▫◦‣⁃\-*\d+\.\s\w\)ivx]+/, '').trim()
+                  ).filter(r => r.length > 10); // Filter out very short items
+                  
+                  if (extracted.length > responsibilities.length) {
+                    responsibilities = extracted;
+                  }
+                }
               }
               
-              // Use the full experience text as description
+              // If we found responsibilities, use them
+              if (responsibilities.length > 0) {
+                exp.responsibilities = responsibilities;
+                console.log(`✅ [RESUME PARSER] Extracted ${responsibilities.length} responsibilities for ${exp.company}`);
+              }
+              
+              // Always use the full experience text as description
               exp.description = experienceText.trim();
               console.log(`✅ [RESUME PARSER] Added description for ${exp.company} (${exp.description.length} chars)`);
+            } else {
+              console.log(`⚠️ [RESUME PARSER] Could not find detailed experience text for ${exp.company}`);
+            }
+          } else {
+            console.log(`✅ [RESUME PARSER] Experience for ${exp.company} already has sufficient detail`);
+          }
+        }
+      }
+      
+      // Post-process certifications to ensure they have complete information
+      if (result.certifications && result.certifications.length > 0) {
+        const enhancedCertifications: any[] = [];
+        
+        for (let i = 0; i < result.certifications.length; i++) {
+          const cert = result.certifications[i];
+          
+          // Handle both string and object formats
+          if (typeof cert === 'string') {
+            console.log(`🔍 [RESUME PARSER] Processing certification string: ${cert}`);
+            
+            // Try to extract detailed information from the certification text
+            const certificationPatterns = [
+              // "Certification Name | Issuer | Date" format
+              /^(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)$/,
+              // "Certification Name - Issuer (Date)" format
+              /^(.+?)\s*-\s*(.+?)\s*\((.+?)\)$/,
+              // "Certification Name, Issuer, Date" format
+              /^(.+?),\s*(.+?),\s*(.+?)$/,
+              // "Certification Name by Issuer (Date)" format
+              /^(.+?)\s+by\s+(.+?)\s*\((.+?)\)$/
+            ];
+            
+            let parsed = false;
+            for (const pattern of certificationPatterns) {
+              const match = cert.match(pattern);
+              if (match) {
+                enhancedCertifications.push({
+                  name: match[1].trim(),
+                  issuer: match[2].trim(),
+                  date: match[3].trim(),
+                  link: ''
+                });
+                parsed = true;
+                console.log(`✅ [RESUME PARSER] Parsed certification: ${match[1]} from ${match[2]}`);
+                break;
+              }
+            }
+            
+            // If no pattern matched, use the string as name
+            if (!parsed) {
+              enhancedCertifications.push({
+                name: cert.trim(),
+                issuer: '',
+                date: '',
+                link: ''
+              });
+              console.log(`⚠️ [RESUME PARSER] Could not parse certification details, using as name: ${cert}`);
+            }
+          } else {
+            // Already an object, just ensure all fields exist
+            enhancedCertifications.push({
+              name: cert.name || '',
+              issuer: cert.issuer || '',
+              date: cert.date || '',
+              link: cert.link || ''
+            });
+            console.log(`✅ [RESUME PARSER] Certification object: ${cert.name}`);
+          }
+        }
+        
+        // Try to find certification links in the resume text
+        for (const cert of enhancedCertifications) {
+          if (!cert.link && cert.name) {
+            // Look for links near the certification name
+            const linkPatterns = [
+              new RegExp(`${cert.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(https?://[^\\s]+)`, 'i'),
+              new RegExp(`(https?://[^\\s]+)[\\s\\S]*?${cert.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i')
+            ];
+            
+            for (const pattern of linkPatterns) {
+              const match = resumeText.match(pattern);
+              if (match && match[1]) {
+                cert.link = match[1];
+                console.log(`✅ [RESUME PARSER] Found link for ${cert.name}: ${cert.link}`);
+                break;
+              }
             }
           }
         }
+        
+        result.certifications = enhancedCertifications;
+        console.log(`✅ [RESUME PARSER] Enhanced ${enhancedCertifications.length} certifications`);
       }
       
       // Post-process projects to ensure they have complete descriptions
@@ -514,7 +646,13 @@ KEY PRINCIPLES:
 2. Parse education history (degree, institution, dates, field of study) - include both startDate/endDate AND year fields
 3. Extract work experience with COMPLETE details (title, company, dates, location, responsibilities, description)
 4. Identify all skills (technical, soft skills, tools, technologies)
-5. Find certifications and licenses
+CERTIFICATION EXTRACTION:
+- Look for sections: "Certifications", "Professional Certifications", "Licenses", "Credentials", "Certificates"
+- Extract certification name, issuing organization, date obtained, and any links/URLs
+- Handle various formats: "AWS Certified Solutions Architect - Amazon (2023)", "Microsoft Azure Fundamentals | Microsoft | 2022"
+- Parse certification links and verification URLs when available
+- Include expiration dates if mentioned
+- Extract both active and expired certifications
 6. Extract ALL projects with FULL descriptions - do not limit quantity
 7. Extract career objective/summary statements completely
 8. Maintain data accuracy and completeness
@@ -567,7 +705,7 @@ OUTPUT FORMAT (return ONLY valid JSON):
   "education": [{"degree": "string", "institution": "string", "field": "string", "year": "string", "location": "string", "startDate": "string", "endDate": "string"}],
   "experience": [{"title": "string", "company": "string", "startDate": "string", "endDate": "string", "location": "string", "responsibilities": ["detailed responsibility 1", "detailed responsibility 2"], "description": "complete job description text"}],
   "skills": ["string"],
-  "certifications": ["string"],
+  "certifications": [{"name": "string", "issuer": "string", "date": "string", "link": "string"}],
   "projects": [{"name": "string", "description": "complete detailed project description", "technologies": ["string"], "url": "string"}],
   "languages": ["string"],
   "achievements": ["string"]

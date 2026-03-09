@@ -295,7 +295,43 @@
   .education-card {
     padding: 1.25rem;
     padding-bottom: 4rem;
-    min-height: 220px;
+    min-height: 240px;
+    height: auto;
+  }
+
+  .education-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .education-institution {
+    font-size: 1rem;
+    min-width: auto;
+  }
+
+  .education-dates {
+    align-self: flex-start;
+  }
+
+  .education-details-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .education-gpa {
+    width: 80px;
+    height: 80px;
+    align-self: center;
+  }
+
+  .gpa-value {
+    font-size: 1.75rem;
+  }
+
+  .gpa-label {
+    font-size: 1.5rem;
   }
 
   .carousel-arrow {
@@ -311,21 +347,8 @@
     right: 0.75rem;
   }
 
-  .education-institution {
-    font-size: 1rem;
-  }
-
   .education-degree {
     font-size: 0.9375rem;
-  }
-
-  .education-card-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .education-dates {
-    align-self: flex-start;
   }
 
   .carousel-dots {
@@ -341,6 +364,32 @@
   .education-card {
     padding: 1rem;
     padding-bottom: 3.5rem;
+    min-height: 220px;
+  }
+
+  .education-institution {
+    font-size: 0.9375rem;
+  }
+
+  .education-degree {
+    font-size: 0.875rem;
+  }
+
+  .education-field {
+    font-size: 0.8125rem;
+  }
+
+  .education-gpa {
+    width: 70px;
+    height: 70px;
+  }
+
+  .gpa-value {
+    font-size: 1.5rem;
+  }
+
+  .gpa-label {
+    font-size: 1.25rem;
   }
 
   .carousel-arrow {

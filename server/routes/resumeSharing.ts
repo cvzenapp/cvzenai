@@ -103,12 +103,11 @@ router.post("/generate/:resumeId", async (req: Request, res: Response) => {
     // Check if a share link already exists for this resume
     console.log('🔍 Checking for existing share link...');
     
-    // Try with user_id first (if column exists), fallback to just resume_id
     let existingShareResult;
     try {
       existingShareResult = await db.query(`
-        SELECT share_token, expires_at FROM resume_shares 
-        WHERE resume_id = $1 AND user_id = $2
+        SELECT share_token, expires_at, is_active FROM resume_shares 
+        WHERE resume_id = $1 AND user_id = $2 AND COALESCE(is_active, true) = true
         ORDER BY created_at DESC
         LIMIT 1
       `, [resumeId, userId]);
@@ -116,8 +115,8 @@ router.post("/generate/:resumeId", async (req: Request, res: Response) => {
       // If user_id column doesn't exist, try without it
       console.log('⚠️ user_id column may not exist, trying without it...');
       existingShareResult = await db.query(`
-        SELECT share_token, expires_at FROM resume_shares 
-        WHERE resume_id = $1
+        SELECT share_token, expires_at, is_active FROM resume_shares 
+        WHERE resume_id = $1 AND COALESCE(is_active, true) = true
         ORDER BY created_at DESC
         LIMIT 1
       `, [resumeId]);
@@ -128,43 +127,90 @@ router.post("/generate/:resumeId", async (req: Request, res: Response) => {
     
     if (existingShareResult.rows.length > 0) {
       const existingShare = existingShareResult.rows[0];
-      const existingExpiresAt = new Date(existingShare.expires_at);
-      const now = new Date();
       
-      // If existing share is still valid (not expired), return it
-      if (existingExpiresAt > now) {
-        console.log('✅ Found valid existing share link, returning it');
+      // If existing share exists and is active, return it regardless of expiry
+      if (existingShare.is_active !== false) {
+        console.log('✅ Found existing active share link, returning it');
         finalShareToken = existingShare.share_token;
-        finalExpiresAt = existingExpiresAt;
+        finalExpiresAt = existingShare.expires_at ? new Date(existingShare.expires_at) : null;
+        
+        // Update expiry if it's null or expired
+        if (!finalExpiresAt || finalExpiresAt < new Date()) {
+          console.log('🔄 Updating expiry for existing share link...');
+          try {
+            await db.query(`
+              UPDATE resume_shares 
+              SET expires_at = $1
+              WHERE resume_id = $2 AND user_id = $3 AND share_token = $4
+            `, [expiresAt, resumeId, userId, finalShareToken]);
+            finalExpiresAt = expiresAt;
+            console.log('✅ Updated expiry for existing share record');
+          } catch (error) {
+            // Fallback without user_id if column doesn't exist
+            console.log('⚠️ Updating expiry without user_id...');
+            await db.query(`
+              UPDATE resume_shares 
+              SET expires_at = $1
+              WHERE resume_id = $2 AND share_token = $3
+            `, [expiresAt, resumeId, finalShareToken]);
+            finalExpiresAt = expiresAt;
+            console.log('✅ Updated expiry for existing share record (without user_id)');
+          }
+        }
       } else {
-        // Update the existing record with new token and expiry
-        console.log('🔄 Updating expired share link...');
+        // Reactivate the existing share with new token and expiry
+        console.log('🔄 Reactivating existing share link...');
         try {
           await db.query(`
             UPDATE resume_shares 
-            SET share_token = $1, expires_at = $2, created_at = CURRENT_TIMESTAMP
+            SET share_token = $1, expires_at = $2, is_active = true
             WHERE resume_id = $3 AND user_id = $4
           `, [shareToken, expiresAt, resumeId, userId]);
-          console.log('✅ Updated existing share record');
+          console.log('✅ Reactivated existing share record');
         } catch (error) {
           // Fallback without user_id if column doesn't exist
-          console.log('⚠️ Updating without user_id...');
+          console.log('⚠️ Reactivating without user_id...');
           await db.query(`
             UPDATE resume_shares 
-            SET share_token = $1, expires_at = $2, created_at = CURRENT_TIMESTAMP
+            SET share_token = $1, expires_at = $2, is_active = true
             WHERE resume_id = $3
           `, [shareToken, expiresAt, resumeId]);
-          console.log('✅ Updated existing share record (without user_id)');
+          console.log('✅ Reactivated existing share record (without user_id)');
         }
       }
     } else {
-      // Insert new share record
+      // Insert new share record only if none exists
       console.log('💾 Inserting new share record...');
-      await db.query(`
-        INSERT INTO resume_shares (share_token, resume_id, user_id, expires_at)
-        VALUES ($1, $2, $3, $4)
-      `, [shareToken, resumeId, userId, expiresAt]);
-      console.log('✅ New share record inserted');
+      try {
+        await db.query(`
+          INSERT INTO resume_shares (share_token, resume_id, user_id, expires_at, is_active)
+          VALUES ($1, $2, $3, $4, true)
+          ON CONFLICT (resume_id, user_id) DO UPDATE SET
+            share_token = EXCLUDED.share_token,
+            expires_at = EXCLUDED.expires_at,
+            is_active = true
+        `, [shareToken, resumeId, userId, expiresAt]);
+        console.log('✅ New share record inserted with conflict resolution');
+      } catch (error) {
+        // Fallback without user_id and conflict resolution
+        console.log('⚠️ Inserting without user_id and conflict resolution...');
+        try {
+          await db.query(`
+            INSERT INTO resume_shares (share_token, resume_id, expires_at, is_active)
+            VALUES ($1, $2, $3, true)
+          `, [shareToken, resumeId, expiresAt]);
+          console.log('✅ New share record inserted (without user_id)');
+        } catch (insertError) {
+          // If still fails due to duplicate, try to update existing
+          console.log('⚠️ Insert failed, trying to update existing record...');
+          await db.query(`
+            UPDATE resume_shares 
+            SET share_token = $1, expires_at = $2, is_active = true
+            WHERE resume_id = $3
+          `, [shareToken, expiresAt, resumeId]);
+          console.log('✅ Updated existing share record as fallback');
+        }
+      }
     }
     
     console.log(`✅ Share token ready for resume ${resumeId} (user ${userId}): ${finalShareToken.substring(0, 8)}...`);
@@ -356,7 +402,7 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
     console.log('🔍 [CUSTOMIZATION] Resume user_id:', resumeData.user_id);
     console.log('🔍 [CUSTOMIZATION] Resume template_id:', resumeData.template_id);
     
-    // Load from resume_customizations table (correct table name and column)
+    // Strategy 1: Load from resume_customizations table (resume-specific customizations)
     try {
       const resumeCustomizationResult = await db.query(`
         SELECT customization_data FROM resume_customizations 
@@ -384,20 +430,90 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
           updatedAt: new Date().toISOString()
         };
         
-        console.log('✅ [CUSTOMIZATION] Converted customization:', {
-          hasColors: !!templateCustomizations.colors && Object.keys(templateCustomizations.colors).length > 0,
-          hasTypography: !!templateCustomizations.typography && Object.keys(templateCustomizations.typography).length > 0,
-          hasLayout: !!templateCustomizations.layout && Object.keys(templateCustomizations.layout).length > 0,
-          colors: templateCustomizations.colors,
-          typography: templateCustomizations.typography,
-          layout: templateCustomizations.layout
-        });
+        console.log('✅ [CUSTOMIZATION] Using resume-specific customization');
       } else {
-        console.log('ℹ️ [CUSTOMIZATION] No resume-specific customizations found in database');
+        console.log('ℹ️ [CUSTOMIZATION] No resume-specific customizations found');
       }
     } catch (resumeCustomError) {
       console.error('❌ [CUSTOMIZATION] Error loading resume customizations:', resumeCustomError.message);
-      console.error('❌ [CUSTOMIZATION] Stack:', resumeCustomError.stack);
+    }
+    
+    // Strategy 2: If no resume-specific customizations, load from template_customizations (user's template preferences)
+    if (!templateCustomizations) {
+      try {
+        console.log('🔍 [CUSTOMIZATION] Looking for user template customizations...');
+        const templateCustomizationResult = await db.query(`
+          SELECT id, template_id, name, colors, typography, layout, sections, is_default, created_at, updated_at
+          FROM template_customizations 
+          WHERE user_id = $1 AND template_id = $2 AND is_active = true
+          ORDER BY is_default DESC, updated_at DESC
+          LIMIT 1
+        `, [resumeData.user_id, resumeData.template_id || 'tech-modern-1']);
+        
+        if (templateCustomizationResult.rows.length > 0) {
+          const customData = templateCustomizationResult.rows[0];
+          console.log('✅ [CUSTOMIZATION] Found user template customizations:', customData.name);
+          
+          templateCustomizations = {
+            id: customData.id,
+            templateId: customData.template_id,
+            userId: resumeData.user_id,
+            name: customData.name,
+            colors: parseJsonField(customData.colors),
+            typography: parseJsonField(customData.typography),
+            layout: parseJsonField(customData.layout),
+            sections: parseJsonField(customData.sections),
+            isDefault: customData.is_default,
+            createdAt: customData.created_at,
+            updatedAt: customData.updated_at
+          };
+          
+          console.log('✅ [CUSTOMIZATION] Using user template customization');
+        } else {
+          console.log('ℹ️ [CUSTOMIZATION] No user template customizations found');
+        }
+      } catch (templateCustomError) {
+        console.error('❌ [CUSTOMIZATION] Error loading template customizations:', templateCustomError.message);
+      }
+    }
+    
+    // Strategy 3: If still no customizations, try to load user's default customization for any template
+    if (!templateCustomizations) {
+      try {
+        console.log('🔍 [CUSTOMIZATION] Looking for user default customizations...');
+        const defaultCustomizationResult = await db.query(`
+          SELECT id, template_id, name, colors, typography, layout, sections, is_default, created_at, updated_at
+          FROM template_customizations 
+          WHERE user_id = $1 AND is_default = true AND is_active = true
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `, [resumeData.user_id]);
+        
+        if (defaultCustomizationResult.rows.length > 0) {
+          const customData = defaultCustomizationResult.rows[0];
+          console.log('✅ [CUSTOMIZATION] Found user default customizations:', customData.name);
+          
+          templateCustomizations = {
+            id: customData.id,
+            templateId: customData.template_id,
+            userId: resumeData.user_id,
+            name: customData.name,
+            colors: parseJsonField(customData.colors),
+            typography: parseJsonField(customData.typography),
+            layout: parseJsonField(customData.layout),
+            sections: parseJsonField(customData.sections),
+            isDefault: customData.is_default,
+            createdAt: customData.created_at,
+            updatedAt: customData.updated_at
+          };
+          
+          console.log('✅ [CUSTOMIZATION] Using user default customization');
+        } else {
+          console.log('ℹ️ [CUSTOMIZATION] No user default customizations found');
+        }
+      } catch (defaultCustomError) {
+        console.error('❌ [CUSTOMIZATION] Error loading default customizations:', defaultCustomError.message);
+      }
     }
     
     // Log final customization state
@@ -412,6 +528,81 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
       });
     } else {
       console.log('⚠️ [CUSTOMIZATION] No customizations found - shared resume will use default styling');
+    }
+
+    // Load job preferences for this user
+    let jobPreferences = null;
+    
+    console.log('💼 [JOB_PREFERENCES] Loading job preferences for user...');
+    console.log('🔍 [JOB_PREFERENCES] User ID:', resumeData.user_id);
+    
+    try {
+      const jobPreferencesResult = await db.query(`
+        SELECT 
+          work_type,
+          employment_type,
+          preferred_countries,
+          preferred_states,
+          preferred_cities,
+          willing_to_relocate,
+          notice_period_days,
+          last_working_day,
+          immediate_availability,
+          interview_availability,
+          preferred_interview_mode,
+          expected_salary_min,
+          expected_salary_max,
+          salary_currency,
+          salary_negotiable,
+          industry_preferences,
+          company_size_preference,
+          role_level,
+          created_at,
+          updated_at
+        FROM job_preferences 
+        WHERE user_id = $1
+        LIMIT 1
+      `, [resumeData.user_id]);
+      
+      if (jobPreferencesResult.rows.length > 0) {
+        const prefs = jobPreferencesResult.rows[0];
+        jobPreferences = {
+          workType: prefs.work_type || [],
+          employmentType: prefs.employment_type || [],
+          preferredCountries: prefs.preferred_countries || [],
+          preferredStates: prefs.preferred_states || [],
+          preferredCities: prefs.preferred_cities || [],
+          willingToRelocate: prefs.willing_to_relocate || false,
+          noticePeriodDays: prefs.notice_period_days || 30,
+          lastWorkingDay: prefs.last_working_day,
+          immediateAvailability: prefs.immediate_availability || false,
+          interviewAvailability: parseJsonField(prefs.interview_availability),
+          preferredInterviewMode: prefs.preferred_interview_mode || [],
+          expectedSalaryMin: prefs.expected_salary_min,
+          expectedSalaryMax: prefs.expected_salary_max,
+          salaryCurrency: prefs.salary_currency || 'USD',
+          salaryNegotiable: prefs.salary_negotiable !== false,
+          industryPreferences: prefs.industry_preferences || [],
+          companySizePreference: prefs.company_size_preference || [],
+          roleLevel: prefs.role_level,
+          createdAt: prefs.created_at,
+          updatedAt: prefs.updated_at
+        };
+        
+        console.log('✅ [JOB_PREFERENCES] Found job preferences:', {
+          workType: jobPreferences.workType,
+          employmentType: jobPreferences.employmentType,
+          preferredCountries: jobPreferences.preferredCountries,
+          roleLevel: jobPreferences.roleLevel,
+          salaryRange: jobPreferences.expectedSalaryMin && jobPreferences.expectedSalaryMax 
+            ? `${jobPreferences.expectedSalaryMin}-${jobPreferences.expectedSalaryMax} ${jobPreferences.salaryCurrency}`
+            : 'Not specified'
+        });
+      } else {
+        console.log('ℹ️ [JOB_PREFERENCES] No job preferences found for user');
+      }
+    } catch (jobPrefsError) {
+      console.error('❌ [JOB_PREFERENCES] Error loading job preferences:', jobPrefsError.message);
     }
 
     // Parse personal_info JSONB field
@@ -454,6 +645,7 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
       experiences: parseJsonField(resumeData.experience),
       education: parseJsonField(resumeData.education),
       projects: parseJsonField(resumeData.projects),
+      jobPreferences: jobPreferences, // Add job preferences to shared resume data
       upvotes: 0, // Will be loaded separately
       shareToken,
       createdAt: resumeData.created_at,
@@ -474,11 +666,12 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
     console.log(`✅ Found shared resume: ${formattedResume.personalInfo.name} (ID: ${resumeData.id})`);
     
     // CRITICAL: Log what we're about to send
-    console.log('📤 [RESPONSE] About to send response with customization:', {
+    console.log('📤 [RESPONSE] About to send response with customization and job preferences:', {
       hasCustomization: !!templateCustomizations,
       customizationId: templateCustomizations?.id,
       customizationName: templateCustomizations?.name,
-      customizationKeys: templateCustomizations ? Object.keys(templateCustomizations) : []
+      hasJobPreferences: !!jobPreferences,
+      jobPreferencesKeys: jobPreferences ? Object.keys(jobPreferences) : []
     });
     
     const responseData = {
@@ -488,6 +681,7 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
     
     console.log('📤 [RESPONSE] Full response data keys:', Object.keys(responseData));
     console.log('📤 [RESPONSE] templateCustomization in response:', !!responseData.templateCustomization);
+    console.log('📤 [RESPONSE] jobPreferences in response:', !!responseData.jobPreferences);
     
     res.json({
       success: true,

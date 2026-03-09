@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, GraduationCap, Calendar, Award, BookOpen, Star } from 'lucide-react';
 import { Resume } from '@shared/api';
+import { formatDateRange } from '@/lib/utils';
 import './EducationCarousel.css';
 
 interface EducationCarouselProps {
@@ -39,7 +40,7 @@ export const EducationCarousel: React.FC<EducationCarouselProps> = ({
             </h3>
             <span className="education-dates">
               <Calendar size={16} />
-              {edu.startDate} - {edu.endDate || 'Present'}
+              {formatDateRange(edu.startDate, edu.endDate)}
             </span>
           </div>
           {/* Degree, Field, and GPA in a row */}
@@ -106,7 +107,7 @@ export const EducationCarousel: React.FC<EducationCarouselProps> = ({
               </h3>
               <span className="education-dates">
                 <Calendar size={16} />
-                {currentEdu.startDate} - {currentEdu.endDate || 'Present'}
+                {formatDateRange(currentEdu.startDate, currentEdu.endDate)}
               </span>
             </div>
             {/* Degree, Field, and GPA in a row */}

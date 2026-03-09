@@ -348,34 +348,34 @@ export default function ResumeDisplay({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 sm:pb-0">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md border-b backdrop-blur-sm bg-white/95">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Eye className="h-4 w-4 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-sm sm:text-xl font-semibold text-gray-900 truncate">
                     {resume.personalInfo.name}'s Resume
                   </h1>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {mode === 'preview' ? 'Preview Mode' : 'Shared Resume'}
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {mode === 'preview' ? 'Preview' : 'Shared'}
                   </span>
                 </div>
               </div>
             </div>
             
             {/* Action Buttons */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               {/* User Profile Menu for Preview Mode */}
               {mode === 'preview' && userName && (
                 <UserProfileMenu 
                   userName={userName}
-                  className="mr-2"
+                  className="hidden sm:block"
                 />
               )}
 
@@ -383,147 +383,168 @@ export default function ResumeDisplay({
               {mode === 'shared' && recruiterName && (
                 <RecruiterProfileMenu 
                   recruiterName={recruiterName}
-                  className="mr-2"
+                  className="hidden sm:block"
                 />
               )}
 
-              {/* Upvote Button */}
-              {/* Likes Button - Only for Shared/Recruiter View, Not for Preview */}
-              {mode !== 'preview' && (
+              {/* Mobile: Show only essential buttons */}
+              <div className="flex items-center space-x-1 sm:hidden">
+                {/* Upvote Button - Mobile */}
+                {mode !== 'preview' && (
+                  <Button
+                    variant={hasUpvoted ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleUpvoteClick}
+                    disabled={isUpvoting}
+                    className="p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Heart className={`h-4 w-4 ${hasUpvoted ? 'fill-current' : ''} ${isUpvoting ? 'animate-pulse' : ''}`} />
+                  </Button>
+                )}
+                
+                {/* Share Button - Mobile */}
                 <Button
-                  variant={hasUpvoted ? "default" : "outline"}
-                  size="sm"
-                  onClick={handleUpvoteClick}
-                  disabled={isUpvoting}
-                  className="flex items-center space-x-2 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Heart className={`h-4 w-4 ${hasUpvoted ? 'fill-current' : ''} ${isUpvoting ? 'animate-pulse' : ''}`} />
-                  <span className="font-medium">{upvotes}</span>
-                </Button>
-              )}
-              
-              {/* Share Button */}
-              <Button
-                onClick={onShare}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-2"
-              >
-                <Share2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Share</span>
-              </Button>
-
-              {/* Shortlist Button - Visible to all, but status only shown to recruiters */}
-              {mode !== 'preview' && (
-                <Button
-                  variant={isRecruiter() && isShortlisted ? "default" : "outline"}
-                  size="sm"
-                  onClick={handleShortlistClick}
-                  disabled={isShortlisting}
-                  className="flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Bookmark className={`h-4 w-4 ${isRecruiter() && isShortlisted ? 'fill-current' : ''} ${isShortlisting ? 'animate-pulse' : ''}`} />
-                  <span className="hidden md:inline">
-                    {isRecruiter() && isShortlisted ? 'Shortlisted' : 'Shortlist'}
-                  </span>
-                </Button>
-              )}
-              
-              {/* Download Button */}
-              <Button
-                onClick={onDownloadPDF}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                <Download className="h-4 w-4" />
-                <span>Download</span>
-              </Button>
-              
-              {/* ATS Improve Button - Only show for preview mode (user's own resume) */}
-              {mode === 'preview' && (
-                <Button
-                  onClick={handleCalculateATS}
-                  disabled={isCalculatingATS}
-                  className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>{isCalculatingATS ? 'Calculating...' : 'Improve ATS'}</span>
-                </Button>
-              )}
-
-              {/* Job Preferences Button - Only show for preview mode (user's own resume) */}
-              {mode === 'preview' && setIsEditingJobPreferences && (
-                <Button
-                  onClick={() => setIsEditingJobPreferences(true)}
+                  onClick={onShare}
                   variant="outline"
                   size="sm"
-                  className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300"
+                  className="p-2"
                 >
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden sm:inline">Preferences</span>
+                  <Share2 className="h-4 w-4" />
                 </Button>
-              )}
+
+                {/* Download Button - Mobile */}
+                <Button
+                  onClick={onDownloadPDF}
+                  size="sm"
+                  className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Desktop: Show full buttons with text */}
+              <div className="hidden sm:flex items-center space-x-2">
+                {/* Upvote Button - Desktop */}
+                {mode !== 'preview' && (
+                  <Button
+                    variant={hasUpvoted ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleUpvoteClick}
+                    disabled={isUpvoting}
+                    className="flex items-center space-x-2 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Heart className={`h-4 w-4 ${hasUpvoted ? 'fill-current' : ''} ${isUpvoting ? 'animate-pulse' : ''}`} />
+                    <span className="font-medium">{upvotes}</span>
+                  </Button>
+                )}
+                
+                {/* Share Button - Desktop */}
+                <Button
+                  onClick={onShare}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Share</span>
+                </Button>
+
+                {/* Shortlist Button - Desktop */}
+                {mode !== 'preview' && (
+                  <Button
+                    variant={isRecruiter() && isShortlisted ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleShortlistClick}
+                    disabled={isShortlisting}
+                    className="flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Bookmark className={`h-4 w-4 ${isRecruiter() && isShortlisted ? 'fill-current' : ''} ${isShortlisting ? 'animate-pulse' : ''}`} />
+                    <span className="hidden md:inline">
+                      {isRecruiter() && isShortlisted ? 'Shortlisted' : 'Shortlist'}
+                    </span>
+                  </Button>
+                )}
+                
+                {/* Download Button - Desktop */}
+                <Button
+                  onClick={onDownloadPDF}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download</span>
+                </Button>
+                
+                {/* ATS Improve Button - Desktop */}
+                {mode === 'preview' && (
+                  <Button
+                    onClick={handleCalculateATS}
+                    disabled={isCalculatingATS}
+                    className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden lg:inline">{isCalculatingATS ? 'Calculating...' : 'Improve ATS'}</span>
+                  </Button>
+                )}
+
+                {/* Job Preferences Button - Desktop */}
+                {(mode === 'preview' || mode === 'shared') && setIsEditingJobPreferences && (
+                  <Button
+                    onClick={() => {
+                      console.log('💼 [DEBUG] Job Preferences button clicked');
+                      console.log('💼 [DEBUG] Mode:', mode);
+                      console.log('💼 [DEBUG] Resume job preferences:', resume?.jobPreferences);
+                      setIsEditingJobPreferences(true);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span className="hidden lg:inline">
+                      {mode === 'shared' ? 'View Preferences' : 'Preferences'}
+                    </span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Resume Content */}
-      <div className="w-full pt-24 pb-8 px-4 sm:px-6 lg:px-8">
+      <div className="w-full pt-20 sm:pt-24 pb-8 px-2 sm:px-4 lg:px-8">
         <div className="w-full bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
           {/* Contact Info Section */}
           {resume.personalInfo.email && (
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-8 py-4 border-b border-gray-200">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-3 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex flex-row flex-wrap items-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-gray-600">
                   {resume.personalInfo.email && (
                     <a 
                       href={`mailto:${resume.personalInfo.email}`}
-                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
+                      className="flex items-center space-x-1.5 sm:space-x-2 hover:text-blue-600 transition-colors duration-200"
                     >
-                      <span>📧</span>
-                      <span>{resume.personalInfo.email}</span>
+                      <span className="text-sm sm:text-base">📧</span>
+                      <span className="break-all text-xs sm:text-sm">{resume.personalInfo.email}</span>
                     </a>
                   )}
                   {resume.personalInfo.phone && (
                     <a 
                       href={`tel:${resume.personalInfo.phone}`}
-                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
+                      className="flex items-center space-x-1.5 sm:space-x-2 hover:text-blue-600 transition-colors duration-200"
                     >
-                      <span>📞</span>
-                      <span>{resume.personalInfo.phone}</span>
-                    </a>
-                  )}
-                  {resume.personalInfo.linkedin && (
-                    <a 
-                      href={resume.personalInfo.linkedin.startsWith('http') ? resume.personalInfo.linkedin : `https://${resume.personalInfo.linkedin}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
-                    >
-                      <span>💼</span>
-                      <span>LinkedIn</span>
-                    </a>
-                  )}
-                  {resume.personalInfo.github && (
-                    <a 
-                      href={resume.personalInfo.github.startsWith('http') ? resume.personalInfo.github : `https://${resume.personalInfo.github}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-2 hover:text-blue-600 transition-colors duration-200"
-                    >
-                      <span>🔗</span>
-                      <span>GitHub</span>
+                      <span className="text-sm sm:text-base">📞</span>
+                      <span className="text-xs sm:text-sm">{resume.personalInfo.phone}</span>
                     </a>
                   )}
                 </div>
                 
                 {/* Social Share Icons */}
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-gray-300 sm:pl-3 lg:pl-4">
                   <SocialShareIcons 
                     resume={resume} 
                     size="sm" 
                     variant="icons"
-                    className="border-l border-gray-300 pl-4"
                   />
                 </div>
               </div>
@@ -532,13 +553,13 @@ export default function ResumeDisplay({
           
           {/* ATS Score Section */}
           {resume.atsScore && (
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-8 py-6 border-b border-gray-200">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-4 sm:px-8 py-6 border-b border-gray-200">
               <ATSScoreDisplay atsScore={resume.atsScore} compact={false} />
             </div>
           )}
           
           {/* Template Content */}
-          <div id="resume-template-container" className="p-8">
+          <div id="resume-template-container" className="p-4 sm:p-8">
             <TemplateRenderer
               resume={displayResume}
               templateConfig={templateConfig}
@@ -565,6 +586,60 @@ export default function ResumeDisplay({
               setIsEditingCertifications={setIsEditingCertifications}
             />
           </div>
+        </div>
+      </div>
+
+      {/* Mobile Action Bar - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg sm:hidden">
+        <div className="flex items-center justify-around py-2 px-2">
+          {/* ATS Improve Button - Mobile */}
+          {mode === 'preview' && (
+            <Button
+              onClick={handleCalculateATS}
+              disabled={isCalculatingATS}
+              size="sm"
+              className="flex flex-col items-center space-y-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-2 py-2 min-w-[60px]"
+            >
+              <Sparkles className="h-3 w-3" />
+              <span className="text-[10px] leading-tight">{isCalculatingATS ? 'Calc...' : 'ATS Score'}</span>
+            </Button>
+          )}
+
+          {/* Shortlist Button - Mobile */}
+          {mode !== 'preview' && (
+            <Button
+              variant={isRecruiter() && isShortlisted ? "default" : "outline"}
+              size="sm"
+              onClick={handleShortlistClick}
+              disabled={isShortlisting}
+              className="flex flex-col items-center space-y-1 px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px]"
+            >
+              <Bookmark className={`h-3 w-3 ${isRecruiter() && isShortlisted ? 'fill-current' : ''} ${isShortlisting ? 'animate-pulse' : ''}`} />
+              <span className="text-[10px] leading-tight">
+                {isRecruiter() && isShortlisted ? 'Saved' : 'Save'}
+              </span>
+            </Button>
+          )}
+
+          {/* Job Preferences Button - Mobile */}
+          {(mode === 'preview' || mode === 'shared') && setIsEditingJobPreferences && (
+            <Button
+              onClick={() => {
+                console.log('💼 [DEBUG] Job Preferences button clicked (mobile)');
+                console.log('💼 [DEBUG] Mode:', mode);
+                console.log('💼 [DEBUG] Resume job preferences:', resume?.jobPreferences);
+                setIsEditingJobPreferences(true);
+              }}
+              variant="outline"
+              size="sm"
+              className="flex flex-col items-center space-y-1 px-2 py-2 min-w-[60px]"
+            >
+              <Settings className="h-3 w-3" />
+              <span className="text-[10px] leading-tight">
+                {mode === 'shared' ? 'Prefs' : 'Settings'}
+              </span>
+            </Button>
+          )}
         </div>
       </div>
 
