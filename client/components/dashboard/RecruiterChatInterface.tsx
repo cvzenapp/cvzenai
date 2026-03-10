@@ -11,6 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from "@/components/ui/dropdown-menu";
 import { FileUploadResult } from '@/services/fileUploadService';
 import { recruiterAiChatApi, CandidateResult, JobDescriptionTemplate, HRAdvice } from '@/services/recruiterAiChatApi';
 import { recruiterAiChatStreamingService } from '@/services/recruiterAiChatStreamingService';
@@ -51,7 +59,8 @@ import {
   XCircle,
   Plus,
   Trash2,
-  X
+  X,
+  History
 } from 'lucide-react';
 
 interface Message {
@@ -233,7 +242,6 @@ export default function RecruiterChatInterface() {
     isActive: boolean;
   }>>([]);
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
-  const [showSidebar, setShowSidebar] = useState(true);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   
   // Job posting modal state
@@ -1455,116 +1463,122 @@ export default function RecruiterChatInterface() {
   );
 
   return (
-    <div className="flex h-full">
-      {/* Session Sidebar */}
-      {showSidebar && (
-        <div className="w-64 border-r bg-slate-50 flex flex-col shrink-0">
-          {/* New Chat Button */}
-          <div className="p-3 border-b">
-            <Button
-              onClick={handleNewChat}
-              className="w-full bg-brand-background hover:bg-brand-background/90 text-white flex items-center justify-center gap-2"
-              size="sm"
-            >
-              <Plus className="w-4 h-4" />
-              New Chat
-            </Button>
+    <div className="flex flex-col h-full">
+      {/* Chat Header with History Dropdown and Quick Actions */}
+      <div className="flex flex-col border-b bg-white">
+        {/* Top row with history and new chat */}
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  <span className="text-sm">Chat History</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-80 max-h-96">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Recent Sessions</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleNewChat}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <ScrollArea className="max-h-64">
+                  {isLoadingSessions ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="ml-2 text-sm text-gray-500">Loading sessions...</span>
+                    </div>
+                  ) : sessions.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-gray-500">
+                      No chat sessions yet
+                    </div>
+                  ) : (
+                    sessions.map((session) => (
+                      <DropdownMenuItem
+                        key={session.id}
+                        className={`flex items-center justify-between p-3 cursor-pointer group ${
+                          session.isActive ? 'bg-brand-background/10' : ''
+                        }`}
+                        onClick={() => handleSwitchSession(session.id)}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <MessageSquare className="w-3 h-3 text-gray-400 shrink-0" />
+                          <span className="text-sm font-medium truncate">
+                            {session.sessionName}
+                          </span>
+                          {session.isActive && (
+                            <Badge variant="secondary" className="text-xs">Active</Badge>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleDeleteSession(session.id, e)}
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <div className="flex items-center gap-2">
+              <Bot className="w-5 h-5 text-brand-background" />
+              <span className="font-medium text-gray-900">Recruiter AI Assistant</span>
+            </div>
           </div>
           
-          {/* Sessions List */}
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-0.5">
-              {isLoadingSessions ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-500">
-                  No chat sessions yet
-                </div>
-              ) : (
-                sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    onClick={() => handleSwitchSession(session.id)}
-                    className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
-                      session.isActive
-                        ? 'bg-brand-background text-white'
-                        : 'hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    <MessageSquare className="w-4 h-4 shrink-0" />
-                    <span 
-                      className="flex-1 min-w-0 text-sm font-normal overflow-hidden text-ellipsis whitespace-nowrap block"
-                      style={{ maxWidth: '140px' }}
-                    >
-                      {session.sessionName}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleDeleteSession(session.id, e)}
-                      className={`opacity-0 group-hover:opacity-100 h-6 w-6 p-0 shrink-0 ${
-                        session.isActive
-                          ? 'hover:bg-white/20 text-white'
-                          : 'hover:bg-gray-300 text-gray-600'
-                      }`}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-          
-          {/* Toggle Sidebar Button */}
-          <div className="p-2 border-t">
+          <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => setShowSidebar(false)}
-              className="w-full text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              title="Hide Chat History"
+              onClick={handleNewChat}
+              className="flex items-center gap-2"
             >
-              <MessageSquare className="w-3 h-3 mr-1" />
-              Hide History
+              <Plus className="w-4 h-4" />
+              <span className="text-sm">New Chat</span>
             </Button>
           </div>
         </div>
-      )}
-      
-      {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 min-w-0">
         
-      {/* Compact Header with Quick Actions */}
-      <div className="px-4 md:px-6 py-2 border-b bg-gradient-to-r from-blue-50 to-indigo-50 shrink-0">
-        {/* Compact Quick Actions */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-          {QUICK_ACTIONS.map((action, index) => (
+        {/* Quick Actions row */}
+        <div className="px-4 pb-3 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            {QUICK_ACTIONS.map((action, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1.5 h-7 py-1 px-2 text-xs whitespace-nowrap shrink-0"
+                onClick={() => handleQuickAction(action.query, action.type)}
+              >
+                <action.icon className="w-3 h-3" />
+                <span>{action.label}</span>
+              </Button>
+            ))}
             <Button
-              key={index}
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="flex items-center gap-1.5 h-7 py-1 px-2 text-xs whitespace-nowrap shrink-0"
-              onClick={() => handleQuickAction(action.query, action.type)}
+              onClick={() => {
+                const randomPrompt = EXAMPLE_PROMPTS[Math.floor(Math.random() * EXAMPLE_PROMPTS.length)];
+                setInputValue(randomPrompt.prompt);
+                inputRef.current?.focus();
+              }}
+              className="text-xs h-7 px-2 whitespace-nowrap shrink-0"
             >
-              <action.icon className="w-3 h-3" />
-              <span>{action.label}</span>
+              Try Example
             </Button>
-          ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const randomPrompt = EXAMPLE_PROMPTS[Math.floor(Math.random() * EXAMPLE_PROMPTS.length)];
-              setInputValue(randomPrompt.prompt);
-              inputRef.current?.focus();
-            }}
-            className="text-xs h-7 px-2 whitespace-nowrap shrink-0"
-          >
-            Try Example
-          </Button>
+          </div>
         </div>
       </div>
 
@@ -1912,20 +1926,6 @@ export default function RecruiterChatInterface() {
           <span>{inputValue.length}/2000</span>
           <span>💡 Be specific for better results</span>
         </div>
-        
-        {/* Show History Button - Bottom positioned with CVZen brand colors */}
-        {!showSidebar && (
-          <div className="mt-4 flex justify-center">
-            <Button
-              onClick={() => setShowSidebar(true)}
-              className="bg-brand-background hover:bg-brand-background/90 text-white px-6 py-2 rounded-lg shadow-md flex items-center gap-2"
-              title="Show Chat History"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-sm font-medium">Show Chat History</span>
-            </Button>
-          </div>
-        )}
         </div>
         </div>
       </div>
@@ -2309,7 +2309,6 @@ export default function RecruiterChatInterface() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
     </div>
   );
 }
