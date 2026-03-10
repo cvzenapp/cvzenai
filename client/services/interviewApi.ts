@@ -169,10 +169,15 @@ export class InterviewApiClient {
   /**
    * Mark interview as completed
    */
-  async markCompleted(interviewId: number, decision?: 'hired' | 'rejected' | 'hold', feedback?: string): Promise<void> {
+  async markCompleted(
+    interviewId: number, 
+    decision?: 'hired' | 'rejected' | 'hold', 
+    feedback?: string, 
+    evaluationMetrics?: any[]
+  ): Promise<void> {
     await this.request(`/${interviewId}/complete`, {
       method: 'POST',
-      body: JSON.stringify({ decision, feedback })
+      body: JSON.stringify({ decision, feedback, evaluationMetrics })
     });
   }
 

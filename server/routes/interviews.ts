@@ -1609,7 +1609,7 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
     }
 
     const { interviewId } = req.params;
-    const { decision, feedback } = req.body;
+    const { decision, feedback, evaluationMetrics } = req.body;
 
     const db = await getDatabase();
 
@@ -1651,12 +1651,12 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
       });
     }
 
-    // Update interview status to completed
+    // Update interview status to completed and store evaluation metrics
     await db.query(
       `UPDATE interview_invitations 
-       SET status = 'completed', updated_at = NOW()
+       SET status = 'completed', evaluation_metrics = $2, updated_at = NOW()
        WHERE id = $1`,
-      [interviewId]
+      [interviewId, evaluationMetrics ? JSON.stringify(evaluationMetrics) : null]
     );
 
     // If recruiter provided decision and feedback, update the application
@@ -1664,6 +1664,7 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
       console.log('📝 Processing feedback:', {
         decision,
         feedback,
+        evaluationMetrics: evaluationMetrics ? evaluationMetrics.length : 0,
         candidateId: interview.candidate_id,
         jobPostingId: interview.job_posting_id,
         resumeId: interview.resume_id
@@ -1728,7 +1729,8 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
       markedBy: isRecruiter ? 'recruiter' : 'candidate',
       userId: auth.userId,
       decision: decision || 'none',
-      hasFeedback: !!feedback
+      hasFeedback: !!feedback,
+      hasEvaluationMetrics: !!evaluationMetrics
     });
 
     res.json({

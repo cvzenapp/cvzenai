@@ -3,7 +3,7 @@ import { Calendar, Clock, Video, Phone, MapPin, Monitor, CheckCircle, XCircle, A
 import { interviewApi } from '../../services/interviewApi';
 import { recruiterInterviewApi } from '../../services/recruiterInterviewApi';
 import { InterviewResponseModal } from './InterviewResponseModal';
-import { InterviewFeedbackModal } from './InterviewFeedbackModal';
+import { InterviewCompletionModal } from './InterviewCompletionModal';
 import { VideoCallLauncher } from '../video/VideoCallLauncher';
 import { ScheduleInterviewWithSelector } from './ScheduleInterviewWithSelector';
 import { ScheduleInterviewForm } from './ScheduleInterviewForm';
@@ -50,7 +50,7 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<InterviewInvitation | null>(null);
-  const [feedbackInterview, setFeedbackInterview] = useState<InterviewInvitation | null>(null);
+  const [completionInterview, setCompletionInterview] = useState<InterviewInvitation | null>(null);
   const [videoCallInterview, setVideoCallInterview] = useState<InterviewInvitation | null>(null);
   const [editingInterview, setEditingInterview] = useState<InterviewInvitation | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'completed'>('all');
@@ -149,16 +149,20 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
     loadInterviews();
   };
 
-  const handleFeedbackSubmit = async (decision: 'hired' | 'rejected' | 'hold', feedback: string) => {
-    if (!feedbackInterview) return;
+  const handleInterviewCompletion = async (
+    decision: 'hired' | 'rejected' | 'hold', 
+    feedback: string, 
+    evaluationMetrics: any[]
+  ) => {
+    if (!completionInterview) return;
 
     try {
       const apiClient = userType === 'recruiter' ? recruiterInterviewApi : interviewApi;
-      await apiClient.markCompleted(feedbackInterview.id, decision, feedback);
+      await apiClient.markCompleted(completionInterview.id, decision, feedback, evaluationMetrics);
       loadInterviews();
-      setFeedbackInterview(null);
+      setCompletionInterview(null);
     } catch (err) {
-      console.error('Failed to submit feedback:', err);
+      console.error('Failed to complete interview:', err);
       throw err;
     }
   };
@@ -520,7 +524,7 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
                             
                             {userType === 'recruiter' && (
                               <button
-                                onClick={() => setFeedbackInterview(interview)}
+                                onClick={() => setCompletionInterview(interview)}
                                 className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-xs sm:text-sm font-jakarta font-medium"
                               >
                                 <span className="hidden sm:inline">Mark Completed</span>
@@ -567,14 +571,13 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
         />
       )}
 
-      {/* Interview Feedback Modal */}
-      {feedbackInterview && (
-        <InterviewFeedbackModal
+      {/* Interview Completion Modal */}
+      {completionInterview && (
+        <InterviewCompletionModal
           isOpen={true}
-          onClose={() => setFeedbackInterview(null)}
-          onSubmit={handleFeedbackSubmit}
-          interviewTitle={feedbackInterview.title}
-          candidateName={feedbackInterview.candidate?.name || feedbackInterview.candidate?.email || 'Candidate'}
+          onClose={() => setCompletionInterview(null)}
+          onSubmit={handleInterviewCompletion}
+          interview={completionInterview}
         />
       )}
 
