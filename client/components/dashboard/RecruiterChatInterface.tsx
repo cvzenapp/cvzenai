@@ -1524,9 +1524,11 @@ export default function RecruiterChatInterface() {
               variant="ghost"
               size="sm"
               onClick={() => setShowSidebar(false)}
-              className="w-full text-xs text-gray-600 hover:text-gray-900"
+              className="w-full text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              title="Hide Chat History"
             >
-              Hide Sidebar
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Hide History
             </Button>
           </div>
         </div>
@@ -1534,19 +1536,6 @@ export default function RecruiterChatInterface() {
       
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Show Sidebar Button (when hidden) */}
-        {!showSidebar && (
-          <div className="absolute top-2 left-2 z-10">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSidebar(true)}
-              className="bg-white shadow-md"
-            >
-              <MessageSquare className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
         
       {/* Compact Header with Quick Actions */}
       <div className="px-4 md:px-6 py-2 border-b bg-gradient-to-r from-blue-50 to-indigo-50 shrink-0">
@@ -1923,6 +1912,20 @@ export default function RecruiterChatInterface() {
           <span>{inputValue.length}/2000</span>
           <span>💡 Be specific for better results</span>
         </div>
+        
+        {/* Show History Button - Bottom positioned with CVZen brand colors */}
+        {!showSidebar && (
+          <div className="mt-4 flex justify-center">
+            <Button
+              onClick={() => setShowSidebar(true)}
+              className="bg-brand-background hover:bg-brand-background/90 text-white px-6 py-2 rounded-lg shadow-md flex items-center gap-2"
+              title="Show Chat History"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm font-medium">Show Chat History</span>
+            </Button>
+          </div>
+        )}
         </div>
         </div>
       </div>

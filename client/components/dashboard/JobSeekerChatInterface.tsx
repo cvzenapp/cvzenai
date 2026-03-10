@@ -899,28 +899,18 @@ export default function JobSeekerChatInterface() {
               variant="ghost"
               size="sm"
               onClick={() => setShowSidebar(false)}
-              className="w-full text-xs text-gray-600 hover:text-gray-900"
+              className="w-full text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              title="Hide Chat History"
             >
-              Hide Sidebar
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Hide History
             </Button>
           </div>
         </div>
       )}
       
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 min-w-0">
-        {!showSidebar && (
-          <div className="absolute top-2 left-2 z-10">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSidebar(true)}
-              className="bg-white shadow-md"
-            >
-              <MessageSquare className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
+      <div className="flex flex-col flex-1 min-w-0 relative">
         
     <div className="flex flex-col h-[calc(100vh-180px)] max-w-6xl mx-auto w-full">
       {/* Debug Panel - Remove after testing */}
@@ -1252,6 +1242,20 @@ export default function JobSeekerChatInterface() {
             <span>💡 Tip: Be specific for better AI responses</span>
           </div>
         </div>
+        
+        {/* Show History Button - Bottom positioned with CVZen brand colors */}
+        {!showSidebar && (
+          <div className="mt-4 flex justify-center">
+            <Button
+              onClick={() => setShowSidebar(true)}
+              className="bg-brand-background hover:bg-brand-background/90 text-white px-6 py-2 rounded-lg shadow-md flex items-center gap-2"
+              title="Show Chat History"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm font-medium">Show Chat History</span>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
       </div>

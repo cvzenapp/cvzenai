@@ -12,7 +12,6 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronLeft,
   Bell,
   User,
   Briefcase,
@@ -419,7 +418,7 @@ export default function RecruiterDashboardLayout({
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="w-full justify-center"
             >
-              <ChevronLeft
+              <Menu
                 className={cn(
                   "h-4 w-4 transition-transform",
                   sidebarCollapsed && "rotate-180"

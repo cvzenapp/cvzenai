@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -73,6 +74,7 @@ import {
   Trash2,
   Menu,
   X,
+  ChevronLeft,
   Shield,
   CreditCard,
   Package,
@@ -1114,7 +1116,7 @@ export default function Dashboard() {
         {/* Sidebar Navigation */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-40
-          bg-card border-r transition-all duration-300 ease-in-out shrink-0
+          bg-card border-r transition-all duration-300 ease-in-out shrink-0 flex flex-col
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}
           w-64
@@ -1292,7 +1294,40 @@ export default function Dashboard() {
               {!isSidebarCollapsed && <span className="flex-1 text-left">Settings</span>}
             </button>
           </nav>
+            
+          {/* Collapse button - Bottom positioned like recruiter */}
+          <div className="p-3 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="w-full justify-center"
+              title={isSidebarCollapsed ? "Expand Sidebar" : "Hide Sidebar"}
+            >
+              <Menu
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  isSidebarCollapsed && "rotate-180"
+                )}
+              />
+            </Button>
+          </div>
         </aside>
+
+        {/* Fixed Bottom Toggle Button for Mobile - Similar to Recruiter Toggle */}
+        {!isMobileSidebarOpen && (
+          <div className="lg:hidden fixed bottom-6 left-6 z-50">
+            <Button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="bg-brand-background hover:bg-brand-background/90 text-white px-4 py-3 rounded-full shadow-lg flex items-center gap-2"
+              title="Show Sidebar"
+            >
+              <Menu className="w-5 h-5" />
+              <span className="text-sm font-medium">Menu</span>
+            </Button>
+          </div>
+        )}
+
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">
