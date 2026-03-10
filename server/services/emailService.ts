@@ -1342,6 +1342,156 @@ ${nextSteps}
     ].join('\r\n');
   }
 
+  async sendPasswordSetupEmail(
+    recipientEmail: string,
+    recipientName: string,
+    setupUrl: string,
+    resumeUrl?: string
+  ): Promise<EmailResponse> {
+    const subject = 'Complete Your CVZen Account Setup';
+    
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Complete Your CVZen Account Setup</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #1565c0 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to CVZen!</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Complete your account setup</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1891db; margin-top: 0;">Hi ${recipientName}!</h2>
+          
+          <p>Great news! Your CVZen account has been created successfully and your resume has been processed. To complete your account setup and secure your account, please set up your password.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1891db;">
+            <h3 style="margin-top: 0; color: #1891db;">What's ready for you:</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>✅ Your account has been created</li>
+              <li>✅ Your resume has been processed and analyzed</li>
+              <li>✅ You can start applying to jobs immediately</li>
+              <li>🔐 Just set up your password to secure your account</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${setupUrl}" 
+               style="background: #1891db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+              Set Up Your Password
+            </a>
+          </div>
+          
+          ${resumeUrl ? `
+          <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0 0 10px 0; color: #2d5a2d; font-weight: bold;">🎉 Your resume is ready!</p>
+            <a href="${resumeUrl}" 
+               style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-size: 14px; display: inline-block;">
+              View Your Resume
+            </a>
+          </div>
+          ` : ''}
+          
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404; font-size: 14px;">
+              <strong>⏰ Important:</strong> This setup link will expire in 24 hours for security reasons. Please complete your setup soon.
+            </p>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            Need help? Reply to this email or visit our <a href="${process.env.APP_URL || 'https://cvzen.com'}/support" style="color: #1891db;">support center</a>.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <div style="text-align: center;">
+            <p style="color: #999; font-size: 12px; margin: 0;">
+              This email was sent to ${recipientEmail}. If you didn't create a CVZen account, please ignore this email.
+            </p>
+            <p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">
+              © ${new Date().getFullYear()} CVZen. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+Hi ${recipientName}!
+
+Welcome to CVZen! Your account has been created successfully and your resume has been processed.
+
+To complete your account setup and secure your account, please set up your password by clicking the link below:
+
+${setupUrl}
+
+What's ready for you:
+✅ Your account has been created
+✅ Your resume has been processed and analyzed  
+✅ You can start applying to jobs immediately
+🔐 Just set up your password to secure your account
+
+${resumeUrl ? `🎉 Your resume is ready! View it here: ${resumeUrl}` : ''}
+
+⏰ Important: This setup link will expire in 24 hours for security reasons. Please complete your setup soon.
+
+Need help? Reply to this email or visit our support center at ${process.env.APP_URL || 'https://cvzen.com'}/support
+
+This email was sent to ${recipientEmail}. If you didn't create a CVZen account, please ignore this email.
+
+© ${new Date().getFullYear()} CVZen. All rights reserved.
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: `${this.fromName} <${this.fromEmail}>`,
+      to: [recipientEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+    };
+
+    // Log the email attempt
+    const logId = await this.logEmail({
+      emailType: 'account_creation',
+      senderEmail: this.fromEmail,
+      recipientEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId: undefined
+    });
+
+    try {
+      const result = await this.sendEmail(emailRequest);
+      
+      // Update log with result
+      if (logId) {
+        await this.updateEmailLog(
+          logId,
+          result.data,
+          result.success ? 'sent' : 'failed',
+          result.error
+        );
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Update log with error
+      if (logId) {
+        await this.updateEmailLog(logId, null, 'failed', errorMessage);
+      }
+
+      return { success: false, error: errorMessage };
+    }
+  }
+
 }
 
 export const emailService = new EmailService();

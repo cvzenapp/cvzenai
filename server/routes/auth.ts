@@ -12,6 +12,7 @@ import {
   User,
 } from "../../shared/auth";
 import { getDatabase, closeDatabase } from '../database/connection';
+import { emailService } from '../services/emailService.js';
 
 const router = Router();
 
@@ -709,7 +710,6 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
     // Send welcome email with password setup link
     try {
       console.log('📧 Sending welcome email with setup link...');
-      const { emailService } = await import('../services/emailService.js');
       const setupUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/setup-password?token=${setupToken}`;
       const resumeUrl = resumeId 
         ? `${process.env.FRONTEND_URL || 'http://localhost:8080'}/resume/${resumeId}`

@@ -113,6 +113,7 @@ router.post("/create", async (req: Request, res: Response) => {
       meetingLocation,
       meetingInstructions,
       recruiterNotes,
+      evaluationMetrics,
       // Guest candidate fields
       guestCandidateName,
       guestCandidateEmail
@@ -334,8 +335,8 @@ router.post("/create", async (req: Request, res: Response) => {
           title, description, interview_type,
           proposed_datetime, duration_minutes, timezone,
           meeting_link, meeting_location, meeting_instructions,
-          recruiter_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+          recruiter_notes, evaluation_metrics
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING id, created_at`
       : `
         INSERT INTO interview_invitations (
@@ -343,21 +344,21 @@ router.post("/create", async (req: Request, res: Response) => {
           title, description, interview_type,
           proposed_datetime, duration_minutes, timezone,
           meeting_link, meeting_location, meeting_instructions,
-          recruiter_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+          recruiter_notes, evaluation_metrics
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING id, created_at`,
       isGuestCandidate ? [
         auth.userId, guestCandidateName, guestCandidateEmail, jobPostingId, applicationId, nextRound, interviewRoundType,
         title, description, interviewType || 'video_call',
         proposedDatetime, durationMinutes, timezone,
         meetingLink, meetingLocation, meetingInstructions,
-        recruiterNotes
+        recruiterNotes, JSON.stringify(evaluationMetrics || [])
       ] : [
         auth.userId, candidateId, resumeId, jobPostingId, applicationId, nextRound, interviewRoundType,
         title, description, interviewType || 'video_call',
         proposedDatetime, durationMinutes, timezone,
         meetingLink, meetingLocation, meetingInstructions,
-        recruiterNotes
+        recruiterNotes, JSON.stringify(evaluationMetrics || [])
       ]
     );
 
@@ -673,7 +674,7 @@ router.put("/:interviewId/update", async (req: Request, res: Response) => {
       'title', 'description', 'interview_type', 'interview_round_type',
       'proposed_datetime', 'duration_minutes', 'timezone',
       'meeting_link', 'meeting_location', 'meeting_instructions',
-      'recruiter_notes'
+      'recruiter_notes', 'evaluation_metrics'
     ];
 
     const fieldMapping = {
@@ -684,7 +685,8 @@ router.put("/:interviewId/update", async (req: Request, res: Response) => {
       'meetingLink': 'meeting_link',
       'meetingLocation': 'meeting_location',
       'meetingInstructions': 'meeting_instructions',
-      'recruiterNotes': 'recruiter_notes'
+      'recruiterNotes': 'recruiter_notes',
+      'evaluationMetrics': 'evaluation_metrics'
     };
 
     for (const [key, value] of Object.entries(updateData)) {
@@ -692,7 +694,12 @@ router.put("/:interviewId/update", async (req: Request, res: Response) => {
         const dbField = fieldMapping[key] || key;
         if (allowedFields.includes(dbField)) {
           updateFields.push(`${dbField} = $${paramIndex}`);
-          updateValues.push(value);
+          // JSON stringify evaluation metrics
+          if (dbField === 'evaluation_metrics') {
+            updateValues.push(JSON.stringify(value));
+          } else {
+            updateValues.push(value);
+          }
           paramIndex++;
         }
       }
@@ -1219,6 +1226,7 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
             status: row.status,
             candidateResponse: row.candidate_response,
             recruiterNotes: row.recruiter_notes,
+            evaluationMetrics: row.evaluation_metrics ? JSON.parse(row.evaluation_metrics) : [],
             
             createdAt: row.created_at,
             updatedAt: row.updated_at,
@@ -1274,6 +1282,7 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
         status: row.status,
         candidateResponse: row.candidate_response,
         recruiterNotes: row.recruiter_notes,
+        evaluationMetrics: row.evaluation_metrics ? JSON.parse(row.evaluation_metrics) : [],
         
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -1411,6 +1420,7 @@ router.get("/:interviewId", async (req: Request, res: Response) => {
       status: row.status,
       candidateResponse: row.candidate_response,
       recruiterNotes: row.recruiter_notes,
+      evaluationMetrics: row.evaluation_metrics ? JSON.parse(row.evaluation_metrics) : [],
       
       createdAt: row.created_at,
       updatedAt: row.updated_at,

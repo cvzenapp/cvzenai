@@ -69,10 +69,19 @@ router.post('/test', async (req: Request, res: Response) => {
         );
         break;
 
+      case 'password_setup':
+        result = await emailService.sendPasswordSetupEmail(
+          email || 'test@example.com',
+          name || 'Test User',
+          'http://localhost:8080/setup-password?token=test-token-123',
+          'http://localhost:8080/resume/123'
+        );
+        break;
+
       default:
         return res.status(400).json({
           success: false,
-          message: 'Invalid email type. Use: account_creation, job_application, application_confirmation, or shortlisted',
+          message: 'Invalid email type. Use: account_creation, job_application, application_confirmation, shortlisted, or password_setup',
         });
     }
 
