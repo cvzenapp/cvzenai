@@ -184,6 +184,15 @@ export default function LandingPage() {
     }
   };
 
+  const handleJobSeekerAuth = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      setAuthModalMode('signup');
+      setAuthModalOpen(true);
+    }
+  };
+
   const handleAuthSuccess = () => {
     setAuthModalOpen(false);
     setIsAuthenticated(true);
@@ -282,7 +291,7 @@ export default function LandingPage() {
                   >
                     For Recruiters
                   </Button>
-                  <Button onClick={handleGetStarted} className="bg-brand-main hover:bg-brand-main/90">Job Seeker</Button>
+                  <Button onClick={handleJobSeekerAuth} className="bg-brand-main hover:bg-brand-main/90">Job Seeker</Button>
                 </>
               )}
             </div>
@@ -386,7 +395,7 @@ export default function LandingPage() {
                     <Button
                       onClick={() => {
                         setMobileMenuOpen(false);
-                        handleGetStarted();
+                        handleJobSeekerAuth();
                       }}
                       className="w-full bg-brand-main hover:bg-brand-main/90 h-12"
                     >

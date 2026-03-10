@@ -66,8 +66,8 @@ const QUICK_ACTIONS = [
   { icon: Search, label: 'Find Jobs', query: 'Show me frontend developer jobs in San Francisco', type: 'job_search' },
   { icon: FileText, label: 'CV Help', query: 'How can I improve my resume for tech jobs?', type: 'resume_analysis' },
   { icon: Paperclip, label: 'Upload CV', query: '', type: 'file_upload' },
-  { icon: TrendingUp, label: 'Career Advice', query: 'What skills should I learn to advance my career?', type: 'career_advice' },
-  { icon: Briefcase, label: 'Interview Tips', query: 'Give me tips for technical interviews', type: 'interview_prep' }
+  { icon: TrendingUp, label: 'Career Tips', query: 'What skills should I learn to advance my career?', type: 'career_advice' },
+  { icon: Briefcase, label: 'Interview', query: 'Give me tips for technical interviews', type: 'interview_prep' }
 ];
 
 const EXAMPLE_PROMPTS = [
@@ -174,9 +174,9 @@ export default function JobSeekerChatInterface() {
     try {
       setIsLoadingSessions(true);
       const response = await aiChatApi.getSessions();
-      if (response.success && response.sessions) {
-        setSessions(response.sessions);
-        const activeSession = response.sessions.find(s => s.isActive);
+      if ((response as any).success && (response as any).sessions) {
+        setSessions((response as any).sessions);
+        const activeSession = (response as any).sessions.find((s: any) => s.isActive);
         if (activeSession) {
           setCurrentSessionId(activeSession.id);
         }
@@ -191,9 +191,9 @@ export default function JobSeekerChatInterface() {
   const handleNewChat = async () => {
     try {
       const response = await aiChatApi.createSession('New Chat');
-      if (response.success && response.session) {
-        setSessions(prev => [response.session, ...prev.map(s => ({ ...s, isActive: false }))]);
-        setCurrentSessionId(response.session.id);
+      if ((response as any).success && (response as any).session) {
+        setSessions(prev => [(response as any).session, ...prev.map(s => ({ ...s, isActive: false }))]);
+        setCurrentSessionId((response as any).session.id);
         setMessages([{
           id: '1',
           type: 'assistant',
@@ -209,7 +209,7 @@ export default function JobSeekerChatInterface() {
   const handleSwitchSession = async (sessionId: number) => {
     try {
       const response = await aiChatApi.switchSession(sessionId);
-      if (response.success) {
+      if ((response as any).success) {
         setSessions(prev => prev.map(s => ({ ...s, isActive: s.id === sessionId })));
         setCurrentSessionId(sessionId);
         await loadChatHistory();
@@ -625,11 +625,11 @@ export default function JobSeekerChatInterface() {
     console.log('🎴 Rendering JobCard:', { id: job.id, title: job.title, company: job.company });
     
     return (
-    <Card className="mb-3 hover:shadow-lg transition-all duration-200 border-l-4 border-l-brand-background">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start gap-3">
+    <Card className="mb-2 sm:mb-3 hover:shadow-lg transition-all duration-200 border-l-4 border-l-brand-background">
+      <CardHeader className="pb-2 p-3 sm:p-4">
+        <div className="flex justify-between items-start gap-2 sm:gap-3">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base font-normal text-brand-main hover:text-brand-main/80 cursor-pointer mb-1 line-clamp-2">
+            <CardTitle className="text-sm sm:text-base font-normal text-brand-main hover:text-brand-main/80 cursor-pointer mb-1 line-clamp-2">
               {job.url ? (
                 <a href={job.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                   {job.title}
@@ -638,8 +638,8 @@ export default function JobSeekerChatInterface() {
                 job.title
               )}
             </CardTitle>
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <Building className="w-3.5 h-3.5 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-gray-600 text-xs sm:text-sm">
+              <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
               <span className="font-normal truncate">{job.company}</span>
             </div>
           </div>
@@ -648,43 +648,43 @@ export default function JobSeekerChatInterface() {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 pb-3">
-        <div className="flex flex-wrap gap-3 text-xs text-gray-600 mb-2">
+      <CardContent className="pt-0 pb-2 sm:pb-3 p-3 sm:p-4">
+        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs text-gray-600 mb-2">
           <div className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5" />
-            <span>{job.location}</span>
+            <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="truncate">{job.location}</span>
           </div>
           {job.salary && (
             <div className="flex items-center gap-1">
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>{job.salary}</span>
+              <DollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="truncate">{job.salary}</span>
             </div>
           )}
           <div className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>{job.postedDate}</span>
           </div>
         </div>
-        <p className="text-gray-700 text-sm mb-2 line-clamp-2">{job.description}</p>
-        <div className="flex flex-wrap gap-1 mb-3">
-          {job.requirements.slice(0, 5).map((req, index) => (
-            <Badge key={index} variant="outline" className="text-xs py-0 px-2">
+        <p className="text-gray-700 text-xs sm:text-sm mb-2 line-clamp-2">{job.description}</p>
+        <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
+          {job.requirements.slice(0, 3).map((req, index) => (
+            <Badge key={index} variant="outline" className="text-xs py-0 px-1.5 sm:px-2">
               {req}
             </Badge>
           ))}
-          {job.requirements.length > 5 && (
-            <Badge variant="outline" className="text-xs py-0 px-2 bg-gray-100">
-              +{job.requirements.length - 5} more
+          {job.requirements.length > 3 && (
+            <Badge variant="outline" className="text-xs py-0 px-1.5 sm:px-2 bg-gray-100">
+              +{job.requirements.length - 3} more
             </Badge>
           )}
         </div>
         <div className="flex gap-2">
-          <Button size="sm" className="h-8 text-xs bg-brand-background hover:bg-brand-background/90 text-white" asChild>
+          <Button size="sm" className="h-7 sm:h-8 text-xs bg-brand-background hover:bg-brand-background/90 text-white flex-1 sm:flex-none" asChild>
             <a href={job.url || '#'} target="_blank" rel="noopener noreferrer">
               Apply Job
             </a>
           </Button>
-          <Button size="sm" variant="outline" className="h-8 text-xs border-brand-background text-brand-background hover:bg-brand-background hover:text-white">
+          <Button size="sm" variant="outline" className="h-7 sm:h-8 text-xs border-brand-background text-brand-background hover:bg-brand-background hover:text-white">
             Save
           </Button>
         </div>
@@ -693,25 +693,25 @@ export default function JobSeekerChatInterface() {
   );};
 
   const AIAnalysisCard = ({ analysis }: { analysis: AIAnalysis }) => (
-    <Card className="mb-4 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="w-5 h-5 text-purple-500" />
+    <Card className="mb-3 sm:mb-4 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+      <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
           AI Analysis Results
           {analysis.score && (
-            <Badge variant="secondary" className="ml-auto">
+            <Badge variant="secondary" className="ml-auto text-xs">
               Score: {analysis.score}/100
             </Badge>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-3 sm:space-y-4">
           {analysis.score && (
             <div>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium">Overall Score</span>
-                <span className="text-sm text-gray-600">{analysis.score}/100</span>
+                <span className="text-xs sm:text-sm font-medium">Overall Score</span>
+                <span className="text-xs sm:text-sm text-gray-600">{analysis.score}/100</span>
               </div>
               <Progress value={analysis.score} className="h-2" />
             </div>
@@ -719,13 +719,13 @@ export default function JobSeekerChatInterface() {
           
           {analysis.strengths && analysis.strengths.length > 0 && (
             <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+              <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                 Strengths
               </h4>
               <ul className="space-y-1">
                 {analysis.strengths.map((strength, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
+                  <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
                     <span className="text-green-500 mt-1">✓</span>
                     <span>{strength}</span>
                   </li>
@@ -736,13 +736,13 @@ export default function JobSeekerChatInterface() {
           
           {analysis.improvements && analysis.improvements.length > 0 && (
             <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <Target className="w-4 h-4 text-orange-500" />
+              <h4 className="font-medium mb-2 flex items-center gap-2 text-sm">
+                <Target className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500" />
                 Areas for Improvement
               </h4>
               <ul className="space-y-1">
                 {analysis.improvements.map((improvement, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
+                  <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
                     <span className="text-orange-500 mt-1">→</span>
                     <span>{improvement}</span>
                   </li>
@@ -759,21 +759,21 @@ export default function JobSeekerChatInterface() {
     if (!suggestions?.length && !actionItems?.length) return null;
     
     return (
-      <Card className="mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-blue-500" />
+      <Card className="mb-3 sm:mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+        <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
             AI Recommendations
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="space-y-3 sm:space-y-4">
             {suggestions && suggestions.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2">Suggestions:</h4>
+                <h4 className="font-medium mb-2 text-sm">Suggestions:</h4>
                 <ul className="space-y-1">
                   {suggestions.map((suggestion, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
+                    <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
                       <span className="text-blue-500 mt-1">💡</span>
                       <span>{suggestion}</span>
                     </li>
@@ -784,10 +784,10 @@ export default function JobSeekerChatInterface() {
             
             {actionItems && actionItems.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2">Action Items:</h4>
+                <h4 className="font-medium mb-2 text-sm">Action Items:</h4>
                 <ul className="space-y-1">
                   {actionItems.map((item, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
+                    <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
                       <span className="text-green-500 mt-1">📋</span>
                       <span>{item}</span>
                     </li>
@@ -802,20 +802,20 @@ export default function JobSeekerChatInterface() {
   };
 
   const ResumeAdviceCard = ({ advice }: { advice: ResumeAdvice }) => (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-yellow-500" />
+    <Card className="mb-3 sm:mb-4">
+      <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
           {advice.title}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-3 sm:space-y-4">
           <div>
-            <h4 className="font-medium mb-2">Suggestions:</h4>
+            <h4 className="font-medium mb-2 text-sm">Suggestions:</h4>
             <ul className="space-y-1">
               {advice.suggestions.map((suggestion, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm">
+                <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
                   <span className="text-blue-500 mt-1">•</span>
                   <span>{suggestion}</span>
                 </li>
@@ -824,10 +824,10 @@ export default function JobSeekerChatInterface() {
           </div>
           {advice.actionItems && (
             <div>
-              <h4 className="font-medium mb-2">Action Items:</h4>
+              <h4 className="font-medium mb-2 text-sm">Action Items:</h4>
               <ul className="space-y-1">
                 {advice.actionItems.map((item, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
+                  <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
                     <span className="text-green-500 mt-1">✓</span>
                     <span>{item}</span>
                   </li>
@@ -843,18 +843,19 @@ export default function JobSeekerChatInterface() {
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header with History Dropdown */}
-      <div className="flex items-center justify-between p-4 border-b bg-white">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-white shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <History className="w-4 h-4" />
-                <span className="text-sm">Chat History</span>
+              <Button variant="outline" size="sm" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <History className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Chat History</span>
+                <span className="sm:hidden">History</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-80 max-h-96">
+            <DropdownMenuContent align="start" className="w-72 sm:w-80 max-h-80 sm:max-h-96">
               <DropdownMenuLabel className="flex items-center justify-between">
-                <span>Recent Sessions</span>
+                <span className="text-sm">Recent Sessions</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -865,7 +866,7 @@ export default function JobSeekerChatInterface() {
                 </Button>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <ScrollArea className="max-h-64">
+              <ScrollArea className="max-h-56 sm:max-h-64">
                 {isLoadingSessions ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -908,9 +909,9 @@ export default function JobSeekerChatInterface() {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <div className="flex items-center gap-2">
-            <Bot className="w-5 h-5 text-brand-background" />
-            <span className="font-medium text-gray-900">AI Assistant</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-brand-background" />
+            <span className="font-medium text-gray-900 text-sm sm:text-base">AI Assistant</span>
           </div>
         </div>
         
@@ -919,43 +920,23 @@ export default function JobSeekerChatInterface() {
             variant="outline"
             size="sm"
             onClick={handleNewChat}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
           >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm">New Chat</span>
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">New Chat</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 min-w-0 relative">
+      <div className="flex flex-col flex-1 min-w-0 relative overflow-hidden">
         
-    <div className="flex flex-col h-[calc(100vh-180px)] max-w-6xl mx-auto w-full">
-      {/* Debug Panel - Remove after testing */}
-      {/* {process.env.NODE_ENV === 'development' && (
-        // <details className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-        //   <summary className="cursor-pointer font-semibold">🐛 Debug: Message State</summary>
-        //   <pre className="mt-2 overflow-auto max-h-40">
-        //     {JSON.stringify(
-        //       messages.map(m => ({
-        //         id: m.id,
-        //         type: m.type,
-        //         contentLength: m.content.length,
-        //         hasJobResults: !!m.jobResults,
-        //         jobCount: m.jobResults?.length,
-        //         jobTitles: m.jobResults?.map(j => j.title).slice(0, 3)
-        //       })),
-        //       null,
-        //       2
-        //     )}
-        //   </pre>
-        // </details>
-      )}
-       */}
+    <div className="flex flex-col h-full max-w-6xl mx-auto w-full">
       {/* Quick Actions */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4 px-2 sm:px-0 shrink-0">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-gray-700">Quick Actions</h3>
+          <h3 className="text-xs sm:text-sm font-medium text-gray-700">Quick Actions</h3>
           <Button
             variant="ghost"
             size="sm"
@@ -964,30 +945,30 @@ export default function JobSeekerChatInterface() {
               setInputValue(randomPrompt.prompt);
               inputRef.current?.focus();
             }}
-            className="text-xs text-blue-600 hover:text-blue-800"
+            className="text-xs text-blue-600 hover:text-blue-800 h-6 px-2"
           >
-            Try Example Prompt
+            Try Example
           </Button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {QUICK_ACTIONS.map((action, index) => (
             <Button
               key={index}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2 h-auto py-2 px-3"
+              className="flex items-center gap-1 sm:gap-2 h-auto py-2 px-2 sm:px-3 text-xs"
               onClick={() => handleQuickAction(action.query, action.type)}
             >
-              <action.icon className="w-4 h-4" />
-              <span className="text-xs">{action.label}</span>
+              <action.icon className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">{action.label}</span>
             </Button>
           ))}
         </div>
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-1 border rounded-lg p-4 mb-4 bg-gradient-to-b from-white to-gray-50">
-        <div className="space-y-4 pb-4">
+      <ScrollArea className="flex-1 border rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 bg-gradient-to-b from-white to-gray-50 min-h-0">
+        <div className="space-y-3 sm:space-y-4 pb-4">
           {/* Load More Button */}
           {hasMoreHistory && !isLoadingHistory && (
             <div className="flex justify-center mb-4">
@@ -1015,37 +996,37 @@ export default function JobSeekerChatInterface() {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-2 sm:gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {message.type === 'assistant' && (
-                <Avatar className="w-8 h-8 mt-1">
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0">
                   <AvatarFallback className="bg-blue-100">
-                    <Bot className="w-4 h-4 text-blue-600" />
+                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                   </AvatarFallback>
                 </Avatar>
               )}
               
-              <div className={`${message.jobRecommendations ? 'w-full' : 'max-w-[80%]'} ${message.type === 'user' ? 'order-first' : ''}`}>
+              <div className={`${message.jobResults ? 'w-full' : 'max-w-[85%] sm:max-w-[80%]'} ${message.type === 'user' ? 'order-first' : ''}`}>
                 <div
-                  className={`rounded-lg p-3 ${
+                  className={`rounded-lg p-2 sm:p-3 ${
                     message.type === 'user'
                       ? 'bg-blue-600 text-white ml-auto'
                       : 'bg-gray-100 text-gray-900'
                   }`}
                 >
-                  <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                  <div className="text-xs sm:text-sm leading-relaxed prose prose-sm max-w-none">
                     {message.type === 'assistant' ? (
                       <ReactMarkdown
                         components={{
-                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                          ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1.5">{children}</ul>,
-                          ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1.5">{children}</ol>,
-                          li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
+                          p: ({ children }) => <p className="mb-1 sm:mb-2 last:mb-0 text-xs sm:text-sm">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 sm:pl-5 mb-2 sm:mb-3 space-y-1">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-4 sm:pl-5 mb-2 sm:mb-3 space-y-1">{children}</ol>,
+                          li: ({ children }) => <li className="text-xs sm:text-sm leading-relaxed">{children}</li>,
                           strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                           em: ({ children }) => <em className="italic">{children}</em>,
-                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 mt-4 first:mt-0">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0">{children}</h3>,
+                          h1: ({ children }) => <h1 className="text-sm sm:text-lg font-bold mb-1 sm:mb-2 mt-2 sm:mt-4 first:mt-0">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-sm sm:text-base font-bold mb-1 sm:mb-2 mt-2 sm:mt-3 first:mt-0">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-xs sm:text-sm font-semibold mb-1 mt-1 sm:mt-2 first:mt-0">{children}</h3>,
                           code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs">{children}</code>,
                           pre: ({ children }) => <pre className="bg-gray-200 p-2 rounded text-xs overflow-x-auto mb-2">{children}</pre>,
                           blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 pl-3 italic my-2">{children}</blockquote>,
@@ -1054,7 +1035,7 @@ export default function JobSeekerChatInterface() {
                         {message.content}
                       </ReactMarkdown>
                     ) : (
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="whitespace-pre-wrap text-xs sm:text-sm">{message.content}</div>
                     )}
                   </div>
                   
@@ -1062,8 +1043,8 @@ export default function JobSeekerChatInterface() {
                   {message.attachedFile && (
                     <div className="mt-2 p-2 bg-black/10 rounded text-xs flex items-center gap-2">
                       <Paperclip className="w-3 h-3" />
-                      <span>{message.attachedFile.name}</span>
-                      <span className="opacity-70">
+                      <span className="truncate">{message.attachedFile.name}</span>
+                      <span className="opacity-70 shrink-0">
                         ({(message.attachedFile.size / 1024).toFixed(1)} KB)
                       </span>
                     </div>
@@ -1072,36 +1053,36 @@ export default function JobSeekerChatInterface() {
                 
                 {/* AI Analysis */}
                 {message.analysis && (
-                  <div className="mt-3">
+                  <div className="mt-2 sm:mt-3">
                     <AIAnalysisCard analysis={message.analysis} />
                   </div>
                 )}
                 
                 {/* AI Suggestions and Action Items */}
                 {(message.suggestions || message.actionItems) && (
-                  <div className="mt-3">
+                  <div className="mt-2 sm:mt-3">
                     <SuggestionsCard suggestions={message.suggestions} actionItems={message.actionItems} />
                   </div>
                 )}
                 
                 {/* Job Results */}
                 {message.jobResults && message.jobResults.length > 0 && (
-                  <div className="mt-3">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 mb-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 text-blue-600" />
-                          <span className="font-semibold text-blue-900 text-sm">
-                            Found {message.jobResults.length} Job Opportunities
+                          <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                          <span className="font-semibold text-blue-900 text-xs sm:text-sm">
+                            Found {message.jobResults.length} Job{message.jobResults.length > 1 ? 's' : ''}
                           </span>
                         </div>
                         <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                          Scroll to view all
+                          <span className="hidden sm:inline">Scroll to view all</span>
+                          <span className="sm:hidden">View all</span>
                         </Badge>
                       </div>
                     </div>
                     <div className="space-y-2 w-full">
-                    
                       {message.jobResults.map((job) => (
                         <JobCard key={job.id} job={job} />
                       ))}
@@ -1111,7 +1092,7 @@ export default function JobSeekerChatInterface() {
                 
                 {/* Resume Advice */}
                 {message.resumeAdvice && (
-                  <div className="mt-3">
+                  <div className="mt-2 sm:mt-3">
                     <ResumeAdviceCard advice={message.resumeAdvice} />
                   </div>
                 )}
@@ -1122,9 +1103,9 @@ export default function JobSeekerChatInterface() {
               </div>
               
               {message.type === 'user' && (
-                <Avatar className="w-8 h-8 mt-1">
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0">
                   <AvatarFallback className="bg-gray-200">
-                    <User className="w-4 h-4 text-gray-600" />
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
                   </AvatarFallback>
                 </Avatar>
               )}
@@ -1132,16 +1113,16 @@ export default function JobSeekerChatInterface() {
           ))}
           
           {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <Avatar className="w-8 h-8 mt-1">
+            <div className="flex gap-2 sm:gap-3 justify-start">
+              <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1">
                 <AvatarFallback className="bg-blue-100">
-                  <Bot className="w-4 h-4 text-blue-600" />
+                  <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                 </AvatarFallback>
               </Avatar>
-              <div className="bg-gray-100 rounded-lg p-3">
+              <div className="bg-gray-100 rounded-lg p-2 sm:p-3">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                  <span className="text-sm text-gray-600">Thinking...</span>
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin text-blue-600" />
+                  <span className="text-xs sm:text-sm text-gray-600">Thinking...</span>
                 </div>
               </div>
             </div>
@@ -1152,12 +1133,12 @@ export default function JobSeekerChatInterface() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 bg-white p-3 shadow-lg">
+      <div className="border-t border-gray-200 bg-white p-2 sm:p-3 shadow-lg shrink-0">
         {/* File Upload Section */}
         {showFileUpload && (
-          <div className="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+          <div className="mb-2 sm:mb-3 p-2 sm:p-3 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="text-sm font-medium text-gray-700">Upload CV for Analysis</h4>
+              <h4 className="text-xs sm:text-sm font-medium text-gray-700">Upload CV for Analysis</h4>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1181,9 +1162,9 @@ export default function JobSeekerChatInterface() {
         {uploadedFile && (
           <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-green-800">
-                <CheckCircle className="w-4 h-4" />
-                <span>Resume uploaded: {uploadedFile.fileName}</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-green-800">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="truncate">Resume uploaded: {uploadedFile.fileName}</span>
               </div>
               <Button
                 variant="ghost"
@@ -1208,13 +1189,13 @@ export default function JobSeekerChatInterface() {
                 ? "Ask me to analyze your uploaded resume or ask any career-related questions..."
                 : "Ask me about jobs, resume analysis, career advice, or interview preparation..."
               }
-              className="min-h-[60px] max-h-[120px] resize-none pr-12 text-sm leading-relaxed"
+              className="min-h-[50px] sm:min-h-[60px] max-h-[100px] sm:max-h-[120px] resize-none pr-10 sm:pr-12 text-xs sm:text-sm leading-relaxed"
               disabled={isLoading}
               rows={2}
             />
-            <div className="absolute bottom-2 right-2 flex items-center gap-1 text-xs text-gray-400">
-              <CornerDownLeft className="w-3 h-3" />
-              <span>Send</span>
+            <div className="absolute bottom-1 sm:bottom-2 right-1 sm:right-2 flex items-center gap-1 text-xs text-gray-400">
+              <CornerDownLeft className="w-2 h-2 sm:w-3 sm:h-3" />
+              <span className="hidden sm:inline">Send</span>
             </div>
           </div>
           
@@ -1224,10 +1205,10 @@ export default function JobSeekerChatInterface() {
             size="lg"
             onClick={() => setShowFileUpload(!showFileUpload)}
             disabled={isLoading}
-            className="h-[60px] px-3"
+            className="h-[50px] sm:h-[60px] px-2 sm:px-3"
             title="Upload cv for analysis"
           >
-            <Paperclip className="w-4 h-4" />
+            <Paperclip className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           
           {/* Send Button */}
@@ -1235,29 +1216,31 @@ export default function JobSeekerChatInterface() {
             onClick={() => handleSendMessage()} 
             disabled={(!inputValue.trim() && !uploadedFile) || isLoading}
             size="lg"
-            className="h-[60px] px-5 bg-brand-background hover:bg-brand-background/90"
+            className="h-[50px] sm:h-[60px] px-3 sm:px-5 bg-brand-background hover:bg-brand-background/90"
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
             ) : (
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
             )}
           </Button>
         </div>
         
         {/* Character count and tips */}
         <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span>{inputValue.length}/2000</span>
             {inputValue.length > 1500 && (
               <span className="text-orange-500 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                Approaching limit
+                <span className="hidden sm:inline">Approaching limit</span>
+                <span className="sm:hidden">Limit</span>
               </span>
             )}
           </div>
-          <div className="text-gray-400 flex items-center gap-2">
-            <span>💡 Tip: Be specific for better AI responses</span>
+          <div className="text-gray-400 flex items-center gap-1 sm:gap-2">
+            <span className="hidden sm:inline">💡 Tip: Be specific for better AI responses</span>
+            <span className="sm:hidden">💡 Be specific</span>
           </div>
         </div>
       </div>

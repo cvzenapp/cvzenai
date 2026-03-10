@@ -242,8 +242,8 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               {message && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">{message}</p>
+                <div className="mb-4 p-4 bg-brand-auxiliary-1/20 border border-brand-main/30 rounded-lg">
+                  <p className="text-sm text-brand-main">{message}</p>
                 </div>
               )}
 
@@ -265,7 +265,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                   placeholder="recruiter@company.com"
                   value={signInData.email || ""}
                   onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                  className="pl-10"
+                  className="pl-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                   required
                 />
               </div>
@@ -281,7 +281,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                   placeholder="••••••••"
                   value={signInData.password || ""}
                   onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                  className="pl-10 pr-10"
+                  className="pl-10 pr-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                   required
                 />
                 <button
@@ -300,20 +300,22 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing In...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-brand-main hover:bg-brand-main/90 text-white font-medium py-3 px-8 rounded-lg transition-colors"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </div>
           </form>
         </TabsContent>
 
@@ -334,7 +336,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                       placeholder="John"
                       value={signUpData.firstName || ""}
                       onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                       required
                     />
                   </div>
@@ -349,7 +351,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                       placeholder="Doe"
                       value={signUpData.lastName || ""}
                       onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                       required
                     />
                   </div>
@@ -367,7 +369,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                       placeholder="recruiter@company.com"
                       value={signUpData.email || ""}
                       onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                      className="pl-10"
+                      className="pl-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                       required
                     />
                   </div>
@@ -380,6 +382,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                     placeholder="+1 (555) 123-4567"
                     value={signUpData.phone || ""}
                     onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
+                    className="focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                   />
                 </div>
               </div>
@@ -393,6 +396,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                     placeholder="HR Manager"
                     value={signUpData.jobTitle || ""}
                     onChange={(e) => setSignUpData({ ...signUpData, jobTitle: e.target.value })}
+                    className="focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                     required
                   />
                 </div>
@@ -404,6 +408,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                     placeholder="https://linkedin.com/in/yourprofile"
                     value={signUpData.linkedinUrl || ""}
                     onChange={(e) => setSignUpData({ ...signUpData, linkedinUrl: e.target.value })}
+                    className="focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                   />
                 </div>
               </div>
@@ -523,7 +528,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                       placeholder="••••••••"
                       value={signUpData.password || ""}
                       onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                       required
                     />
                     <button
@@ -547,7 +552,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                       placeholder="••••••••"
                       value={signUpData.confirmPassword || ""}
                       onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                       required
                     />
                     <button
@@ -570,11 +575,11 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                   id="acceptTerms"
                   checked={signUpData.acceptTerms}
                   onChange={(e) => setSignUpData({ ...signUpData, acceptTerms: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-brand-main focus:ring-brand-main border-gray-300 rounded"
                   required
                 />
                 <Label htmlFor="acceptTerms" className="text-sm">
-                  I accept the <a href="/terms" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>
+                  I accept the <a href="/terms" className="text-brand-main hover:text-brand-main/80 font-medium transition-colors" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>
                 </Label>
               </div>
               
@@ -584,11 +589,11 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                   id="acceptPrivacyPolicy"
                   checked={signUpData.acceptPrivacyPolicy}
                   onChange={(e) => setSignUpData({ ...signUpData, acceptPrivacyPolicy: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-brand-main focus:ring-brand-main border-gray-300 rounded"
                   required
                 />
                 <Label htmlFor="acceptPrivacyPolicy" className="text-sm">
-                  I accept the <a href="/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                  I accept the <a href="/privacy" className="text-brand-main hover:text-brand-main/80 font-medium transition-colors" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
                 </Label>
               </div>
             </div>
@@ -599,20 +604,22 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                "Create Recruiter Account"
-              )}
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-brand-main hover:bg-brand-main/90 text-white font-medium py-3 px-8 rounded-lg transition-colors"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  "Create Recruiter Account"
+                )}
+              </Button>
+            </div>
           </form>
         </TabsContent>
       </Tabs>

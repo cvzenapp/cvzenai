@@ -50,7 +50,7 @@ export default function AppHeader({ children, onToggleSidebar, showToggle = fals
             {showToggle && onToggleSidebar && (
               <button
                 onClick={onToggleSidebar}
-                className="lg:hidden text-white p-1.5 sm:p-2 hover:bg-slate-800 rounded-lg transition-all"
+                className="lg:hidden text-brand-main hover:text-white hover:bg-brand-main/20 p-1.5 sm:p-2 rounded-lg transition-all duration-200"
                 aria-label="Toggle sidebar"
               >
                 <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,13 +68,13 @@ export default function AppHeader({ children, onToggleSidebar, showToggle = fals
             <h1 className="hidden md:flex text-sm md:text-base lg:text-xl font-normal text-white items-center gap-2 mr-2 sm:mr-4">
               {`Welcome back, ${currentUser?.name || 'User'}! 👋`}
             </h1>
-            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-300 hover:text-white cursor-pointer hidden sm:block" />
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-brand-main/70 hover:text-brand-main cursor-pointer hidden sm:block transition-colors duration-200" />
             <Button 
               variant="outline" 
               size="sm"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="text-red-400 hover:text-red-300 hover:bg-slate-800 border-slate-700 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-7 sm:h-8 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-brand-main text-white hover:bg-brand-background border-brand-main hover:border-brand-background text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-7 sm:h-8 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {isLoggingOut ? (
                 <>
@@ -85,7 +85,7 @@ export default function AppHeader({ children, onToggleSidebar, showToggle = fals
                 'Logout'
               )}
             </Button>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-medium">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-brand-main hover:bg-brand-background rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-medium cursor-pointer transition-all duration-200 hover:scale-105 shadow-md">
               {currentUser?.name?.substring(0, 2).toUpperCase() || 'U'}
             </div>
           </div>

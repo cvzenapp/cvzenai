@@ -126,13 +126,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-brand-background via-slate-800 to-brand-background text-white p-6 flex items-center justify-between">
+            <div className="bg-brand-background text-white p-6 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">
-                  {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+                  {mode === 'login' ? 'Welcome Back to CVZen' : 'Create Account'}
                 </h2>
                 <p className="text-brand-auxiliary-1 text-sm">
-                  {mode === 'login' ? 'Sign in to apply for jobs' : 'Sign up to start applying'}
+                  {mode === 'login' ? 'Sign in to build your digital CV' : 'Sign up to start building'}
                 </p>
               </div>
               <button
@@ -146,7 +146,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {debugInfo && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-lg text-xs">
+                <div className="bg-brand-auxiliary-1/20 border border-brand-main/30 text-brand-main px-4 py-2 rounded-lg text-xs">
                   Debug: {debugInfo}
                 </div>
               )}
@@ -168,7 +168,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                       placeholder="Alex Morgan"
                       required
                     />
@@ -186,7 +186,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                     placeholder="you@example.com"
                     required
                   />
@@ -203,7 +203,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                     placeholder="••••••••"
                     required
                     minLength={6}
@@ -211,13 +211,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  type="submit"
+                  className="bg-brand-main hover:bg-brand-main/90 text-white font-medium py-3 px-8 rounded-lg transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                </Button>
+              </div>
 
               <div className="text-center">
                 <button
@@ -226,7 +228,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultMode = 'l
                     setMode(mode === 'login' ? 'signup' : 'login');
                     setError('');
                   }}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-brand-main hover:text-brand-main/80 font-medium transition-colors"
                 >
                   {mode === 'login' 
                     ? "Don't have an account? Sign up" 

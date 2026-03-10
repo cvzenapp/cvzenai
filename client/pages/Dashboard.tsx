@@ -1096,7 +1096,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <AppHeader 
         showToggle={true}
@@ -1104,7 +1104,7 @@ export default function Dashboard() {
       />
 
       {/* Main Layout: Sidebar + Content */}
-      <div className="flex h-[calc(100vh-64px)] bg-background">
+      <div className="flex flex-1 bg-background overflow-hidden">
         {/* Overlay for mobile */}
         {isMobileSidebarOpen && (
           <div
@@ -1119,16 +1119,27 @@ export default function Dashboard() {
           bg-card border-r transition-all duration-300 ease-in-out shrink-0 flex flex-col
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}
-          w-64
+          w-72 sm:w-64
           mt-16 lg:mt-0
         `}>
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {/* Mobile Close Button */}
+          <div className="lg:hidden flex justify-end p-2 border-b">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <nav className="flex-1 p-2 sm:p-3 space-y-1 overflow-y-auto">
             <button
               onClick={() => {
                 setActiveTab('ai-chat');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'ai-chat'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1136,7 +1147,7 @@ export default function Dashboard() {
               title={isSidebarCollapsed ? "AI Assistant" : ""}
             >
               <MessageSquare className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left">AI Assistant</span>}
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">AI Assistant</span>}
             </button>
             
             <button
@@ -1144,7 +1155,7 @@ export default function Dashboard() {
                 setActiveTab('overview');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'overview'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1152,7 +1163,7 @@ export default function Dashboard() {
               title={isSidebarCollapsed ? "Overview" : ""}
             >
               <TrendingUp className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left">Overview</span>}
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Overview</span>}
             </button>
             
             <button
@@ -1160,7 +1171,7 @@ export default function Dashboard() {
                 setActiveTab('resumes');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'resumes'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1170,9 +1181,9 @@ export default function Dashboard() {
               <FileText className="h-5 w-5 shrink-0" />
               {!isSidebarCollapsed && (
                 <>
-                  <span className="flex-1 text-left">My Resumes</span>
+                  <span className="flex-1 text-left text-sm sm:text-base">My Resumes</span>
                   {resumes.length > 0 && (
-                    <Badge variant="secondary" className="ml-auto">
+                    <Badge variant="secondary" className="ml-auto text-xs">
                       {resumes.length}
                     </Badge>
                   )}
@@ -1185,7 +1196,7 @@ export default function Dashboard() {
                 setActiveTab('jobs');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'jobs'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1193,7 +1204,7 @@ export default function Dashboard() {
               title={isSidebarCollapsed ? "Jobs" : ""}
             >
               <Search className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left">Jobs</span>}
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Jobs</span>}
             </button>
             
             <button
@@ -1201,7 +1212,7 @@ export default function Dashboard() {
                 setActiveTab('fake-job-detector');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'fake-job-detector'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1209,7 +1220,7 @@ export default function Dashboard() {
               title={isSidebarCollapsed ? "JD Trust Score" : ""}
             >
               <Shield className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left">JD Trust Score</span>}
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">JD Trust Score</span>}
             </button>
             
             <button
@@ -1217,7 +1228,7 @@ export default function Dashboard() {
                 setActiveTab('applications');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'applications'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1227,9 +1238,9 @@ export default function Dashboard() {
               <FileText className="h-5 w-5 shrink-0" />
               {!isSidebarCollapsed && (
                 <>
-                  <span className="flex-1 text-left">Applications</span>
+                  <span className="flex-1 text-left text-sm sm:text-base">Applications</span>
                   {stats.applications > 0 && (
-                    <Badge variant="secondary" className="ml-auto">
+                    <Badge variant="secondary" className="ml-auto text-xs">
                       {stats.applications}
                     </Badge>
                   )}
@@ -1242,7 +1253,7 @@ export default function Dashboard() {
                 setActiveTab('interviews');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'interviews'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1252,9 +1263,9 @@ export default function Dashboard() {
               <Calendar className="h-5 w-5 shrink-0" />
               {!isSidebarCollapsed && (
                 <>
-                  <span className="flex-1 text-left">Interviews</span>
+                  <span className="flex-1 text-left text-sm sm:text-base">Interviews</span>
                   {stats.interviews > 0 && (
-                    <Badge variant="secondary" className="ml-auto">
+                    <Badge variant="secondary" className="ml-auto text-xs">
                       {stats.interviews}
                     </Badge>
                   )}
@@ -1267,7 +1278,7 @@ export default function Dashboard() {
                 setActiveTab('subscription');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'subscription'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1275,7 +1286,7 @@ export default function Dashboard() {
               title={isSidebarCollapsed ? "Subscription" : ""}
             >
               <Package className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left">Subscription</span>}
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Subscription</span>}
             </button>
             
             <button
@@ -1283,7 +1294,7 @@ export default function Dashboard() {
                 setActiveTab('settings');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'settings'
                   ? 'bg-brand-background text-white'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -1291,7 +1302,7 @@ export default function Dashboard() {
               title={isSidebarCollapsed ? "Settings" : ""}
             >
               <Settings className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left">Settings</span>}
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Settings</span>}
             </button>
           </nav>
             
@@ -1314,85 +1325,81 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        {/* Fixed Bottom Toggle Button for Mobile - Similar to Recruiter Toggle */}
+        {/* Fixed Bottom Toggle Button for Mobile - Enhanced for better UX */}
         {!isMobileSidebarOpen && (
-          <div className="lg:hidden fixed bottom-6 left-6 z-50">
+          <div className="lg:hidden fixed bottom-4 left-4 z-50">
             <Button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="bg-brand-background hover:bg-brand-background/90 text-white px-4 py-3 rounded-full shadow-lg flex items-center gap-2"
+              className="bg-brand-main hover:bg-brand-background text-white px-3 py-3 rounded-full shadow-lg flex items-center gap-2 transition-all duration-200 hover:scale-105"
               title="Show Sidebar"
             >
-              <Menu className="w-5 h-5" />
-              <span className="text-sm font-medium">Menu</span>
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-xs sm:text-sm font-medium">Menu</span>
             </Button>
           </div>
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
+        <main className="flex-1 overflow-hidden flex flex-col">
+          <div className={`${activeTab === 'ai-chat' ? 'p-3 sm:p-4 lg:p-6 flex-1 flex flex-col' : 'p-3 sm:p-4 lg:p-6 overflow-y-auto'}`}>
             {activeTab === 'overview' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Stats Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-3 sm:p-4 lg:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-normal text-gray-600">Total Resumes</p>
-                          <p className="text-2xl font-normal text-gray-900">{stats.totalResumes}</p>
+                          <p className="text-xs sm:text-sm font-normal text-gray-600">Total Resumes</p>
+                          <p className="text-lg sm:text-xl lg:text-2xl font-normal text-gray-900">{stats.totalResumes}</p>
                         </div>
-                        <FileText className="h-8 w-8 text-blue-600" />
+                        <FileText className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-blue-600" />
                       </div>
                     </CardContent>
                   </Card>
                   
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-3 sm:p-4 lg:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-normal text-gray-600">Profile Views</p>
-                          <p className="text-2xl font-normal text-gray-900">{stats.totalViews}</p>
+                          <p className="text-xs sm:text-sm font-normal text-gray-600">Profile Views</p>
+                          <p className="text-lg sm:text-xl lg:text-2xl font-normal text-gray-900">{stats.totalViews}</p>
                         </div>
-                        <Eye className="h-8 w-8 text-green-600" />
+                        <Eye className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-green-600" />
                       </div>
                     </CardContent>
                   </Card>
                   
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-3 sm:p-4 lg:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-normal text-gray-600">Recruiter Responses</p>
-                          <p className="text-2xl font-normal text-gray-900">{stats.recruiterResponses}</p>
+                          <p className="text-xs sm:text-sm font-normal text-gray-600">Recruiter Responses</p>
+                          <p className="text-lg sm:text-xl lg:text-2xl font-normal text-gray-900">{stats.recruiterResponses}</p>
                         </div>
-                        <UserPlus className="h-8 w-8 text-purple-600" />
+                        <UserPlus className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-purple-600" />
                       </div>
                     </CardContent>
                   </Card>
                   
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-3 sm:p-4 lg:p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-normal text-gray-600">Profile Strength</p>
-                          <p className="text-2xl font-normal text-gray-900">{stats.profileStrength}%</p>
+                          <p className="text-xs sm:text-sm font-normal text-gray-600">Profile Strength</p>
+                          <p className="text-lg sm:text-xl lg:text-2xl font-normal text-gray-900">{stats.profileStrength}%</p>
                         </div>
-                        <TrendingUp className="h-8 w-8 text-orange-600" />
+                        <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-orange-600" />
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {/* AI Chat Preview */}
                   <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-                    <CardHeader>
-                      {/* <CardTitle className="flex items-center gap-2">
-                        <MessageSquare className="h-5 w-5 text-blue-600" />
-                        AI Career Assistant
-                      </CardTitle> */}
+                    <CardHeader className="pb-3 sm:pb-4">
                       <p className="text-sm text-gray-600">
                         Get instant career advice, resume tips, and job search guidance powered by AI
                       </p>
@@ -1400,7 +1407,7 @@ export default function Dashboard() {
                     <CardContent>
                       <Button 
                         onClick={() => setActiveTab('ai-chat')} 
-                        className="w-full bg-brand-background hover:bg-brand-background/90"
+                        className="w-full bg-brand-background hover:bg-brand-background/90 text-sm sm:text-base"
                       >
                         Start AI Chat Session
                       </Button>
@@ -1409,16 +1416,16 @@ export default function Dashboard() {
 
                   {/* Quick Resume Actions */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-gray-600" />
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
                         Resume Actions
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-2 sm:space-y-3">
                       <Button 
                         onClick={handleCreateResume} 
-                        className="w-full" 
+                        className="w-full text-sm sm:text-base" 
                         variant="outline"
                       >
                         <Plus className="h-4 w-4 mr-2" />
@@ -1426,7 +1433,7 @@ export default function Dashboard() {
                       </Button>
                       <Button 
                         onClick={() => setActiveTab('resumes')} 
-                        className="w-full" 
+                        className="w-full text-sm sm:text-base" 
                         variant="outline"
                       >
                         <Eye className="h-4 w-4 mr-2" />
@@ -1439,88 +1446,102 @@ export default function Dashboard() {
             )}
 
             {activeTab === 'ai-chat' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  {/* <div className="mb-6"> */}
-                    {/* <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                      <MessageSquare className="h-6 w-6 text-blue-600" />
-                      AI Career Assistant
-                    </h2> */}
-                    {/* <p className="text-gray-600 mt-2">
-                      Get personalized career advice, resume analysis, job search strategies, and interview preparation tips powered by advanced AI.
-                    </p> */}
-                  {/* </div> */}
+              <div className="h-full flex flex-col">
+                <div className="bg-white rounded-xl border border-gray-200 flex-1 flex flex-col overflow-hidden">
                   <JobSeekerChatInterface />
                 </div>
               </div>
             )}
 
             {activeTab === 'resumes' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-normal text-gray-900">My Resumes</h2>
-                  <div className="flex gap-2">
-                    <Button onClick={() => setShowImportModal(true)} variant="outline" className="gap-2">
-                      <Upload className="h-4 w-4" />
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+                  <h2 className="text-lg sm:text-xl font-normal text-gray-900">My Resumes</h2>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button onClick={() => setShowImportModal(true)} variant="outline" className="gap-2 text-xs sm:text-sm border-brand-main/30 text-brand-main hover:bg-brand-main hover:text-white transition-all duration-200">
+                      <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                       Import Resume
                     </Button>
-                    <Button onClick={handleCreateResume} className="gap-2">
-                      <Plus className="h-4 w-4" />
+                    <Button onClick={handleCreateResume} className="gap-2 text-xs sm:text-sm bg-brand-main hover:bg-brand-background transition-all duration-200">
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                       Create New Resume
                     </Button>
                   </div>
                 </div>
                 
-                <div className="grid gap-6">
+                <div className="grid gap-4 sm:gap-6">
                   {resumes.length > 0 ? (
                     resumes.map((resume) => (
-                      <Card key={resume.id} className="bg-white shadow-sm">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between gap-4">
+                      <Card key={resume.id} className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-4 mb-2">
-                                <h3 className="font-normal text-gray-900 text-lg">{resume.name}</h3>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <Switch
-                                    id={`active-${resume.id}`}
-                                    checked={resume.isActive || false}
-                                    onCheckedChange={() => handleToggleActive(resume.id, resume.isActive || false)}
-                                    title={resume.isActive ? "Active Resume" : "Set as Active"}
-                                  />
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleResumeAction("view", resume.id)}
-                                    title="View Resume"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleResumeAction("edit", resume.id)}
-                                    title="Edit Resume"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleDeleteResume(resume.id)}
-                                    title="Delete Resume"
-                                    disabled={resume.isActive}
-                                    className={resume.isActive ? "opacity-50 cursor-not-allowed" : "hover:bg-red-50 hover:text-red-600 hover:border-red-300"}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
+                                <h3 className="font-normal text-gray-900 text-base sm:text-lg truncate">{resume.name}</h3>
+                                <div className="flex items-center gap-2 flex-shrink-0 self-start">
+                                  <div className="flex items-center gap-1">
+                                    <Switch
+                                      id={`active-${resume.id}`}
+                                      checked={resume.isActive || false}
+                                      onCheckedChange={() => handleToggleActive(resume.id, resume.isActive || false)}
+                                      title={resume.isActive ? "Active Resume" : "Set as Active"}
+                                      className="data-[state=checked]:bg-brand-main"
+                                    />
+                                    <span className="text-xs text-gray-500 hidden sm:inline">
+                                      {resume.isActive ? "Active" : "Inactive"}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                               {resume.personalInfo?.title && (
-                                <p className="text-sm text-blue-600 mb-1">{resume.personalInfo.title}</p>
+                                <p className="text-xs sm:text-sm text-brand-main mb-1 truncate">{resume.personalInfo.title}</p>
                               )}
-                              <p className="text-sm text-gray-500 mb-3">
+                              <p className="text-xs sm:text-sm text-gray-500 mb-3">
                                 Template: {resume.template} • Last updated {resume.lastUpdated}
                               </p>
+                              
+                              {/* Action Buttons - Mobile First Layout */}
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleResumeAction("view", resume.id)}
+                                  title="View Resume"
+                                  className="flex-1 sm:flex-none text-xs border-brand-main/30 text-brand-main hover:bg-brand-main hover:text-white transition-all duration-200"
+                                >
+                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                  <span className="hidden sm:inline">View</span>
+                                  <span className="sm:hidden">View</span>
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleResumeAction("edit", resume.id)}
+                                  title="Edit Resume"
+                                  className="flex-1 sm:flex-none text-xs border-brand-main/30 text-brand-main hover:bg-brand-main hover:text-white transition-all duration-200"
+                                >
+                                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                  <span className="hidden sm:inline">Edit</span>
+                                  <span className="sm:hidden">Edit</span>
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleDeleteResume(resume.id)}
+                                  title="Delete Resume"
+                                  disabled={resume.isActive}
+                                  className={`flex-1 sm:flex-none text-xs transition-all duration-200 ${
+                                    resume.isActive 
+                                      ? "opacity-50 cursor-not-allowed border-gray-300 text-gray-400" 
+                                      : "border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400"
+                                  }`}
+                                >
+                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                  <span className="sm:hidden">Delete</span>
+                                </Button>
+                              </div>
+
                               {resume.atsScore && (
                                 <div 
                                   className="mt-3 pt-3 border-t border-gray-200 cursor-pointer hover:bg-gray-50 rounded p-2 transition-colors"
@@ -1540,7 +1561,7 @@ export default function Dashboard() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleCalculateATS(resume.id)}
-                                    className="w-full"
+                                    className="w-full text-xs sm:text-sm border-brand-main/30 text-brand-main hover:bg-brand-main hover:text-white transition-all duration-200"
                                   >
                                     Calculate ATS Score
                                   </Button>
@@ -1554,10 +1575,10 @@ export default function Dashboard() {
                   ) : (
                     <Card className="bg-white shadow-sm">
                       <CardContent className="p-6 text-center">
-                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="font-normal text-gray-900 mb-2">No resumes yet</h3>
-                        <p className="text-gray-500 mb-4">Create your first resume to get started</p>
-                        <Button onClick={handleCreateResume} className="gap-2">
+                        <FileText className="h-12 w-12 text-brand-main/60 mx-auto mb-4" />
+                        <h3 className="font-normal text-gray-900 mb-2 text-base sm:text-lg">No resumes yet</h3>
+                        <p className="text-gray-500 mb-4 text-sm sm:text-base">Create your first resume to get started</p>
+                        <Button onClick={handleCreateResume} className="gap-2 bg-brand-main hover:bg-brand-background transition-all duration-200">
                           <Plus className="h-4 w-4" />
                           Create Your First Resume
                         </Button>
