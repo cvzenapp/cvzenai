@@ -188,59 +188,126 @@ export default function Dashboard() {
 
   // Update profile data when user changes (after login)
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
+    const fetchUserProfile = async () => {
       try {
-        const user = JSON.parse(userData);
-        setProfileData({
-          name: user?.name || '',
-          email: user?.email || '',
-          mobile: user?.mobile || '',
-          avatar: user?.avatar || '',
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          // Fallback to localStorage if no token
+          const userData = localStorage.getItem('user');
+          if (userData) {
+            try {
+              const user = JSON.parse(userData);
+              setProfileData({
+                name: user?.name || '',
+                email: user?.email || '',
+                mobile: user?.mobile || '',
+                avatar: user?.avatar || '',
+              });
+            } catch (e) {
+              console.error('Error parsing user data from localStorage:', e);
+            }
+          }
+          return;
+        }
+
+        console.log('🔍 Fetching user profile from server...');
+        const response = await fetch('/api/user/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
-        
-        // Calculate profile strength based on resume data
-        // We'll update this when resumes are loaded
-        // For now, calculate based on user profile data
-        let strength = 0;
-        const checks = [
-          { condition: user?.name && user.name.trim() !== '', weight: 25 },
-          { condition: user?.email, weight: 25 },
-          { condition: user?.mobile, weight: 25 },
-          { condition: user?.avatar, weight: 25 },
-        ];
-        
-        checks.forEach(check => {
-          if (check.condition) strength += check.weight;
-        });
-        
-        setStats(prev => ({ ...prev, profileStrength: strength }));
-        
-        // Calculate password last changed
-        if (user?.passwordChangedAt) {
-          const changedDate = new Date(user.passwordChangedAt);
-          const now = new Date();
-          const diffTime = Math.abs(now.getTime() - changedDate.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (response.ok) {
+          const result = await response.json();
+          const user = result.data;
           
-          if (diffDays === 0) {
-            setPasswordLastChanged('Today');
-          } else if (diffDays === 1) {
-            setPasswordLastChanged('Yesterday');
-          } else if (diffDays < 30) {
-            setPasswordLastChanged(`${diffDays} days ago`);
-          } else if (diffDays < 365) {
-            const months = Math.floor(diffDays / 30);
-            setPasswordLastChanged(`${months} month${months > 1 ? 's' : ''} ago`);
-          } else {
-            const years = Math.floor(diffDays / 365);
-            setPasswordLastChanged(`${years} year${years > 1 ? 's' : ''} ago`);
+          console.log('✅ Profile fetched successfully:', { name: user.name, email: user.email });
+          
+          setProfileData({
+            name: user.name || '',
+            email: user.email || '',
+            mobile: user.mobile || '',
+            avatar: user.avatar || '',
+          });
+
+          // Update localStorage with fresh data
+          localStorage.setItem('user', JSON.stringify(user));
+          
+          // Calculate profile strength based on user data
+          let strength = 0;
+          const checks = [
+            { condition: user?.name && user.name.trim() !== '', weight: 25 },
+            { condition: user?.email, weight: 25 },
+            { condition: user?.mobile, weight: 25 },
+            { condition: user?.avatar, weight: 25 },
+          ];
+          
+          checks.forEach(check => {
+            if (check.condition) strength += check.weight;
+          });
+          
+          setStats(prev => ({ ...prev, profileStrength: strength }));
+          
+          // Update password last changed date
+          if (user.passwordChangedAt) {
+            const changedDate = new Date(user.passwordChangedAt);
+            const now = new Date();
+            const diffTime = Math.abs(now.getTime() - changedDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+              setPasswordLastChanged('Today');
+            } else if (diffDays === 1) {
+              setPasswordLastChanged('Yesterday');
+            } else if (diffDays < 30) {
+              setPasswordLastChanged(`${diffDays} days ago`);
+            } else if (diffDays < 365) {
+              const months = Math.floor(diffDays / 30);
+              setPasswordLastChanged(`${months} month${months > 1 ? 's' : ''} ago`);
+            } else {
+              const years = Math.floor(diffDays / 365);
+              setPasswordLastChanged(`${years} year${years > 1 ? 's' : ''} ago`);
+            }
+          }
+        } else {
+          console.error('Failed to fetch user profile:', response.status);
+          // Fallback to localStorage data
+          const userData = localStorage.getItem('user');
+          if (userData) {
+            try {
+              const user = JSON.parse(userData);
+              setProfileData({
+                name: user?.name || '',
+                email: user?.email || '',
+                mobile: user?.mobile || '',
+                avatar: user?.avatar || '',
+              });
+            } catch (e) {
+              console.error('Error parsing user data from localStorage:', e);
+            }
           }
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('Error fetching user profile:', error);
+        // Fallback to localStorage data
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const user = JSON.parse(userData);
+            setProfileData({
+              name: user?.name || '',
+              email: user?.email || '',
+              mobile: user?.mobile || '',
+              avatar: user?.avatar || '',
+            });
+          } catch (e) {
+            console.error('Error parsing user data from localStorage:', e);
+          }
+        }
       }
-    }
+    };
+
+    fetchUserProfile();
   }, []); // Run once on mount to get latest user data
 
   // Change password state

@@ -26,6 +26,78 @@ const updateReferralProfileSchema = z.object({
   }).optional()
 });
 
+// GET /api/user/profile - Get user profile data
+router.get('/profile', async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized - User ID not found'
+      });
+    }
+
+    console.log('📖 Fetching profile for user:', userId);
+
+    // Get database connection
+    const { getDatabase } = await import('../database/connection.js');
+    const db = await getDatabase();
+    
+    // Get user profile data
+    const result = await db.query(`
+      SELECT 
+        id, 
+        email, 
+        first_name, 
+        last_name, 
+        mobile, 
+        avatar,
+        created_at,
+        updated_at,
+        password_changed_at
+      FROM users 
+      WHERE id = $1
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    const user = result.rows[0];
+    
+    // Combine first_name and last_name into name for response
+    const profileData = {
+      id: user.id,
+      email: user.email,
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+      mobile: user.mobile,
+      avatar: user.avatar,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+      passwordChangedAt: user.password_changed_at
+    };
+
+    console.log('✅ Profile fetched successfully for user:', userId);
+
+    res.json({
+      success: true,
+      data: profileData
+    });
+  } catch (error: any) {
+    console.error('❌ Get profile error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // // GET /api/user/profile - Get enhanced user profile with referral data
 // router.get('/profile', referralAuth.requireAuth, async (req: AuthenticatedRequest, res: Response) => {
 //   try {
