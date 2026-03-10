@@ -1659,7 +1659,7 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
       [interviewId, evaluationMetrics ? JSON.stringify(evaluationMetrics) : null]
     );
 
-    // If recruiter provided decision and feedback, update the application
+    // If recruiter provided decision and feedback, update the application and send notification
     if (isRecruiter && decision && interview.candidate_id && interview.job_posting_id) {
       console.log('📝 Processing feedback:', {
         decision,
@@ -1709,6 +1709,137 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
         }
       }
 
+      // Store feedback in interview_feedback table
+      if (feedback || decision) {
+        try {
+          // Calculate overall rating from evaluation metrics if available
+          let overallRating = null;
+
+          if (evaluationMetrics && Array.isArray(evaluationMetrics)) {
+            const scoredMetrics = evaluationMetrics.filter(m => m.checked && m.score);
+            
+            console.log('📊 Processing evaluation metrics:', {
+              totalMetrics: evaluationMetrics.length,
+              scoredMetrics: scoredMetrics.length,
+              metrics: scoredMetrics.map(m => ({ metric: m.metric, score: m.score }))
+            });
+            
+            if (scoredMetrics.length > 0) {
+              // Calculate overall rating - scores are already on 1-10 scale
+              const avgScore = scoredMetrics.reduce((sum, metric) => {
+                return sum + parseFloat(metric.score || '0');
+              }, 0) / scoredMetrics.length;
+              
+              // Ensure rating is between 1.0 and 10.0, round to one decimal place
+              overallRating = Math.max(1.0, Math.min(10.0, Math.round(avgScore * 10) / 10));
+              
+              console.log('📊 Rating calculation details:', {
+                rawScores: scoredMetrics.map(m => parseFloat(m.score || '0')),
+                avgScore: avgScore,
+                finalRating: overallRating
+              });
+            }
+          }
+
+          console.log('📝 Storing feedback in interview_feedback table:', {
+            interviewId,
+            providedBy: auth.userId,
+            hasFeedback: !!feedback,
+            hasDecision: !!decision,
+            hasEvaluationMetrics: !!(evaluationMetrics && evaluationMetrics.length > 0),
+            calculatedRating: overallRating
+          });
+
+          // Map decision to hiring status
+          const hiringStatus = decision === 'hired' ? 'hired' : decision === 'rejected' ? 'rejected' : 'hold';
+
+          const feedbackResult = await db.query(
+            `INSERT INTO interview_feedback (
+              interview_id, 
+              provided_by, 
+              rating, 
+              feedback_text, 
+              hiring_status
+            ) VALUES ($1, $2, $3, $4, $5)
+            RETURNING id`,
+            [
+              interviewId,
+              auth.userId,
+              overallRating,
+              feedback || null,
+              hiringStatus
+            ]
+          );
+
+          console.log('✅ Stored feedback in interview_feedback table:', {
+            feedbackId: feedbackResult.rows[0].id,
+            interviewId,
+            providedBy: auth.userId,
+            overallRating,
+            hiringStatus,
+            hasFeedbackText: !!feedback
+          });
+        } catch (feedbackError) {
+          console.error('❌ Failed to store interview feedback:', feedbackError);
+          console.error('❌ Feedback error details:', {
+            message: feedbackError.message,
+            stack: feedbackError.stack
+          });
+          // Don't fail the completion if feedback storage fails
+        }
+      }
+
+      // Send email notification to candidate about the decision
+      try {
+        // Get candidate and recruiter details for email
+        const emailDetailsQuery = await db.query(`
+          SELECT 
+            c.email as candidate_email,
+            COALESCE(c.first_name || ' ' || c.last_name, c.email) as candidate_name,
+            COALESCE(rec.first_name || ' ' || rec.last_name, rec.email) as recruiter_name,
+            comp.name as company_name,
+            jp.title as job_title,
+            i.title as interview_title,
+            i.proposed_datetime
+          FROM interview_invitations i
+          LEFT JOIN users c ON i.candidate_id = c.id
+          LEFT JOIN users rec ON i.recruiter_id = rec.id
+          LEFT JOIN recruiter_profiles rp ON rec.id = rp.user_id
+          LEFT JOIN companies comp ON rp.company_id = comp.id
+          LEFT JOIN job_postings jp ON i.job_posting_id = jp.id
+          WHERE i.id = $1
+        `, [interviewId]);
+
+        if (emailDetailsQuery.rows.length > 0) {
+          const emailData = emailDetailsQuery.rows[0];
+          
+          await emailService.sendInterviewDecisionNotification(
+            emailData.candidate_email,
+            emailData.candidate_name || 'Candidate',
+            emailData.recruiter_name || 'Recruiter',
+            emailData.company_name || 'Company',
+            {
+              title: emailData.interview_title,
+              proposedDatetime: emailData.proposed_datetime,
+              decision: decision as 'hired' | 'rejected' | 'hold',
+              feedback: feedback,
+              evaluationMetrics: evaluationMetrics
+            },
+            emailData.job_title,
+            interview.candidate_id
+          );
+
+          console.log('✅ Interview decision email sent to candidate:', {
+            candidateEmail: emailData.candidate_email,
+            decision,
+            companyName: emailData.company_name
+          });
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send interview decision email:', emailError);
+        // Don't fail the completion if email fails
+      }
+
       console.log('✅ Application updated with interview feedback:', {
         candidateId: interview.candidate_id,
         jobPostingId: interview.job_posting_id,
@@ -1743,6 +1874,88 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to mark interview as completed'
+    });
+  }
+});
+
+// Get interview feedback
+router.get("/:interviewId/feedback", async (req: Request, res: Response) => {
+  try {
+    const auth = await authenticateUser(req);
+    
+    if (!auth) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const { interviewId } = req.params;
+    const db = await getDatabase();
+
+    // Verify interview exists and user is authorized
+    const interviewCheck = await db.query(
+      'SELECT id, recruiter_id, candidate_id FROM interview_invitations WHERE id = $1',
+      [interviewId]
+    );
+
+    if (interviewCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Interview not found'
+      });
+    }
+
+    const interview = interviewCheck.rows[0];
+    const isRecruiter = interview.recruiter_id === auth.userId;
+    const isCandidate = interview.candidate_id === auth.userId;
+
+    if (!isRecruiter && !isCandidate) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view this interview feedback'
+      });
+    }
+
+    // Get feedback from interview_feedback table
+    const feedbackQuery = await db.query(`
+      SELECT 
+        if.*,
+        COALESCE(u.first_name || ' ' || u.last_name, u.email) as provider_name
+      FROM interview_feedback if
+      LEFT JOIN users u ON if.provided_by = u.id
+      WHERE if.interview_id = $1
+      ORDER BY if.created_at DESC
+    `, [interviewId]);
+
+    const feedback = feedbackQuery.rows.map(row => ({
+      id: row.id,
+      interviewId: row.interview_id,
+      providedBy: row.provided_by,
+      providerName: row.provider_name,
+      rating: row.rating,
+      feedbackText: row.feedback_text,
+      hiringStatus: row.hiring_status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+
+    console.log('✅ Retrieved interview feedback:', {
+      interviewId,
+      feedbackCount: feedback.length,
+      requestedBy: auth.userId
+    });
+
+    res.json({
+      success: true,
+      data: feedback
+    });
+
+  } catch (error) {
+    console.error('❌ Error retrieving interview feedback:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve interview feedback'
     });
   }
 });

@@ -241,14 +241,14 @@ export default function LandingPage() {
                 <Leaf className="h-4 w-4" />
                 Take Pledge
               </button>
-              {isAuthenticated && (
+              {/* {isAuthenticated && (
                 <Link
                   to="/dashboard"
                   className="text-brand-auxiliary-1 hover:text-brand-main transition-colors font-normal"
                 >
                   Dashboard
                 </Link>
-              )}
+              )} */}
               {/* {!isAuthenticated && (
                 <>
                   <button

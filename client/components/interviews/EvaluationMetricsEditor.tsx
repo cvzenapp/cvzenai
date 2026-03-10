@@ -60,11 +60,33 @@ export const EvaluationMetricsEditor: React.FC<EvaluationMetricsEditorProps> = (
   };
 
   const handleScoreChange = (id: number, score: string) => {
-    const updatedMetrics = metrics.map(metric =>
-      metric.id === id ? { ...metric, score: score || null } : metric
-    );
-    setMetrics(updatedMetrics);
-    onChange(updatedMetrics);
+    // Validate score is between 1-10 and allow decimals
+    if (score === '' || score === null) {
+      const updatedMetrics = metrics.map(metric =>
+        metric.id === id ? { ...metric, score: null } : metric
+      );
+      setMetrics(updatedMetrics);
+      onChange(updatedMetrics);
+      return;
+    }
+
+    const numericScore = parseFloat(score);
+    
+    // Allow typing but validate range
+    if (!isNaN(numericScore) && numericScore >= 1 && numericScore <= 10) {
+      const updatedMetrics = metrics.map(metric =>
+        metric.id === id ? { ...metric, score: score } : metric
+      );
+      setMetrics(updatedMetrics);
+      onChange(updatedMetrics);
+    } else if (score.match(/^\d*\.?\d*$/)) {
+      // Allow partial typing (like "8." or "9.5")
+      const updatedMetrics = metrics.map(metric =>
+        metric.id === id ? { ...metric, score: score } : metric
+      );
+      setMetrics(updatedMetrics);
+      onChange(updatedMetrics);
+    }
   };
 
   const handleAddMetric = () => {
@@ -124,13 +146,28 @@ export const EvaluationMetricsEditor: React.FC<EvaluationMetricsEditorProps> = (
             </div>
             
             <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={metric.score || ''}
-                onChange={(e) => handleScoreChange(metric.id, e.target.value)}
-                placeholder="Score"
-                className="w-20 px-2 py-1 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-brand-main focus:border-brand-main font-jakarta"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="0.1"
+                  value={metric.score || ''}
+                  onChange={(e) => handleScoreChange(metric.id, e.target.value)}
+                  placeholder="1-10"
+                  className={`w-20 px-2 py-1 text-xs border rounded focus:ring-1 focus:ring-brand-main font-jakarta ${
+                    metric.score && (parseFloat(metric.score) < 1 || parseFloat(metric.score) > 10)
+                      ? 'border-red-300 focus:border-red-500'
+                      : 'border-slate-200 focus:border-brand-main'
+                  }`}
+                  title="Rate from 1.0 to 10.0 (decimals allowed)"
+                />
+                {metric.score && (parseFloat(metric.score) < 1 || parseFloat(metric.score) > 10) && (
+                  <div className="absolute -bottom-5 left-0 text-xs text-red-500 whitespace-nowrap">
+                    Must be 1-10
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => handleRemoveMetric(metric.id)}
@@ -185,9 +222,17 @@ export const EvaluationMetricsEditor: React.FC<EvaluationMetricsEditorProps> = (
         )}
       </div>
 
-      <p className="text-xs text-slate-500 font-jakarta">
-        Check the metrics you want to evaluate during the interview. You can add scores during or after the interview.
-      </p>
+      <div className="text-xs text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <p className="font-medium text-blue-700 mb-1">📊 Scoring Guide:</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-blue-600">
+          <span>• 1-3: Below expectations</span>
+          <span>• 4-6: Meets expectations</span>
+          <span>• 7-10: Exceeds expectations</span>
+        </div>
+        <p className="mt-2 text-blue-600">
+          Rate each metric from 1.0 to 10.0 (decimals like 8.5 are allowed). Check the metrics you want to evaluate during the interview.
+        </p>
+      </div>
     </div>
   );
 };

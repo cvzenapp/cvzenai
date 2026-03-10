@@ -232,17 +232,9 @@ export interface InterviewFeedback {
   interviewId: number;
   providedBy: number;
   
-  rating?: number;
-  technicalSkillsRating?: number;
-  communicationRating?: number;
-  culturalFitRating?: number;
-  
+  rating?: number; // Overall rating 1.0-10.0 (decimal)
   feedbackText?: string;
-  strengths?: string;
-  areasForImprovement?: string;
-  
-  recommendation?: 'hire' | 'no_hire' | 'maybe' | 'next_round';
-  nextSteps?: string;
+  hiringStatus?: 'hired' | 'rejected' | 'hold';
   
   createdAt: string;
   updatedAt: string;

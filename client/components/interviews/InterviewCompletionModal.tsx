@@ -42,6 +42,16 @@ export const InterviewCompletionModal: React.FC<InterviewCompletionModalProps> =
   const handleSubmit = async () => {
     if (!decision) return;
 
+    // Validate all scores are within 1-10 range
+    const invalidScores = evaluationMetrics.filter(metric => 
+      metric.checked && metric.score && (parseFloat(metric.score) < 1 || parseFloat(metric.score) > 10)
+    );
+
+    if (invalidScores.length > 0) {
+      alert('Please ensure all scores are between 1.0 and 10.0 before submitting.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       await onSubmit(decision, feedback, evaluationMetrics);
@@ -135,15 +145,6 @@ export const InterviewCompletionModal: React.FC<InterviewCompletionModalProps> =
                 jobTitle={interview.title}
               />
             </div>
-
-            <div className="text-xs text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <p className="font-medium text-blue-700 mb-1">Scoring Guide:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-blue-600">
-                <span>• 1-3: Below expectations</span>
-                <span>• 4-6: Meets expectations</span>
-                <span>• 7-10: Exceeds expectations</span>
-              </div>
-            </div>
           </div>
 
           {/* Decision Selection */}
@@ -222,7 +223,15 @@ export const InterviewCompletionModal: React.FC<InterviewCompletionModalProps> =
               className="resize-none"
             />
             <p className="text-xs text-slate-500 mt-1">
-              This feedback will be visible to the candidate in their applications
+              This feedback will be visible to the candidate in their applications and email notification
+            </p>
+          </div>
+
+          {/* Email Notification Info */}
+          <div className="text-xs text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <p className="font-medium text-blue-700 mb-1">📧 Email Notification:</p>
+            <p className="text-blue-600">
+              The candidate will receive an email notification with your decision and feedback.
             </p>
           </div>
         </div>

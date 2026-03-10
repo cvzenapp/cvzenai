@@ -1213,6 +1213,282 @@ ${nextSteps}
     return result;
   }
 
+  // Send interview decision notification to candidate
+  async sendInterviewDecisionNotification(
+    candidateEmail: string,
+    candidateName: string,
+    recruiterName: string,
+    companyName: string,
+    interviewDetails: {
+      title: string;
+      proposedDatetime: string;
+      decision: 'hired' | 'rejected' | 'hold';
+      feedback?: string;
+      evaluationMetrics?: any[];
+    },
+    jobTitle?: string,
+    userId?: string
+  ): Promise<EmailResponse> {
+    const interviewDate = new Date(interviewDetails.proposedDatetime);
+    const decision = interviewDetails.decision;
+    const isHired = decision === 'hired';
+    const isRejected = decision === 'rejected';
+    const isOnHold = decision === 'hold';
+    
+    const subject = `Interview Update: ${isHired ? 'Congratulations!' : isRejected ? 'Interview Feedback' : 'Interview Status Update'} - ${interviewDetails.title}`;
+    
+    const formatDateTime = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    };
+
+    const getDecisionIcon = (decision: string) => {
+      switch (decision) {
+        case 'hired': return '🎉';
+        case 'rejected': return '📝';
+        case 'hold': return '⏳';
+        default: return '📋';
+      }
+    };
+
+    const getDecisionColor = (decision: string) => {
+      switch (decision) {
+        case 'hired': return '#10b981';
+        case 'rejected': return '#6b7280';
+        case 'hold': return '#f59e0b';
+        default: return '#6b7280';
+      }
+    };
+
+    const getOverallScore = () => {
+      if (!interviewDetails.evaluationMetrics || !Array.isArray(interviewDetails.evaluationMetrics)) {
+        return null;
+      }
+      
+      const scoredMetrics = interviewDetails.evaluationMetrics.filter(m => m.checked && m.score);
+      if (scoredMetrics.length === 0) return null;
+      
+      const total = scoredMetrics.reduce((sum, metric) => {
+        const score = parseFloat(metric.score || '0');
+        return sum + score;
+      }, 0);
+      
+      return (total / scoredMetrics.length).toFixed(1);
+    };
+
+    const overallScore = getOverallScore();
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Interview Decision</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, ${getDecisionColor(decision)} 0%, ${getDecisionColor(decision)}dd 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">${getDecisionIcon(decision)} ${isHired ? 'Congratulations!' : isRejected ? 'Interview Feedback' : 'Interview Update'}</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+            ${isHired ? 'Great news about your interview!' : isRejected ? 'Thank you for your time and interest' : 'Update on your interview status'}
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: ${getDecisionColor(decision)}; margin-top: 0;">Hi ${candidateName}!</h2>
+          
+          ${isHired ? `
+          <p>🎉 <strong>Congratulations!</strong> We're excited to inform you that you've been selected for the position following your interview with ${companyName}.</p>
+          ` : isRejected ? `
+          <p>Thank you for taking the time to interview with us for the ${interviewDetails.title} position. After careful consideration, we have decided to move forward with other candidates at this time.</p>
+          ` : `
+          <p>Thank you for your interview with ${companyName}. We wanted to provide you with an update on your application status.</p>
+          `}
+          
+          <div style="background: white; padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 4px solid ${getDecisionColor(decision)}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: ${getDecisionColor(decision)}; font-size: 20px;">${interviewDetails.title}</h3>
+            
+            <div style="display: grid; gap: 15px; margin-top: 20px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">🏢</span>
+                <div>
+                  <strong>Company:</strong> ${companyName}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">👤</span>
+                <div>
+                  <strong>Interviewer:</strong> ${recruiterName}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">📅</span>
+                <div>
+                  <strong>Interview Date:</strong><br>
+                  <span style="color: ${getDecisionColor(decision)}; font-weight: 600;">${formatDateTime(interviewDate)}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">${getDecisionIcon(decision)}</span>
+                <div>
+                  <strong>Decision:</strong> <span style="color: ${getDecisionColor(decision)}; font-weight: 600; text-transform: uppercase;">${decision === 'hired' ? 'Selected' : decision === 'rejected' ? 'Not Selected' : 'On Hold'}</span>
+                </div>
+              </div>
+              
+              ${overallScore ? `
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">⭐</span>
+                <div>
+                  <strong>Interview Score:</strong> <span style="color: ${getDecisionColor(decision)}; font-weight: 600;">${overallScore}/10</span>
+                </div>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${interviewDetails.feedback ? `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196f3;">
+            <h3 style="margin-top: 0; color: #1891db;">💬 Feedback from ${recruiterName}:</h3>
+            <p style="margin: 0; white-space: pre-wrap; font-style: italic; color: #555;">"${interviewDetails.feedback}"</p>
+          </div>
+          ` : ''}
+          
+          ${isHired ? `
+          <div style="background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h3 style="margin-top: 0; color: #065f46;">🎯 Next Steps</h3>
+            <p style="margin: 0; color: #065f46;">Someone from our team will be in touch with you soon regarding the next steps in the hiring process. Congratulations again on this achievement!</p>
+          </div>
+          ` : isRejected ? `
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
+            <h3 style="margin-top: 0; color: #374151;">🚀 Keep Going</h3>
+            <p style="margin: 0; color: #374151;">We encourage you to continue pursuing opportunities that align with your skills and interests. Thank you for considering ${companyName} as a potential employer.</p>
+          </div>
+          ` : `
+          <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <h3 style="margin-top: 0; color: #92400e;">⏳ Status: On Hold</h3>
+            <p style="margin: 0; color: #92400e;">Your application is currently on hold. We will keep you updated if there are any changes to your application status.</p>
+          </div>
+          `}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.APP_URL || 'https://cvzen.com'}/dashboard" 
+               style="background: #1891db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              📋 View Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            ${isHired ? 
+              "We're excited to have you join our team! Welcome aboard!" : 
+              isRejected ?
+              "We appreciate the time you invested in the interview process and wish you the best in your job search." :
+              "We'll keep you updated on any changes to your application status."
+            }
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This interview decision was sent by CVZen on behalf of ${companyName}.<br>
+            ${jobTitle ? `Position: ${jobTitle}` : ''}
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      Interview Decision: ${isHired ? 'Congratulations!' : isRejected ? 'Interview Feedback' : 'Interview Update'}
+      
+      Hi ${candidateName}!
+      
+      ${isHired ? 
+        `🎉 Congratulations! We're excited to inform you that you've been selected for the position following your interview with ${companyName}.` :
+        isRejected ?
+        `Thank you for taking the time to interview with us for the ${interviewDetails.title} position. After careful consideration, we have decided to move forward with other candidates at this time.` :
+        `Thank you for your interview with ${companyName}. We wanted to provide you with an update on your application status.`
+      }
+      
+      Interview Details:
+      • Position: ${interviewDetails.title}
+      • Company: ${companyName}
+      • Interviewer: ${recruiterName}
+      • Interview Date: ${formatDateTime(interviewDate)}
+      • Decision: ${decision === 'hired' ? 'Selected' : decision === 'rejected' ? 'Not Selected' : 'On Hold'}
+      ${overallScore ? `• Interview Score: ${overallScore}/10` : ''}
+      
+      ${interviewDetails.feedback ? `Feedback from ${recruiterName}:\n"${interviewDetails.feedback}"\n\n` : ''}
+      
+      ${isHired ? 
+        "🎯 Next Steps\nSomeone from our team will be in touch with you soon regarding the next steps in the hiring process. Congratulations again on this achievement!" :
+        isRejected ?
+        "🚀 Keep Going\nWe encourage you to continue pursuing opportunities that align with your skills and interests. Thank you for considering " + companyName + " as a potential employer." :
+        "⏳ Status: On Hold\nYour application is currently on hold. We will keep you updated if there are any changes to your application status."
+      }
+      
+      View your dashboard: ${process.env.APP_URL || 'https://cvzen.com'}/dashboard
+      
+      ${isHired ? 
+        "We're excited to have you join our team! Welcome aboard!" : 
+        isRejected ?
+        "We appreciate the time you invested in the interview process and wish you the best in your job search." :
+        "We'll keep you updated on any changes to your application status."
+      }
+      
+      Best regards,
+      ${recruiterName}
+      ${companyName}
+      
+      ---
+      Sent via CVZen
+      ${jobTitle ? `Position: ${jobTitle}` : ''}
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: `"${companyName}" <${this.fromEmail}>`,
+      to: [candidateEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'candidate_notification',
+      senderEmail: this.fromEmail,
+      recipientEmail: candidateEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
+    }
+
+    return result;
+  }
+
   // Send interview response notification to recruiter
   async sendInterviewResponseNotification(
     recruiterEmail: string,
