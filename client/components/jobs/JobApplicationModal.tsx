@@ -115,7 +115,10 @@ export function JobApplicationModal({
         companyName: company
       });
 
+      console.log('✅ Resume optimization response:', response);
+
       if (response.success) {
+        console.log('✅ Setting resumeOptimized to true');
         setResumeOptimized(true);
         
         // Calculate new score after optimization
@@ -126,9 +129,15 @@ export function JobApplicationModal({
           jobRequirements: []
         });
         
+        console.log('✅ New score response:', newScoreResponse);
+        
         if (newScoreResponse.success) {
+          console.log('✅ Setting optimized score to:', newScoreResponse.data.score);
           setOptimizedScore(newScoreResponse.data.score);
         }
+      } else {
+        console.error('❌ Resume optimization failed:', response);
+        setError('Failed to optimize resume');
       }
     } catch (error: any) {
       console.error('Resume optimization error:', error);
@@ -187,7 +196,7 @@ export function JobApplicationModal({
 
       console.log('Cover letter API response:', response);
 
-      setCoverLetter(response.data?.coverLetter || response.coverLetter || 'Unable to generate cover letter');
+      setCoverLetter(response.data?.coverLetter || 'Unable to generate cover letter');
     } catch (error: any) {
       console.error('Cover letter generation error:', error);
       setError(error.message || 'Failed to generate cover letter');

@@ -173,6 +173,12 @@ export interface InterviewInvitation {
   status: 'pending' | 'accepted' | 'declined' | 'rescheduled' | 'completed' | 'cancelled';
   candidateResponse?: string;
   recruiterNotes?: string;
+  evaluationMetrics?: Array<{
+    id: number;
+    metric: string;
+    score: string | null;
+    checked: boolean;
+  }>;
   
   createdAt: string;
   updatedAt: string;
@@ -266,6 +272,12 @@ export interface CreateInterviewRequest {
   meetingInstructions?: string;
   
   recruiterNotes?: string;
+  evaluationMetrics?: Array<{
+    id: number;
+    metric: string;
+    score: string | null;
+    checked: boolean;
+  }>;
 }
 
 export interface RespondToInterviewRequest {

@@ -195,14 +195,14 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
     const { getDatabase } = await import('../database/connection.js');
     const db = await getDatabase();
 
-    // Get user's resumes from database with shareToken
+    // Get user's resumes from database with shareToken (deduplicated)
     const resumesResult = await db.query(`
-      SELECT r.*, u.email, u.avatar, rs.share_token
+      SELECT DISTINCT ON (r.id) r.*, u.email, u.avatar, rs.share_token
       FROM resumes r
       JOIN users u ON r.user_id = u.id
       LEFT JOIN resume_shares rs ON r.id = rs.resume_id AND rs.is_active = true
       WHERE r.user_id = $1
-      ORDER BY r.is_active DESC NULLS LAST, r.updated_at DESC
+      ORDER BY r.id, r.is_active DESC NULLS LAST, r.updated_at DESC
     `, [userId]);
 
     const resumes = resumesResult.rows;

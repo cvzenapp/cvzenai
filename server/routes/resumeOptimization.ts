@@ -70,7 +70,7 @@ router.post("/optimize", async (req: Request, res: Response) => {
     // Prepare current resume data for AI
     const resumeData = {
       summary: currentResume.summary || '',
-      careerObjective: currentResume.career_objective || '',
+      careerObjective: currentResume.objective || '',
       skills: currentResume.skills || [],
       experience: currentResume.experience || [],
       education: currentResume.education || [],
@@ -188,7 +188,7 @@ Please optimize this resume for the job posting. Return ONLY the JSON object wit
       console.log('Creating fallback optimization...');
       optimizedData = {
         summary: currentResume.summary || `Experienced professional with expertise in ${validatedData.jobTitle}`,
-        careerObjective: currentResume.career_objective || `Seeking opportunities in ${validatedData.jobTitle} at ${validatedData.companyName}`,
+        careerObjective: currentResume.objective || `Seeking opportunities in ${validatedData.jobTitle} at ${validatedData.companyName}`,
         skills: currentResume.skills || [],
         experience: currentResume.experience || [],
         projects: currentResume.projects || []
@@ -212,7 +212,7 @@ Please optimize this resume for the job posting. Return ONLY the JSON object wit
     const updateQuery = `
       UPDATE resumes SET
         summary = $1,
-        career_objective = $2,
+        objective = $2,
         skills = $3,
         experience = $4,
         projects = $5,
@@ -223,7 +223,7 @@ Please optimize this resume for the job posting. Return ONLY the JSON object wit
 
     const updateValues = [
       optimizedData.summary || currentResume.summary,
-      optimizedData.careerObjective || currentResume.career_objective,
+      optimizedData.careerObjective || currentResume.objective,
       JSON.stringify(optimizedData.skills || currentResume.skills),
       JSON.stringify(optimizedData.experience || currentResume.experience),
       JSON.stringify(optimizedData.projects || currentResume.projects),
@@ -241,7 +241,7 @@ Please optimize this resume for the job posting. Return ONLY the JSON object wit
           id: updatedResume.id,
           title: updatedResume.title,
           summary: updatedResume.summary,
-          careerObjective: updatedResume.career_objective,
+          careerObjective: updatedResume.objective,
           skills: typeof updatedResume.skills === 'string' ? JSON.parse(updatedResume.skills) : updatedResume.skills,
           experience: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : updatedResume.experience,
           projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : updatedResume.projects,

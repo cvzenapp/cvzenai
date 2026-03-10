@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar, Clock, Video, Phone, MapPin, User, Briefcase, Brain, Sparkles, ArrowRight, ArrowLeft, Search } from 'lucide-react';
 import { recruiterInterviewApi } from '../../services/recruiterInterviewApi';
 import { CandidateSelector } from './CandidateSelector';
+import { EvaluationMetricsEditor, type EvaluationMetric } from './EvaluationMetricsEditor';
 import type { CreateInterviewRequest } from '@shared/api';
 
 interface Candidate {
@@ -58,6 +59,48 @@ const interviewTypes = [
   { value: 'phone', label: 'Phone Call', icon: Phone, description: 'Voice call interview' },
   { value: 'in_person', label: 'In Person', icon: MapPin, description: 'Face-to-face meeting at office' }
 ] as const;
+
+// Helper function to parse AI-generated internal notes into evaluation metrics
+const parseInternalNotesToMetrics = (internalNotes: string, candidateName: string): EvaluationMetric[] => {
+  const lines = internalNotes.split('\n').filter(line => line.trim());
+  const metrics: EvaluationMetric[] = [];
+  let id = 1;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    // Look for bullet points or evaluation criteria
+    if (trimmedLine.startsWith('*') || trimmedLine.startsWith('•') || trimmedLine.startsWith('-')) {
+      const metric = trimmedLine.replace(/^[*•-]\s*/, '').trim();
+      if (metric && metric.length > 10) { // Only add meaningful metrics
+        metrics.push({
+          id: id++,
+          metric: metric,
+          score: null,
+          checked: true
+        });
+      }
+    }
+  }
+
+  // If no metrics found, use default ones
+  if (metrics.length === 0) {
+    const defaultMetrics = [
+      `Technical expertise in frontend development (JavaScript frameworks, HTML/CSS, responsive design principles)`,
+      `Experience with frontend build tools, UI component libraries, and accessibility standards`,
+      `Ability to work with cross-functional teams and meet business objectives`,
+      `Problem-solving skills and attention to detail`
+    ];
+
+    return defaultMetrics.map((metric, index) => ({
+      id: index + 1,
+      metric: metric.replace(/the candidate/gi, candidateName),
+      score: null,
+      checked: true
+    }));
+  }
+
+  return metrics;
+};
 export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
   isOpen,
   onClose,
@@ -104,6 +147,9 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
     meetingInstructions: editingInterview?.meetingInstructions || '',
     recruiterNotes: editingInterview?.recruiterNotes || ''
   });
+
+  // Evaluation metrics state
+  const [evaluationMetrics, setEvaluationMetrics] = useState<EvaluationMetric[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -222,12 +268,16 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
           .replace(/\bthe candidate\b/gi, selectedCandidate.name)
       };
 
+      // Parse internal notes into evaluation metrics
+      const metrics = parseInternalNotesToMetrics(personalizedContent.internalNotes, selectedCandidate.name);
+      setEvaluationMetrics(metrics);
+
       // Update form with AI-generated content
       setFormData(prev => ({
         ...prev,
         description: personalizedContent.description,
         meetingInstructions: personalizedContent.instructions,
-        recruiterNotes: personalizedContent.internalNotes
+        recruiterNotes: '' // Clear recruiter notes as we're using evaluation metrics now
       }));
 
       setTimeout(() => {
@@ -249,11 +299,15 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
         internalNotes: `Focus areas:\n• Technical competency assessment\n• Cultural fit evaluation\n• Communication skills and authenticity\n• Problem-solving approach\n• Create a welcoming, collaborative atmosphere\n• Encourage open dialogue rather than one-sided questioning\n• Assess genuine interest and motivation\n• Questions about role expectations and growth opportunities`
       };
 
+      // Parse fallback internal notes into evaluation metrics
+      const fallbackMetrics = parseInternalNotesToMetrics(fallbackContent.internalNotes, selectedCandidate.name);
+      setEvaluationMetrics(fallbackMetrics);
+
       setFormData(prev => ({
         ...prev,
         description: fallbackContent.description,
         meetingInstructions: fallbackContent.instructions,
-        recruiterNotes: fallbackContent.internalNotes
+        recruiterNotes: '' // Clear recruiter notes as we're using evaluation metrics now
       }));
 
       setError(`AI preparation unavailable. Using standard template instead.`);
@@ -309,6 +363,7 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
           jobPostingId: preSelectedCandidate?.jobPostingId,
           applicationId: preSelectedCandidate?.applicationId,
           interviewRoundType: basicDetails.interviewRoundType || undefined,
+          evaluationMetrics: evaluationMetrics,
           ...formData
         } : {
           // Registered candidate
@@ -317,6 +372,7 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
           jobPostingId: preSelectedCandidate?.jobPostingId,
           applicationId: preSelectedCandidate?.applicationId,
           interviewRoundType: basicDetails.interviewRoundType || undefined,
+          evaluationMetrics: evaluationMetrics,
           ...formData
         };
 
@@ -974,27 +1030,14 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
                 />
               </div>
 
-              {/* Recruiter Notes */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-semibold text-slate-700 font-jakarta">
-                    Internal Notes (not visible to candidate)
-                  </label>
-                  {formData.recruiterNotes && !editingInterview && (
-                    <div className="flex items-center space-x-1 text-xs text-purple-600 font-jakarta">
-                      <Sparkles className="w-3 h-3" />
-                      <span>AI Generated</span>
-                    </div>
-                  )}
-                </div>
-                <textarea
-                  value={formData.recruiterNotes || ''}
-                  onChange={(e) => handleInputChange('recruiterNotes', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-main/20 focus:border-brand-main transition-colors font-jakarta"
-                  rows={2}
-                  placeholder="Internal notes about this interview..."
-                />
-              </div>
+              {/* Evaluation Metrics */}
+              <EvaluationMetricsEditor
+                value={evaluationMetrics}
+                onChange={setEvaluationMetrics}
+                candidateName={selectedCandidate?.name}
+                jobTitle={preSelectedCandidate?.jobPostingId ? 'Position' : undefined}
+                isAIGenerated={!editingInterview && evaluationMetrics.length > 0}
+              />
 
               {/* Confirmation */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">

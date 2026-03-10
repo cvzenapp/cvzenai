@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, Video, Phone, MapPin, Monitor, ChevronDown, ChevronUp } from 'lucide-react';
 import { interviewApi } from '../../services/interviewApi';
+import { EvaluationMetricsEditor, type EvaluationMetric } from './EvaluationMetricsEditor';
 import type { CreateInterviewRequest } from '@shared/api';
 
 interface ScheduleInterviewModalProps {
@@ -49,6 +50,8 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
     recruiterNotes: ''
   });
 
+  const [evaluationMetrics, setEvaluationMetrics] = useState<EvaluationMetric[]>([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -59,7 +62,11 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
     setError(null);
 
     try {
-      await interviewApi.createInterview(formData);
+      const requestData = {
+        ...formData,
+        evaluationMetrics: evaluationMetrics
+      };
+      await interviewApi.createInterview(requestData);
       onSuccess?.();
       onClose();
       
@@ -74,6 +81,7 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
         meetingInstructions: '',
         recruiterNotes: ''
       });
+      setEvaluationMetrics([]);
     } catch (err: any) {
       setError(err.message || 'Failed to schedule interview');
     } finally {
@@ -323,12 +331,11 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
               
               {showAdvanced && (
                 <div className="mt-4 px-4">
-                  <textarea
-                    value={formData.recruiterNotes || ''}
-                    onChange={(e) => handleInputChange('recruiterNotes', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
-                    rows={2}
-                    placeholder="Internal notes (not visible to candidate)..."
+                  <EvaluationMetricsEditor
+                    value={evaluationMetrics}
+                    onChange={setEvaluationMetrics}
+                    candidateName={candidateName}
+                    isAIGenerated={false}
                   />
                 </div>
               )}

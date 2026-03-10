@@ -249,7 +249,7 @@ export default function LandingPage() {
                   Dashboard
                 </Link>
               )}
-              {!isAuthenticated && (
+              {/* {!isAuthenticated && (
                 <>
                   <button
                     onClick={openLoginModal}
@@ -264,7 +264,7 @@ export default function LandingPage() {
                     Register
                   </button>
                 </>
-              )}
+              )} */}
             </div>
 
             {/* Action Buttons */}

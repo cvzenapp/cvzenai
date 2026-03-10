@@ -24,6 +24,8 @@ export interface ResumeOptimizationResponse {
     optimizedResume: OptimizedResume;
     message: string;
   };
+  error?: string;
+  message?: string;
 }
 
 class ResumeOptimizationApiService extends BaseApiClient {
@@ -32,9 +34,14 @@ class ResumeOptimizationApiService extends BaseApiClient {
   }
 
   async optimizeResume(data: ResumeOptimizationRequest): Promise<ResumeOptimizationResponse> {
-    const response = await this.post<ResumeOptimizationResponse>('/optimize', data);
+    const response = await this.post<any>('/optimize', data);
     if (response.success && response.data) {
-      return response.data;
+      return {
+        success: response.success,
+        data: response.data,
+        error: response.error as string,
+        message: response.message
+      };
     }
     throw new Error(response.error as string || 'Failed to optimize resume');
   }

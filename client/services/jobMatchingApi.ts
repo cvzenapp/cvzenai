@@ -14,6 +14,8 @@ export interface JobMatchingResponse {
     reasons: string[];
     missing: string[];
   };
+  error?: string;
+  message?: string;
 }
 
 class JobMatchingApiService extends BaseApiClient {
@@ -22,9 +24,14 @@ class JobMatchingApiService extends BaseApiClient {
   }
 
   async calculateMatchScore(data: JobMatchingRequest): Promise<JobMatchingResponse> {
-    const response = await this.post<JobMatchingResponse>('/calculate-score', data);
+    const response = await this.post<any>('/calculate-score', data);
     if (response.success && response.data) {
-      return response.data;
+      return {
+        success: response.success,
+        data: response.data,
+        error: response.error as string,
+        message: response.message
+      };
     }
     throw new Error(response.error as string || 'Failed to calculate match score');
   }

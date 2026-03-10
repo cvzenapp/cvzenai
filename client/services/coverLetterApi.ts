@@ -13,6 +13,8 @@ export interface CoverLetterResponse {
   data: {
     coverLetter: string;
   };
+  error?: string;
+  message?: string;
 }
 
 class CoverLetterApiService extends BaseApiClient {
@@ -21,9 +23,14 @@ class CoverLetterApiService extends BaseApiClient {
   }
 
   async generateCoverLetter(data: CoverLetterRequest): Promise<CoverLetterResponse> {
-    const response = await this.post<CoverLetterResponse>('/generate', data);
+    const response = await this.post<any>('/generate', data);
     if (response.success && response.data) {
-      return response.data;
+      return {
+        success: response.success,
+        data: response.data,
+        error: response.error,
+        message: response.message
+      };
     }
     throw new Error(response.error as string || 'Failed to generate cover letter');
   }
