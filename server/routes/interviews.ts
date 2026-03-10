@@ -1226,7 +1226,8 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
             status: row.status,
             candidateResponse: row.candidate_response,
             recruiterNotes: row.recruiter_notes,
-            evaluationMetrics: row.evaluation_metrics ? JSON.parse(row.evaluation_metrics) : [],
+            evaluationMetrics: row.evaluation_metrics ? 
+              (typeof row.evaluation_metrics === 'string' ? JSON.parse(row.evaluation_metrics) : row.evaluation_metrics) : [],
             
             createdAt: row.created_at,
             updatedAt: row.updated_at,
@@ -1282,7 +1283,8 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
         status: row.status,
         candidateResponse: row.candidate_response,
         recruiterNotes: row.recruiter_notes,
-        evaluationMetrics: row.evaluation_metrics ? JSON.parse(row.evaluation_metrics) : [],
+        evaluationMetrics: row.evaluation_metrics ? 
+          (typeof row.evaluation_metrics === 'string' ? JSON.parse(row.evaluation_metrics) : row.evaluation_metrics) : [],
         
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -1420,7 +1422,8 @@ router.get("/:interviewId", async (req: Request, res: Response) => {
       status: row.status,
       candidateResponse: row.candidate_response,
       recruiterNotes: row.recruiter_notes,
-      evaluationMetrics: row.evaluation_metrics ? JSON.parse(row.evaluation_metrics) : [],
+      evaluationMetrics: row.evaluation_metrics ? 
+        (typeof row.evaluation_metrics === 'string' ? JSON.parse(row.evaluation_metrics) : row.evaluation_metrics) : [],
       
       createdAt: row.created_at,
       updatedAt: row.updated_at,
