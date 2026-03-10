@@ -877,6 +877,55 @@ router.post("/respond", async (req: Request, res: Response) => {
       [status, candidateResponse, interviewId]
     );
 
+    // Get full interview details for email notification
+    const interviewDetailsQuery = await db.query(`
+      SELECT 
+        i.*,
+        COALESCE(rec.first_name || ' ' || rec.last_name, rec.email) as recruiter_name,
+        rec.email as recruiter_email,
+        COALESCE(c.first_name || ' ' || c.last_name, c.email) as candidate_name,
+        c.email as candidate_email,
+        comp.name as company_name
+      FROM interview_invitations i
+      LEFT JOIN users rec ON i.recruiter_id = rec.id
+      LEFT JOIN users c ON i.candidate_id = c.id
+      LEFT JOIN recruiter_profiles rp ON rec.id = rp.user_id
+      LEFT JOIN companies comp ON rp.company_id = comp.id
+      WHERE i.id = $1
+    `, [interviewId]);
+
+    if (interviewDetailsQuery.rows.length > 0) {
+      const interviewData = interviewDetailsQuery.rows[0];
+      
+      // Send email notification to recruiter
+      try {
+        await emailService.sendInterviewResponseNotification(
+          interviewData.recruiter_email,
+          interviewData.recruiter_name || 'Recruiter',
+          interviewData.candidate_name || 'Candidate',
+          {
+            title: interviewData.title,
+            proposedDatetime: interviewData.proposed_datetime,
+            interviewType: interviewData.interview_type,
+            status: status as 'accepted' | 'declined',
+            candidateResponse: candidateResponse
+          },
+          interviewId.toString(),
+          interviewData.company_name,
+          auth.userId
+        );
+
+        console.log('✅ Interview response email sent to recruiter:', {
+          recruiterEmail: interviewData.recruiter_email,
+          candidateName: interviewData.candidate_name,
+          status
+        });
+      } catch (emailError) {
+        console.error('❌ Failed to send interview response email:', emailError);
+        // Don't fail the response if email fails
+      }
+    }
+
     console.log('✅ Interview response recorded:', {
       interviewId,
       candidateId: auth.userId,

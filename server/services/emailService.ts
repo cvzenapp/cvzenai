@@ -23,7 +23,7 @@ interface EmailResponse {
 }
 
 interface EmailLogData {
-  emailType: 'account_creation' | 'job_application' | 'shortlisted' | 'candidate_notification';
+  emailType: 'account_creation' | 'job_application' | 'shortlisted' | 'candidate_notification' | 'recruiter_notification';
   senderEmail: string;
   recipientEmail: string;
   subject: string;
@@ -1208,6 +1208,226 @@ ${nextSteps}
       console.log('✅ Interview reschedule email sent successfully');
     } else {
       console.error('❌ Failed to send interview reschedule email:', result.error);
+    }
+
+    return result;
+  }
+
+  // Send interview response notification to recruiter
+  async sendInterviewResponseNotification(
+    recruiterEmail: string,
+    recruiterName: string,
+    candidateName: string,
+    interviewDetails: {
+      title: string;
+      proposedDatetime: string;
+      interviewType: string;
+      status: 'accepted' | 'declined';
+      candidateResponse?: string;
+    },
+    interviewId: string,
+    companyName?: string,
+    userId?: string
+  ): Promise<EmailResponse> {
+    const interviewDate = new Date(interviewDetails.proposedDatetime);
+    const isAccepted = interviewDetails.status === 'accepted';
+    
+    const subject = `Interview ${isAccepted ? 'Accepted' : 'Declined'}: ${candidateName} - ${interviewDetails.title}`;
+    
+    const formatDateTime = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    };
+
+    const getStatusIcon = (status: string) => {
+      return status === 'accepted' ? '✅' : '❌';
+    };
+
+    const getStatusColor = (status: string) => {
+      return status === 'accepted' ? '#10b981' : '#ef4444';
+    };
+
+    const getInterviewTypeIcon = (type: string) => {
+      switch (type) {
+        case 'video_call': return '📹';
+        case 'phone': return '📞';
+        case 'in_person': return '🏢';
+        case 'technical': return '💻';
+        default: return '📅';
+      }
+    };
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Interview Response</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, ${getStatusColor(interviewDetails.status)} 0%, ${getStatusColor(interviewDetails.status)}dd 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">${getStatusIcon(interviewDetails.status)} Interview ${isAccepted ? 'Accepted' : 'Declined'}</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">${candidateName} has responded to your interview invitation</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: ${getStatusColor(interviewDetails.status)}; margin-top: 0;">Hi ${recruiterName}!</h2>
+          
+          <p><strong>${candidateName}</strong> has <strong style="color: ${getStatusColor(interviewDetails.status)};">${interviewDetails.status}</strong> your interview invitation.</p>
+          
+          <div style="background: white; padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 4px solid ${getStatusColor(interviewDetails.status)}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0; color: ${getStatusColor(interviewDetails.status)}; font-size: 20px;">${interviewDetails.title}</h3>
+            
+            <div style="display: grid; gap: 15px; margin-top: 20px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">👤</span>
+                <div>
+                  <strong>Candidate:</strong> ${candidateName}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">📅</span>
+                <div>
+                  <strong>Scheduled Date & Time:</strong><br>
+                  <span style="color: ${getStatusColor(interviewDetails.status)}; font-weight: 600;">${formatDateTime(interviewDate)}</span>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">${getInterviewTypeIcon(interviewDetails.interviewType)}</span>
+                <div>
+                  <strong>Interview Type:</strong> ${interviewDetails.interviewType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">${getStatusIcon(interviewDetails.status)}</span>
+                <div>
+                  <strong>Status:</strong> <span style="color: ${getStatusColor(interviewDetails.status)}; font-weight: 600; text-transform: uppercase;">${interviewDetails.status}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          ${interviewDetails.candidateResponse ? `
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196f3;">
+            <h3 style="margin-top: 0; color: #1891db;">💬 Candidate's Message:</h3>
+            <p style="margin: 0; white-space: pre-wrap; font-style: italic; color: #555;">"${interviewDetails.candidateResponse}"</p>
+          </div>
+          ` : ''}
+          
+          ${isAccepted ? `
+          <div style="background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h3 style="margin-top: 0; color: #065f46;">🎉 Great News!</h3>
+            <p style="margin: 0; color: #065f46;">The candidate has accepted your interview invitation. Make sure to prepare for the interview and send any additional materials if needed.</p>
+          </div>
+          ` : `
+          <div style="background: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+            <h3 style="margin-top: 0; color: #991b1b;">📋 Next Steps</h3>
+            <p style="margin: 0; color: #991b1b;">The candidate has declined this interview. You may want to consider rescheduling or reaching out to discuss alternative arrangements.</p>
+          </div>
+          `}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.APP_URL || 'https://cvzen.com'}/recruiter/interviews" 
+               style="background: #1891db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              📋 View All Interviews
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            ${isAccepted ? 
+              "The interview is confirmed! Make sure to prepare and reach out if you need to make any changes." : 
+              "Don't worry - there are many great candidates out there. Keep up the great work!"
+            }
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This notification was sent by CVZen${companyName ? ` on behalf of ${companyName}` : ''}.<br>
+            Interview ID: ${interviewId}
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      Interview ${isAccepted ? 'Accepted' : 'Declined'}: ${candidateName}
+      
+      Hi ${recruiterName}!
+      
+      ${candidateName} has ${interviewDetails.status} your interview invitation.
+      
+      Interview Details:
+      • Candidate: ${candidateName}
+      • Title: ${interviewDetails.title}
+      • Scheduled Date & Time: ${formatDateTime(interviewDate)}
+      • Interview Type: ${interviewDetails.interviewType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+      • Status: ${interviewDetails.status.toUpperCase()}
+      
+      ${interviewDetails.candidateResponse ? `Candidate's Message:\n"${interviewDetails.candidateResponse}"\n\n` : ''}
+      
+      ${isAccepted ? 
+        "🎉 Great News!\nThe candidate has accepted your interview invitation. Make sure to prepare for the interview and send any additional materials if needed." :
+        "📋 Next Steps\nThe candidate has declined this interview. You may want to consider rescheduling or reaching out to discuss alternative arrangements."
+      }
+      
+      View all interviews: ${process.env.APP_URL || 'https://cvzen.com'}/recruiter/interviews
+      
+      ${isAccepted ? 
+        "The interview is confirmed! Make sure to prepare and reach out if you need to make any changes." : 
+        "Don't worry - there are many great candidates out there. Keep up the great work!"
+      }
+      
+      Best regards,
+      CVZen Team
+      
+      ---
+      Interview ID: ${interviewId}
+      ${companyName ? `Company: ${companyName}` : ''}
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: `"CVZen" <${this.fromEmail}>`,
+      to: [recruiterEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'recruiter_notification',
+      senderEmail: this.fromEmail,
+      recipientEmail: recruiterEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
     }
 
     return result;
