@@ -912,7 +912,7 @@ export default function LandingPage() {
                 className="h-12 px-6 sm:px-8 bg-transparent border-white/20 text-white hover:bg-white/10 w-full text-sm sm:text-base"
               >
                 <Shield className="mr-2 h-4 w-4" />
-                Try Fake Job Detector
+                Try JD Trust Score
               </Button>
             </Link>
           </div>

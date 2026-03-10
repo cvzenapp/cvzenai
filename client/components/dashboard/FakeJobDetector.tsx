@@ -59,7 +59,7 @@ export function FakeJobDetector() {
       <div className="flex items-center gap-3 mb-6">
         <Shield className="w-6 h-6 text-blue-600" />
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Fake Job Detector</h2>
+          <h2 className="text-xl font-semibold text-gray-900">JD Trust Score</h2>
           <p className="text-sm text-gray-600">AI-powered fraud detection trained on 3000+ job postings</p>
         </div>
       </div>

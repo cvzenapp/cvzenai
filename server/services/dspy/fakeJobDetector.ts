@@ -31,7 +31,7 @@ interface DetectionResult {
 }
 
 /**
- * Fake Job Detector using DSPy-style prompt optimization
+ * JD Trust Score using DSPy-style prompt optimization
  * Trained on fake_real_job_postings dataset with pre-compiled prompt
  */
 class FakeJobDetector {
@@ -50,7 +50,7 @@ class FakeJobDetector {
       if (fs.existsSync(this.promptPath)) {
         const data = JSON.parse(fs.readFileSync(this.promptPath, 'utf-8'));
         this.compiledPrompt = data.systemPrompt;
-        console.log('✅ Loaded pre-compiled fake job detector prompt');
+        console.log('✅ Loaded pre-compiled JD Trust Score prompt');
       } else {
         console.log('⚠️ No compiled prompt found, will use default');
       }

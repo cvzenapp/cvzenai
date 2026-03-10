@@ -48,6 +48,7 @@ import { FakeJobDetector } from "@/components/dashboard/FakeJobDetector";
 import { JobSeekerSubscriptionDashboard } from "@/components/subscription/JobSeekerSubscriptionDashboard";
 import { JobSeekerPlanSelector } from "@/components/subscription/JobSeekerPlanSelector";
 import { JobSeekerUsageTracker } from "@/components/subscription/JobSeekerUsageTracker";
+import { MyApplicationsList } from "@/components/jobs/MyApplicationsList";
 import { subscriptionApi } from "@/services/subscriptionApi";
 import type { UserSubscription } from "@shared/subscription";
 import { CreateReferralRequest } from "@shared/referrals";
@@ -156,6 +157,8 @@ export default function Dashboard() {
     improvements?: string[];
     oldScore?: number;
     newScore?: number;
+    scoreIncrease?: number;
+    noChangeReason?: string;
   } | null>(null);
   const [stats, setStats] = useState({
     totalResumes: 0,
@@ -168,6 +171,8 @@ export default function Dashboard() {
     referralCount: 0,
     profileViews: 0,
     profileStrength: 85,
+    applications: 0,
+    interviews: 0,
   });
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
@@ -731,7 +736,9 @@ export default function Dashboard() {
           message: 'Resume improved successfully!',
           improvements: result.data.improvements,
           oldScore: result.data.oldScore,
-          newScore: result.data.newScore
+          newScore: result.data.newScore,
+          scoreIncrease: result.data.scoreIncrease,
+          noChangeReason: result.data.noChangeReason
         });
         
         // Update the resume in state with new ATS score
@@ -1095,7 +1102,7 @@ export default function Dashboard() {
       />
 
       {/* Main Layout: Sidebar + Content */}
-      <div className="flex h-[calc(100vh-64px)]">
+      <div className="flex h-[calc(100vh-64px)] bg-background">
         {/* Overlay for mobile */}
         {isMobileSidebarOpen && (
           <div
@@ -1107,28 +1114,27 @@ export default function Dashboard() {
         {/* Sidebar Navigation */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-40
-          bg-white border-r border-gray-200 overflow-y-auto
-          transform transition-all duration-300 ease-in-out
+          bg-card border-r transition-all duration-300 ease-in-out shrink-0
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}
           w-64
           mt-16 lg:mt-0
         `}>
-          <nav className="p-4 space-y-1">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <button
               onClick={() => {
                 setActiveTab('ai-chat');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'ai-chat'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title={isSidebarCollapsed ? "AI Chat" : ""}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+              title={isSidebarCollapsed ? "AI Assistant" : ""}
             >
-              <MessageSquare className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">AI Chat</span>}
+              <MessageSquare className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left">AI Assistant</span>}
             </button>
             
             <button
@@ -1136,15 +1142,15 @@ export default function Dashboard() {
                 setActiveTab('overview');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'overview'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Overview" : ""}
             >
-              <TrendingUp className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Overview</span>}
+              <TrendingUp className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Overview</span>}
             </button>
             
             <button
@@ -1152,15 +1158,24 @@ export default function Dashboard() {
                 setActiveTab('resumes');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'resumes'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "My Resumes" : ""}
             >
-              <FileText className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">My Resumes</span>}
+              <FileText className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="flex-1 text-left">My Resumes</span>
+                  {resumes.length > 0 && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {resumes.length}
+                    </Badge>
+                  )}
+                </>
+              )}
             </button>
             
             <button
@@ -1168,15 +1183,15 @@ export default function Dashboard() {
                 setActiveTab('jobs');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'jobs'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Jobs" : ""}
             >
-              <Search className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Jobs</span>}
+              <Search className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Jobs</span>}
             </button>
             
             <button
@@ -1184,47 +1199,40 @@ export default function Dashboard() {
                 setActiveTab('fake-job-detector');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'fake-job-detector'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title={isSidebarCollapsed ? "Fake Job Detector" : ""}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+              title={isSidebarCollapsed ? "JD Trust Score" : ""}
             >
-              <Shield className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Fake Job Detector</span>}
+              <Shield className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left">JD Trust Score</span>}
             </button>
             
             <button
               onClick={() => {
-                setActiveTab('recruiters');
+                setActiveTab('applications');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
-                activeTab === 'recruiters'
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'applications'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title={isSidebarCollapsed ? "Recruiters" : ""}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+              title={isSidebarCollapsed ? "Applications" : ""}
             >
-              <UserPlus className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Recruiters</span>}
-            </button>
-            
-            <button
-              onClick={() => {
-                setActiveTab('referrals');
-                setIsMobileSidebarOpen(false);
-              }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
-                activeTab === 'referrals'
-                  ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title={isSidebarCollapsed ? "Referrals" : ""}
-            >
-              <ThumbsUp className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Referrals</span>}
+              <FileText className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Applications</span>
+                  {stats.applications > 0 && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {stats.applications}
+                    </Badge>
+                  )}
+                </>
+              )}
             </button>
             
             <button
@@ -1232,15 +1240,24 @@ export default function Dashboard() {
                 setActiveTab('interviews');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'interviews'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Interviews" : ""}
             >
-              <Calendar className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Interviews</span>}
+              <Calendar className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Interviews</span>
+                  {stats.interviews > 0 && (
+                    <Badge variant="secondary" className="ml-auto">
+                      {stats.interviews}
+                    </Badge>
+                  )}
+                </>
+              )}
             </button>
             
             <button
@@ -1248,15 +1265,15 @@ export default function Dashboard() {
                 setActiveTab('subscription');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'subscription'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Subscription" : ""}
             >
-              <CreditCard className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Subscription</span>}
+              <Package className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Subscription</span>}
             </button>
             
             <button
@@ -1264,36 +1281,18 @@ export default function Dashboard() {
                 setActiveTab('settings');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-lg text-left transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'settings'
                   ? 'bg-brand-background text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Settings" : ""}
             >
-              <Settings className="h-5 w-5 flex-shrink-0" />
-              {!isSidebarCollapsed && <span className="font-normal">Settings</span>}
-            </button>
-            
-            {/* Desktop Toggle Button at Bottom */}
-            <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden lg:flex w-full items-center justify-center px-4 py-2 mt-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-all border-t pt-4"
-              title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isSidebarCollapsed ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              )}
+              <Settings className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Settings</span>}
             </button>
           </nav>
         </aside>
-
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">
@@ -1586,6 +1585,18 @@ export default function Dashboard() {
                     </TabsContent>
                   </Tabs>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'applications' && (
+              <div className="space-y-6">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold mb-2">My Applications</h2>
+                  <p className="text-gray-600">
+                    Track and manage your job applications
+                  </p>
+                </div>
+                <MyApplicationsList />
               </div>
             )}
 
@@ -2066,13 +2077,16 @@ export default function Dashboard() {
                   {improvementResult.success && improvementResult.oldScore && improvementResult.newScore && (
                     <div className="mb-2 text-sm font-normal text-green-800">
                       Score: {improvementResult.oldScore} → {improvementResult.newScore} 
-                      <span className={`ml-2 ${
-                        improvementResult.newScore > improvementResult.oldScore 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        ({improvementResult.newScore > improvementResult.oldScore ? '+' : ''}{improvementResult.newScore - improvementResult.oldScore} points)
-                      </span>
+                      {improvementResult.scoreIncrease !== undefined && improvementResult.scoreIncrease > 0 && (
+                        <span className="ml-2 text-green-600">
+                          (+{improvementResult.scoreIncrease} points)
+                        </span>
+                      )}
+                      {improvementResult.noChangeReason === 'improvements_decreased_score' && (
+                        <span className="ml-2 text-gray-600">
+                          (kept original score)
+                        </span>
+                      )}
                     </div>
                   )}
                   
@@ -2081,6 +2095,31 @@ export default function Dashboard() {
                   }`}>
                     {improvementResult.message}
                   </p>
+                  
+                  {/* Helpful message for good scores with no improvement */}
+                  {improvementResult.success && 
+                   improvementResult.scoreIncrease === 0 && 
+                   (improvementResult.newScore || 0) >= 70 && (
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <h6 className="font-medium text-blue-900 text-sm mb-1">Your resume looks good!</h6>
+                          <p className="text-xs text-blue-700 mb-2">
+                            To improve your score further, consider adding:
+                          </p>
+                          <ul className="text-xs text-blue-700 space-y-1">
+                            <li>• More relevant skills that match job requirements</li>
+                            <li>• Additional projects showcasing your expertise</li>
+                            <li>• Professional certifications related to your field</li>
+                            <li>• Quantifiable achievements with specific metrics</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {improvementResult.success && improvementResult.improvements && improvementResult.improvements.length > 0 && (
                     <ul className="mt-3 space-y-1">

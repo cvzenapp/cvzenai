@@ -6,7 +6,7 @@ import { groqService } from '../groqService.js';
 /**
  * Job Description Generator using DSPy-trained patterns
  * Uses compiled patterns from offline training with job_descriptions.csv dataset
- * Follows the same pattern as fake job detector
+ * Follows the same pattern as JD Trust Score
  */
 
 interface JobDescriptionRequest {

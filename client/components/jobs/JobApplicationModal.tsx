@@ -35,7 +35,6 @@ export function JobApplicationModal({
   const [originalScore, setOriginalScore] = useState<number | null>(null);
   const [optimizedScore, setOptimizedScore] = useState<number | null>(null);
   const [resumeOptimized, setResumeOptimized] = useState(false);
-  const [showResumePreview, setShowResumePreview] = useState(false);
 
   useEffect(() => {
     loadResumes();
@@ -380,39 +379,72 @@ export function JobApplicationModal({
                         <div className="text-sm text-gray-600 mb-1">Current</div>
                         <div className="text-2xl font-bold text-green-600">{optimizedScore}%</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-sm text-green-600 mb-1">Improvement</div>
-                        <div className="text-xl font-bold text-green-600">
-                          +{(optimizedScore || 0) - (originalScore || 0)}%
+                      {((optimizedScore || 0) - (originalScore || 0)) > 0 && (
+                        <div className="text-center">
+                          <div className="text-sm text-green-600 mb-1">Improvement</div>
+                          <div className="text-xl font-bold text-green-600">
+                            +{(optimizedScore || 0) - (originalScore || 0)}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Improvement Suggestions for Good Scores */}
+                  {((optimizedScore || 0) - (originalScore || 0)) <= 0 && (optimizedScore || 0) >= 70 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <h5 className="font-medium text-blue-900 mb-1">Your resume looks good!</h5>
+                          <p className="text-sm text-blue-700 mb-2">
+                            To improve your score further, consider adding:
+                          </p>
+                          <ul className="text-sm text-blue-700 space-y-1">
+                            <li>• More relevant skills that match the job requirements</li>
+                            <li>• Additional projects that showcase your expertise</li>
+                            <li>• Professional certifications related to this role</li>
+                            <li>• Quantifiable achievements with specific metrics</li>
+                          </ul>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Resume Preview Button */}
                   <div className="text-center">
                     <button
-                      onClick={() => setShowResumePreview(true)}
+                      onClick={() => {
+                        if (selectedResumeId) {
+                          // Open resume in new tab
+                          window.open(`/resume/${selectedResumeId}`, '_blank');
+                        }
+                      }}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
                     >
                       <Eye className="w-4 h-4" />
-                      Preview Updated Resume
+                      Preview
                     </button>
                   </div>
 
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-start gap-2">
-                      <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <div>
-                        <h5 className="font-medium text-green-900 mb-1">Resume Optimized Successfully!</h5>
-                        <p className="text-sm text-green-700">
-                          Your resume has been enhanced with relevant keywords and improved descriptions to better match this job posting.
-                        </p>
+                  {/* Success message - only show when score actually improved */}
+                  {((optimizedScore || 0) - (originalScore || 0)) > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <h5 className="font-medium text-green-900 mb-1">Resume Optimized Successfully!</h5>
+                          <p className="text-sm text-green-700">
+                            Your resume has been enhanced with relevant keywords and improved descriptions to better match this job posting.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>

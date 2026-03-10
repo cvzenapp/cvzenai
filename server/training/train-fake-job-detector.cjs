@@ -202,7 +202,7 @@ async function evaluatePrompt(systemPrompt, testData, sampleSize = 50) {
 
 // Main training function
 async function trainFakeJobDetector() {
-  console.log('🚀 Starting DSPy-style training for Fake Job Detector\n');
+  console.log('🚀 Starting DSPy-style training for JD Trust Score\n');
   
   // Load dataset
   const dataset = loadDataset();

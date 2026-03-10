@@ -27,6 +27,8 @@ interface ATSImproveResponse {
   oldScore: number;
   newScore: number;
   scoreIncrease?: number;
+  noChangeReason?: string;
+  message?: string;
   newATSScore: ATSScoreData;
 }
 

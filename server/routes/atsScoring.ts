@@ -376,7 +376,9 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
         newScore: currentATSScore.overallScore, // Keep original score
         scoreIncrease: 0,
         noChangeReason: 'improvements_decreased_score',
-        message: `AI suggestions would have decreased your score. Your original score of ${currentATSScore.overallScore} has been kept.`,
+        message: currentATSScore.overallScore >= 70 
+          ? `Your resume looks good with a score of ${currentATSScore.overallScore}! To improve further, consider adding more relevant skills, projects, or certifications.`
+          : `AI suggestions would have decreased your score. Your original score of ${currentATSScore.overallScore} has been kept.`,
         newATSScore: currentATSScore // Return original score
       });
     }
@@ -394,10 +396,20 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
         newScore: currentATSScore.overallScore,
         scoreIncrease: 0,
         noChangeReason: 'score_unchanged',
-        message: `Your score remains at ${currentATSScore.overallScore}. Here are suggestions to improve:`,
+        message: currentATSScore.overallScore >= 70
+          ? `Your resume looks good with a score of ${currentATSScore.overallScore}! To improve further, consider adding more relevant skills, projects, or certifications.`
+          : `Your score remains at ${currentATSScore.overallScore}. Here are suggestions to improve:`,
         newATSScore: {
           ...newATSScore,
-          suggestions: [
+          suggestions: currentATSScore.overallScore >= 70 ? [
+            'Your resume is performing well! To boost it further:',
+            'Add more relevant skills that match specific job requirements',
+            'Include additional projects that showcase your expertise',
+            'Obtain professional certifications related to your field',
+            'Add quantifiable achievements with specific metrics (e.g., "Increased sales by 25%")',
+            'Include industry-specific keywords from job postings',
+            'Add volunteer work or leadership experiences if relevant'
+          ] : [
             'To improve your ATS score further, consider:',
             ...newATSScore.suggestions
           ]

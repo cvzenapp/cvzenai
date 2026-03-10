@@ -104,6 +104,8 @@ export default function ResumeDisplay({
     improvements?: string[];
     oldScore?: number;
     newScore?: number;
+    scoreIncrease?: number;
+    noChangeReason?: string;
   } | null>(null);
 
   // Section-by-section improvement
@@ -254,7 +256,9 @@ export default function ResumeDisplay({
           message: 'Resume improved successfully!',
           improvements: result.data.improvements,
           oldScore: result.data.oldScore,
-          newScore: result.data.newScore
+          newScore: result.data.newScore,
+          scoreIncrease: result.data.scoreIncrease,
+          noChangeReason: result.data.noChangeReason
         });
         
         if (result.data.newATSScore) {
@@ -825,13 +829,16 @@ export default function ResumeDisplay({
                   {improvementResult.success && improvementResult.oldScore && improvementResult.newScore && (
                     <div className="mb-2 text-sm font-medium text-green-800">
                       Score: {improvementResult.oldScore} → {improvementResult.newScore} 
-                      <span className={`ml-2 ${
-                        improvementResult.newScore > improvementResult.oldScore 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        ({improvementResult.newScore > improvementResult.oldScore ? '+' : ''}{improvementResult.newScore - improvementResult.oldScore} points)
-                      </span>
+                      {improvementResult.scoreIncrease !== undefined && improvementResult.scoreIncrease > 0 && (
+                        <span className="ml-2 text-green-600">
+                          (+{improvementResult.scoreIncrease} points)
+                        </span>
+                      )}
+                      {improvementResult.noChangeReason === 'improvements_decreased_score' && (
+                        <span className="ml-2 text-gray-600">
+                          (kept original score)
+                        </span>
+                      )}
                     </div>
                   )}
                   
@@ -840,6 +847,31 @@ export default function ResumeDisplay({
                   }`}>
                     {improvementResult.message}
                   </p>
+                  
+                  {/* Helpful message for good scores with no improvement */}
+                  {improvementResult.success && 
+                   improvementResult.scoreIncrease === 0 && 
+                   (improvementResult.newScore || 0) >= 70 && (
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <h6 className="font-medium text-blue-900 text-sm mb-1">Your resume looks good!</h6>
+                          <p className="text-xs text-blue-700 mb-2">
+                            To improve your score further, consider adding:
+                          </p>
+                          <ul className="text-xs text-blue-700 space-y-1">
+                            <li>• More relevant skills that match job requirements</li>
+                            <li>• Additional projects showcasing your expertise</li>
+                            <li>• Professional certifications related to your field</li>
+                            <li>• Quantifiable achievements with specific metrics</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {improvementResult.success && improvementResult.improvements && improvementResult.improvements.length > 0 && (
                     <ul className="mt-3 space-y-1">

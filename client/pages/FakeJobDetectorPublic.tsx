@@ -243,7 +243,7 @@ export default function FakeJobDetectorPublic() {
           </div>
           
           <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Fake Job Detector
+            JD Trust Score
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-6">
             Paste any job posting below and get instant AI analysis to detect fraud patterns

@@ -242,9 +242,13 @@ router.get('/my-applications', unifiedAuth.requireAuth, async (req: AuthRequest,
       `SELECT 
         ja.*,
         jp.title as job_title,
-        jp.department as company,
+        jp.company,
         jp.location,
-        jp.job_type
+        jp.job_type,
+        jp.department,
+        jp.salary_range,
+        jp.experience_level,
+        jp.created_at as job_posted_at
        FROM job_applications ja
        JOIN job_postings jp ON ja.job_id = jp.id
        WHERE ja.user_id = $1

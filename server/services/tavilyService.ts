@@ -358,7 +358,7 @@ class TavilyService {
   }
 
   /**
-   * Search jobs and detect fake postings using Tavily Extract + Fake Job Detector
+   * Search jobs and detect fake postings using Tavily Extract + JD Trust Score
    * Crawls LinkedIn URLs and analyzes them for fraud indicators
    */
   async searchAndDetectFakeJobs(params: JobSearchParams): Promise<JobWithFraudScore[]> {

@@ -109,7 +109,7 @@ router.get('/health', (_req: Request, res: Response) => {
     success: true,
     data: {
       status: 'ready',
-      message: 'Fake job detector is operational'
+      message: 'JD Trust Score is operational'
     }
   });
 });
