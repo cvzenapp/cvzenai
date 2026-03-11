@@ -343,17 +343,16 @@ export default function QuickSignupModal({ isOpen, onClose, mode = 'signup', job
           setStep("analysis");
         } else {
           setStep("success");
+          // Only redirect automatically if no analysis is available
+          setTimeout(() => {
+            if (data.resumeId) {
+              navigate(`/resume/${data.resumeId}`);
+            } else {
+              navigate('/dashboard');
+            }
+            onClose();
+          }, 2000);
         }
-
-        // Redirect after short delay for signup mode
-        setTimeout(() => {
-          if (data.resumeId) {
-            navigate(`/resume/${data.resumeId}`);
-          } else {
-            navigate('/dashboard');
-          }
-          onClose();
-        }, 2000);
       }
     } catch (err: any) {
       console.error("Signup error:", err);

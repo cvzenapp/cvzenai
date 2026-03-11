@@ -301,12 +301,26 @@ router.post("/register", async (req: Request, res: Response) => {
     // Send welcome email asynchronously
     setImmediate(async () => {
       try {
-        await emailService.sendAccountCreationEmail(
+        // Get company name for the email
+        let companyName = null;
+        if (companyId) {
+          try {
+            const companyQuery = await client.query('SELECT name FROM companies WHERE id = $1', [companyId]);
+            if (companyQuery.rows.length > 0) {
+              companyName = companyQuery.rows[0].name;
+            }
+          } catch (companyQueryError) {
+            console.error("⚠️ Failed to get company name for email:", companyQueryError);
+          }
+        }
+
+        await emailService.sendRecruiterAccountCreationEmail(
           validatedData.email.toLowerCase(),
           `${validatedData.firstName} ${validatedData.lastName}`,
+          companyName,
           user.id.toString()
         );
-        console.log("✅ Welcome email sent to:", validatedData.email);
+        console.log("✅ Recruiter welcome email sent to:", validatedData.email);
       } catch (emailError) {
         console.error("❌ Failed to send welcome email:", emailError);
       }

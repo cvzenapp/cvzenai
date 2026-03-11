@@ -310,6 +310,140 @@ class EmailService {
 
     return result;
   }
+  async sendRecruiterAccountCreationEmail(
+    recipientEmail: string,
+    recipientName: string,
+    companyName?: string,
+    userId?: string
+  ): Promise<EmailResponse> {
+    const subject = 'Welcome to CVZen - Start Hiring Top Talent!';
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to CVZen - Recruiter Platform</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1891db 0%, #1565c0 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to CVZen!</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your recruitment platform is ready</p>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1891db; margin-top: 0;">Hi ${recipientName}!</h2>
+
+          <p>Congratulations! Your CVZen recruiter account has been successfully created${companyName ? ` for ${companyName}` : ''}. You're now ready to connect with top talent and streamline your hiring process.</p>
+
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1891db;">
+            <h3 style="margin-top: 0; color: #1891db;">What you can do now:</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Post job openings and attract qualified candidates</li>
+              <li>Browse and search through candidate profiles</li>
+              <li>Schedule and conduct AI-powered interviews</li>
+              <li>Manage applications and track hiring progress</li>
+              <li>Build your company profile to attract talent</li>
+            </ul>
+          </div>
+
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+            <h3 style="margin-top: 0; color: #28a745;">🚀 Pro Tips for Success:</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Complete your company profile to increase visibility</li>
+              <li>Use detailed job descriptions for better candidate matching</li>
+              <li>Leverage our AI screening tools to save time</li>
+              <li>Set up interview templates for consistent evaluation</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.APP_URL || 'https://cvzen.com'}/recruiter/dashboard"
+               style="background: #1891db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-right: 10px;">
+              Access Recruiter Dashboard
+            </a>
+            <a href="${process.env.APP_URL || 'https://cvzen.com'}/recruiter/company-profile"
+               style="background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Setup Company Profile
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            Need help getting started? Reply to this email or visit our <a href="${process.env.APP_URL || 'https://cvzen.com'}/recruiter/support" style="color: #1891db;">recruiter support center</a>.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            This email was sent by CVZen Recruiter Platform. If you didn't create an account, please ignore this email.
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textBody = `
+      Welcome to CVZen Recruiter Platform, ${recipientName}!
+
+      Congratulations! Your CVZen recruiter account has been successfully created${companyName ? ` for ${companyName}` : ''}.
+
+      What you can do now:
+      • Post job openings and attract qualified candidates
+      • Browse and search through candidate profiles
+      • Schedule and conduct AI-powered interviews
+      • Manage applications and track hiring progress
+      • Build your company profile to attract talent
+
+      Pro Tips for Success:
+      • Complete your company profile to increase visibility
+      • Use detailed job descriptions for better candidate matching
+      • Leverage our AI screening tools to save time
+      • Set up interview templates for consistent evaluation
+
+      Get started: ${process.env.APP_URL || 'https://cvzen.com'}/recruiter/dashboard
+      Setup company profile: ${process.env.APP_URL || 'https://cvzen.com'}/recruiter/company-profile
+
+      Need help? Reply to this email or visit our recruiter support center.
+
+      Best regards,
+      The CVZen Recruitment Team
+    `;
+
+    const emailRequest: EmailRequest = {
+      sender: this.fromEmail,
+      to: [recipientEmail],
+      subject,
+      html_body: htmlBody,
+      text_body: textBody,
+    };
+
+    // Log email attempt
+    const logId = await this.logEmail({
+      emailType: 'recruiter_account_creation',
+      senderEmail: this.fromEmail,
+      recipientEmail,
+      subject,
+      requestData: emailRequest,
+      status: 'pending',
+      userId,
+    });
+
+    // Send email
+    const result = await this.sendEmail(emailRequest);
+
+    // Update log with result
+    if (logId) {
+      await this.updateEmailLog(
+        logId,
+        result.data,
+        result.success ? 'sent' : 'failed',
+        result.error
+      );
+    }
+
+    return result;
+  }
+
 
   async sendJobApplicationEmail(
     recruiterEmail: string,
@@ -1119,11 +1253,11 @@ ${nextSteps}
           <div style="text-align: center; margin: 30px 0;">
             <p style="font-size: 16px; margin-bottom: 20px;">Please confirm your availability for the new time:</p>
             <div style="display: inline-block; gap: 15px;">
-              <a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}" 
+              <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}" 
                  style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 0 10px; display: inline-block;">
                 ✅ Accept New Time
               </a>
-              <a href="${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}" 
+              <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}" 
                  style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 0 10px; display: inline-block;">
                 ❌ Decline
               </a>
@@ -1166,8 +1300,8 @@ ${nextSteps}
       📎 A calendar invite (.ics file) is attached to this email.
       
       Please confirm your attendance for the new time:
-      Accept: ${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}
-      Decline: ${process.env.APP_BASE_URL || 'http://localhost:8080'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}
+      Accept: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}
+      Decline: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}
       
       Best regards,
       ${recruiterName}
