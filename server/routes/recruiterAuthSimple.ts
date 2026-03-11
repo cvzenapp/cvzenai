@@ -212,14 +212,14 @@ router.post("/register", async (req: Request, res: Response) => {
         companyId = existingCompanyResult.rows[0].id;
         console.log("🔍 REGISTER: Using existing company with ID:", companyId);
       } else {
-        // Create new company
+        // Create new company without created_by for now (will update after recruiter profile is created)
         const insertCompanyQuery = `
           INSERT INTO companies (
             name, website, description, industry, size_range, location,
             founded_year, employee_count, company_type, work_environment,
-            company_values, specialties, benefits, created_by
+            company_values, specialties, benefits
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING id
         `;
 
@@ -236,8 +236,7 @@ router.post("/register", async (req: Request, res: Response) => {
           companyData.work_environment,
           companyData.company_values,
           JSON.stringify(companyData.specialties || []),
-          JSON.stringify(companyData.benefits || []),
-          user.id
+          JSON.stringify(companyData.benefits || [])
         ]);
 
         companyId = companyResult.rows[0].id;
@@ -266,6 +265,20 @@ router.post("/register", async (req: Request, res: Response) => {
 
     const profile = profileResult.rows[0];
     console.log("🔍 REGISTER: Profile created with ID:", profile.id);
+
+    // Update company with created_by if company was created
+    if (companyId) {
+      try {
+        await client.query(
+          `UPDATE companies SET created_by = $1 WHERE id = $2 AND created_by IS NULL`,
+          [profile.id, companyId]
+        );
+        console.log("🔍 REGISTER: Updated company created_by with recruiter profile ID:", profile.id);
+      } catch (updateError) {
+        console.error("⚠️ REGISTER: Failed to update company created_by:", updateError);
+        // Don't fail registration if this update fails
+      }
+    }
 
     // Commit transaction
     await client.query('COMMIT');
