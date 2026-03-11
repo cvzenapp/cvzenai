@@ -731,9 +731,18 @@ export default function Dashboard() {
         ));
       } else {
         console.error('Failed to calculate ATS score:', result.error);
+        // Show user-friendly error message
+        alert('Failed to calculate ATS score. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error calculating ATS score:', error);
+      
+      // Handle circuit breaker errors specifically
+      if (error.message?.includes('Circuit breaker')) {
+        alert('Service temporarily unavailable due to multiple failures. The system has automatically reset and you can try again.');
+      } else {
+        alert('Error calculating ATS score. Please try again.');
+      }
     }
   };
 

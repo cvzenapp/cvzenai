@@ -15,12 +15,12 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
 
   console.log(`🎯 ATS calculation requested for resume ${resumeId} by user ${userId}`);
 
-  const db = await initializeDatabase();
+  const db = await getDatabase();
 
   try {
     // Get resume data
     const result = await db.query(
-      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2::uuid',
       [resumeId, userId]
     );
 
@@ -155,8 +155,6 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
       success: false,
       error: error.message || 'Failed to calculate ATS score'
     });
-  } finally {
-    await closeDatabase();
   }
 });
 
@@ -176,12 +174,12 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
   console.log(`   📋 Query params:`, req.query);
   console.log(`   🎯 Method selected: ${method}`);
 
-  const db = await initializeDatabase();
+  const db = await getDatabase();
 
   try {
     // Get resume data with current ATS score
     const result = await db.query(
-      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2::uuid',
       [resumeId, userId]
     );
 
@@ -509,8 +507,6 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
       success: false,
       error: error.message || 'Failed to improve resume'
     });
-  } finally {
-    await closeDatabase();
   }
 });
 
@@ -525,7 +521,7 @@ router.post('/improve-section/:resumeId', unifiedAuth.requireAuth, async (req: A
 
   console.log(`🎯 Section improvement requested: ${sectionType} for resume ${resumeId}`);
 
-  const db = await initializeDatabase();
+  const db = await getDatabase();
 
   try {
     // Validate section type
@@ -539,7 +535,7 @@ router.post('/improve-section/:resumeId', unifiedAuth.requireAuth, async (req: A
 
     // Get resume data for context
     const result = await db.query(
-      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM resumes WHERE id = $1 AND user_id = $2::uuid',
       [resumeId, userId]
     );
 
@@ -578,11 +574,11 @@ router.post('/improve-section/:resumeId', unifiedAuth.requireAuth, async (req: A
 
     if (sectionType === 'summary' || sectionType === 'objective') {
       // Simple string fields
-      updateQuery = `UPDATE resumes SET ${sectionType} = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *`;
+      updateQuery = `UPDATE resumes SET ${sectionType} = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3::uuid RETURNING *`;
       updateParams = [improvement.improved, resumeId, userId];
     } else if (sectionType === 'skills') {
       // Array field
-      updateQuery = `UPDATE resumes SET skills = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *`;
+      updateQuery = `UPDATE resumes SET skills = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3::uuid RETURNING *`;
       updateParams = [JSON.stringify(improvement.improved), resumeId, userId];
     } else if (sectionIndex !== undefined) {
       // Array item update (experience, education, projects)
@@ -601,7 +597,7 @@ router.post('/improve-section/:resumeId', unifiedAuth.requireAuth, async (req: A
       // Update the specific index
       currentArray[sectionIndex] = improvement.improved;
       
-      updateQuery = `UPDATE resumes SET ${columnName} = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *`;
+      updateQuery = `UPDATE resumes SET ${columnName} = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3::uuid RETURNING *`;
       updateParams = [JSON.stringify(currentArray), resumeId, userId];
     }
 
@@ -632,8 +628,6 @@ router.post('/improve-section/:resumeId', unifiedAuth.requireAuth, async (req: A
       success: false,
       error: error.message || 'Failed to improve section'
     });
-  } finally {
-    await closeDatabase();
   }
 });
 

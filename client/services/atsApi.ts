@@ -40,10 +40,30 @@ interface SectionImproveResponse {
 
 class ATSApiClient extends BaseApiClient {
   /**
+   * Reset the circuit breaker for ATS operations
+   */
+  resetCircuitBreaker() {
+    super.resetCircuitBreaker();
+    console.log('🔄 ATS API circuit breaker reset');
+  }
+
+  /**
    * Calculate ATS score for a resume
    */
   async calculateScore(resumeId: number) {
-    return this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
+    try {
+      return await this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
+    } catch (error) {
+      // If circuit breaker is active, reset it and try once more
+      if (error.message?.includes('Circuit breaker')) {
+        console.log('🔄 Circuit breaker detected, resetting and retrying ATS calculation...');
+        this.resetCircuitBreaker();
+        // Wait a moment before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
+      }
+      throw error;
+    }
   }
 
   /**
@@ -52,7 +72,18 @@ class ATSApiClient extends BaseApiClient {
    * @param method - Improvement method: 'llm' (default), 'rule-based', or 'hybrid'
    */
   async improveResume(resumeId: number, method: 'rule-based' | 'llm' | 'hybrid' = 'llm') {
-    return this.post<ATSImproveResponse>(`/ats/improve/${resumeId}?method=${method}`, {});
+    try {
+      return await this.post<ATSImproveResponse>(`/ats/improve/${resumeId}?method=${method}`, {});
+    } catch (error) {
+      // If circuit breaker is active, reset it and try once more
+      if (error.message?.includes('Circuit breaker')) {
+        console.log('🔄 Circuit breaker detected, resetting and retrying ATS improvement...');
+        this.resetCircuitBreaker();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await this.post<ATSImproveResponse>(`/ats/improve/${resumeId}?method=${method}`, {});
+      }
+      throw error;
+    }
   }
 
   /**
@@ -64,11 +95,26 @@ class ATSApiClient extends BaseApiClient {
     sectionData: any,
     sectionIndex?: number
   ) {
-    return this.post<SectionImproveResponse>(`/ats/improve-section/${resumeId}`, {
-      sectionType,
-      sectionData,
-      sectionIndex
-    });
+    try {
+      return await this.post<SectionImproveResponse>(`/ats/improve-section/${resumeId}`, {
+        sectionType,
+        sectionData,
+        sectionIndex
+      });
+    } catch (error) {
+      // If circuit breaker is active, reset it and try once more
+      if (error.message?.includes('Circuit breaker')) {
+        console.log('🔄 Circuit breaker detected, resetting and retrying section improvement...');
+        this.resetCircuitBreaker();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await this.post<SectionImproveResponse>(`/ats/improve-section/${resumeId}`, {
+          sectionType,
+          sectionData,
+          sectionIndex
+        });
+      }
+      throw error;
+    }
   }
 }
 
