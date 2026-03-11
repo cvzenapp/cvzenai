@@ -49,6 +49,7 @@ import { FakeJobDetector } from "@/components/dashboard/FakeJobDetector";
 import { JobSeekerSubscriptionDashboard } from "@/components/subscription/JobSeekerSubscriptionDashboard";
 import { JobSeekerPlanSelector } from "@/components/subscription/JobSeekerPlanSelector";
 import { JobSeekerUsageTracker } from "@/components/subscription/JobSeekerUsageTracker";
+import { MockTestDashboard } from "@/components/dashboard/MockTestDashboard";
 import { MyApplicationsList } from "@/components/jobs/MyApplicationsList";
 import { subscriptionApi } from "@/services/subscriptionApi";
 import type { UserSubscription } from "@shared/subscription";
@@ -78,6 +79,7 @@ import {
   Shield,
   CreditCard,
   Package,
+  Brain,
 } from "lucide-react";
 
 interface SavedResume {
@@ -127,6 +129,19 @@ export default function Dashboard() {
       return;
     }
   }, [navigate]);
+
+  // Handle tab switching from external components
+  useEffect(() => {
+    const handleTabSwitch = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('setDashboardTab', handleTabSwitch as EventListener);
+    
+    return () => {
+      window.removeEventListener('setDashboardTab', handleTabSwitch as EventListener);
+    };
+  }, []);
   
   // Get user directly from localStorage - memoize to prevent infinite re-renders
   const [currentUser] = useState(() => {
@@ -1275,6 +1290,22 @@ export default function Dashboard() {
             
             <button
               onClick={() => {
+                setActiveTab('mock-tests');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'mock-tests'
+                  ? 'bg-brand-background text-white'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+              title={isSidebarCollapsed ? "Mock Tests" : ""}
+            >
+              <Brain className="h-5 w-5 shrink-0" />
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Mock Tests</span>}
+            </button>
+            
+            <button
+              onClick={() => {
                 setActiveTab('subscription');
                 setIsMobileSidebarOpen(false);
               }}
@@ -1806,6 +1837,10 @@ export default function Dashboard() {
                   </Tabs>
                 )}
               </div>
+            )}
+
+            {activeTab === 'mock-tests' && (
+              <MockTestDashboard />
             )}
 
             {activeTab === 'settings' && (

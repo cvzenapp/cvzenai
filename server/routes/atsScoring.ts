@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import unifiedAuth, { AuthRequest } from '../middleware/unifiedAuth.js';
-import { initializeDatabase, closeDatabase } from '../database/connection.js';
+import { getDatabase } from '../database/connection.js';
 import { atsScorer } from '../services/dspy/atsScorer.js';
 
 const router = Router();

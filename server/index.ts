@@ -77,6 +77,7 @@ import jobPreferencesRouter from "./routes/jobPreferences.js";
 import locationSearchRouter from "./routes/locationSearch.js";
 import recruiterActionsRouter from "./routes/recruiterActions";
 import emailTestRouter from "./routes/emailTest";
+import { createMockTestRoutes } from "./routes/mockTests";
 import { requireAuth } from "./middleware/unifiedAuth";
 import { getDatabase, initializeDatabase, closeDatabase } from "./database/connection";
 import { seedDatabase } from "./database/seedData";
@@ -377,6 +378,9 @@ export function createServer() {
 
   // Job preferences routes
   app.use("/api/job-preferences", jobPreferencesRouter);
+
+  // Mock test routes
+  app.use("/api/mock-tests", createMockTestRoutes());
 
   // Test routes (development only)
   if (process.env.NODE_ENV === 'development') {

@@ -19,6 +19,8 @@ import Pricing from "./pages/Pricing";
 import { InterviewsPage } from "./pages/InterviewsPage";
 import { InterviewDemo } from "./pages/InterviewDemo";
 import { InterviewJoinPage } from "./pages/InterviewJoinPage";
+import { MockTestSessionPage } from "./pages/MockTestSession";
+import { MockTestResultsPage } from "./pages/MockTestResults";
 import StreamingChatDemo from "./pages/StreamingChatDemo";
 
 import Login from "./pages/Login";
@@ -77,6 +79,8 @@ const App = () => {
               <Route path="/job-search" element={<JobSearch />} />
               <Route path="/interviews" element={<InterviewsPage />} />
               <Route path="/interview/:interviewId/join" element={<InterviewJoinPage />} />
+              <Route path="/mock-test/session/:sessionId" element={<MockTestSessionPage />} />
+              <Route path="/mock-test/results/:sessionId" element={<MockTestResultsPage />} />
               <Route path="/interview-demo" element={<InterviewDemo />} />
               <Route path="/streaming-chat-demo" element={<StreamingChatDemo />} />
               <Route path="/features" element={<Features />} />

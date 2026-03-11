@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Clock, Video, Phone, MapPin, Monitor, 
   CheckCircle, XCircle, AlertCircle, User, Building, 
   Filter, Search, ChevronDown, RefreshCw, Download,
-  ArrowUpDown, ArrowUp, ArrowDown, Edit
+  ArrowUpDown, ArrowUp, ArrowDown, Edit, Brain
 } from 'lucide-react';
 import { interviewApi } from '../../services/interviewApi';
 import { recruiterInterviewApi } from '../../services/recruiterInterviewApi';
@@ -65,6 +66,7 @@ const statusIcons = {
 };
 
 export const EnterpriseInterviewManager: React.FC<EnterpriseInterviewManagerProps> = ({ userType }) => {
+  const navigate = useNavigate();
   const [interviews, setInterviews] = useState<InterviewInvitation[]>([]);
   const [filteredInterviews, setFilteredInterviews] = useState<InterviewInvitation[]>([]);
   const [displayedInterviews, setDisplayedInterviews] = useState<InterviewInvitation[]>([]);
@@ -563,6 +565,25 @@ export const EnterpriseInterviewManager: React.FC<EnterpriseInterviewManagerProp
 
                   {/* Actions */}
                   <div className="ml-4 flex flex-col space-y-2">
+                    {/* Mock Test button for job seekers - Show for all statuses for testing */}
+                    {userType === 'job_seeker' && (
+                      <button
+                        onClick={() => {
+                          // Navigate to dashboard with mock-tests tab
+                          navigate('/dashboard');
+                          // Set the active tab to mock-tests (this will be handled by URL params or state)
+                          setTimeout(() => {
+                            const event = new CustomEvent('setDashboardTab', { detail: 'mock-tests' });
+                            window.dispatchEvent(event);
+                          }, 100);
+                        }}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center space-x-2 whitespace-nowrap"
+                      >
+                        <Brain className="w-4 h-4" />
+                        <span>Mock Test</span>
+                      </button>
+                    )}
+                    
                     {/* Edit button for recruiters - Always show for testing */}
                     <button
                       onClick={() => handleEditInterview(interview)}
