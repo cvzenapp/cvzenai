@@ -28,7 +28,7 @@ dist-ssr
 
 # Uploaded files
 uploads/
-server/data_sets
+#server/data_sets
 # SQLite databases (not used - PostgreSQL only)
 *.sqlite
 *.sqlite3

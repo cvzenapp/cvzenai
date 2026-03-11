@@ -1,0 +1,114 @@
+{
+  "analyzedAt": "2026-02-28T19:11:09.588Z",
+  "datasets": [
+    {
+      "filePath": "server/data_sets/01_people.csv",
+      "lineCount": 54934,
+      "header": "person_id,name,email,phone,linkedin",
+      "sampleLines": [
+        "1,Database Administrator,,,",
+        "2,Database Administrator,,,",
+        "3,Oracle Database Administrator,,,",
+        "4,\"Amazon Redshift Administrator and ETL Developer, Business Intelligence\",,,",
+        "5,Scrum Master Scrum Master Scrum Master,,,"
+      ],
+      "sizeM": "2.20"
+    },
+    {
+      "filePath": "server/data_sets/02_abilities.csv",
+      "lineCount": 1219474,
+      "header": "person_id,ability",
+      "sampleLines": [
+        "1,Installation and Building Server",
+        "1,Running Backups",
+        "1,Recovering and Restoring Models",
+        "1,Support various MS SQL Server",
+        "1,MS SQL Server 2005/2008"
+      ],
+      "sizeM": "36.45"
+    },
+    {
+      "filePath": "server/data_sets/03_education.csv",
+      "lineCount": 76000,
+      "header": "person_id,institution,program,start_date,location",
+      "sampleLines": [
+        "1,Lead City University,Bachelor of Science,07/2013,",
+        "2,lagos state university,bsc in computer science,,\"Lagos, GU\"",
+        "3,\"JNTU - Kakinada, Andhra Pradesh\",Master of Computer Applications in Science and technology,2013,\"Kakinada, Andhra Pradesh\"",
+        "4,University of Informatics,Bachelor in Computer Science,06/07,June 2007",
+        "5,Virginia Commomwealth University,,08/2013,\"Richmond, VA\""
+      ],
+      "sizeM": "6.02"
+    },
+    {
+      "filePath": "server/data_sets/04_experience.csv",
+      "lineCount": 265405,
+      "header": "person_id,title,firm,start_date,end_date,location",
+      "sampleLines": [
+        "1,Database Administrator,Family Private Care LLC,04/2017,Present,\"Roswell, GA\"",
+        "1,Database Administrator,Incomm,01/2014,02/2017,\"Alpharetta, GA\"",
+        "2,Database Administrator,Intercontinental Registry,12/2008,08/2011,\"Lagos, GU\"",
+        "3,Oracle Database Administrator,Cognizant,06/2016,Present,\"Hyderabad, Telangana\"",
+        "3,Oracle Database Administrator,Convergys,06/2014,06/2016,\"Hyderabad, Telangana\""
+      ],
+      "sizeM": "19.89"
+    },
+    {
+      "filePath": "server/data_sets/05_person_skills.csv",
+      "lineCount": 2483377,
+      "header": "person_id,skill",
+      "sampleLines": [
+        "1,Database administration",
+        "1,Database",
+        "1,Ms sql server",
+        "1,Ms sql server 2005",
+        "1,Sql server"
+      ],
+      "sizeM": "57.09"
+    },
+    {
+      "filePath": "server/data_sets/07_projects.csv",
+      "lineCount": 21,
+      "header": "project_name,project_type,technologies,description,category",
+      "sampleLines": [
+        "E-commerce Platform,Web Application,\"React, Node.js, MongoDB, Stripe\",Full-stack online shopping platform with payment integration,Web Development",
+        "Task Management App,Mobile Application,\"React Native, Firebase, Redux\",Cross-platform task tracking application,Mobile Development",
+        "Data Analytics Dashboard,Dashboard,\"Python, Pandas, Plotly, Flask\",Interactive data visualization and analytics platform,Data Science",
+        "Machine Learning Model,AI/ML,\"Python, TensorFlow, Scikit-learn\",Predictive model for customer churn analysis,Machine Learning",
+        "REST API Service,Backend,\"Node.js, Express, PostgreSQL, JWT\",Scalable RESTful API with authentication,Backend Development"
+      ],
+      "sizeM": "0.00"
+    },
+    {
+      "filePath": "server/data_sets/resume_data/resume_dataset_1200.csv",
+      "lineCount": 1201,
+      "header": "Name,Age,Gender,Education_Level,Field_of_Study,Degrees,Institute_Name,Graduation_Year,Experience_Years,Current_Job_Title,Previous_Job_Titles,Skills,Certifications,Target_Job_Description",
+      "sampleLines": [
+        "Akash Pillai,30,Non-Binary,Master's,Cybersecurity,Master's in Cybersecurity,University of Pennsylvania,2025,0,None,None,\"Node.js, JavaScript, Deep Learning, Statistics, SQL\",Google Cloud Professional,Seeking a challenging role as a Software Developer where I can apply my skills and knowledge to contribute to organizational success and professional growth.",
+        "Charlotte Taylor,27,Non-Binary,Bachelor's,Electronics Engineering,Bachelor's in Electronics Engineering,Pune University,2019,5,Cybersecurity Engineer,None,\"Spark, Kubernetes, Terraform, Natural Language Processing\",TensorFlow Developer Certificate,Targeting a Cybersecurity Engineer position to utilize my educational background and experience to drive results and achieve career objectives.",
+        "James Zhou,45,Male,Bachelor's,Computer Science,Bachelor's in Computer Science,Amity University,2023,2,Prompt Engineer,None,\"Data Analysis, Node.js, Machine Learning, Linux, Jenkins, Network Security, REST APIs\",\"Microsoft Azure Fundamentals, Cisco Certified Network Associate, Oracle Certified Professional\",Targeting a Prompt Engineer position to utilize my educational background and experience to drive results and achieve career objectives.",
+        "Amelia Thomas,28,Male,Master's,Information Technology,Master's in Information Technology,University of Pennsylvania,2023,2,AI Engineer,None,\"Docker, Kubernetes, Blockchain, Spark\",None,\"Targeting a Data Scientist position where I can utilize my expertise in Python, R, SQL, and machine learning algorithms to solve business challenges through data analysis and predictive modeling.\"",
+        "Amanda Jain,42,Non-Binary,Master's,Electronics Engineering,Master's in Electronics Engineering,University of Toronto,2023,2,Cybersecurity Engineer,None,\"Statistics, Blockchain, Kubernetes, Cybersecurity\",None,Looking for an opportunity as a Prompt Engineer to leverage my expertise in electronics engineering and make a meaningful impact in the industry."
+      ],
+      "sizeM": "0.48"
+    },
+    {
+      "filePath": "server/data_sets/UpdatedResumeDataSetSkills.csv",
+      "lineCount": 42105,
+      "header": "Category,Resume",
+      "sampleLines": [
+        "Data Science,\"Skills * Programming Languages: Python (pandas, numpy, scipy, scikit-learn, matplotlib), Sql, Java, JavaScript/JQuery. * Machine learning: Regression, SVM, NaÃ¯ve Bayes, KNN, Random Forest, Decision Trees, Boosting techniques, Cluster Analysis, Word Embedding, Sentiment Analysis, Natural Language processing, Dimensionality reduction, Topic Modelling (LDA, NMF), PCA & Neural Nets. * Database Visualizations: Mysql, SqlServer, Cassandra, Hbase, ElasticSearch D3.js, DC.js, Plotly, kibana, matplotlib, ggplot, Tableau. * Others: Regular Expression, HTML, CSS, Angular 6, Logstash, Kafka, Python Flask, Git, Docker, computer vision - Open CV and understanding of Deep learning.Education Details ",
+        "",
+        "Data Science Assurance Associate ",
+        "",
+        "Data Science Assurance Associate - Ernst & Young LLP"
+      ],
+      "sizeM": "2.96"
+    }
+  ],
+  "summary": {
+    "totalLines": 4142517,
+    "totalSizeMB": 125.09,
+    "datasetCount": 8
+  }
+}

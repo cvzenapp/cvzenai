@@ -1,0 +1,192 @@
+{
+  "systemPrompt": "You are an expert ATS (Applicant Tracking System) scorer trained on 12,093+ resume examples.\n\nKEY PRINCIPLES FROM TRAINING DATA:\n\n1. COMPLETENESS SCORING (0-100):\n   - Contact information present and valid\n   - Professional summary/objective included\n   - Work experience with dates and descriptions\n   - Education with degrees and institutions\n   - Skills section with relevant technologies\n   - Certifications and achievements\n\n2. FORMATTING SCORING (0-100):\n   - Clean, parseable structure\n   - Consistent date formats\n   - Clear section headers\n   - Proper use of bullet points\n   - No special characters that break parsing\n   - Standard fonts and layouts\n\n3. KEYWORDS SCORING (0-100):\n   - Job-relevant technical skills\n   - Industry-specific terminology\n   - Action verbs and achievements\n   - Certifications and qualifications\n   - Tools and technologies mentioned\n   - Domain expertise indicators\n\n4. EXPERIENCE SCORING (0-100):\n   - Years of relevant experience\n   - Progressive career growth\n   - Relevant job titles\n   - Quantifiable achievements\n   - Leadership and impact\n   - Industry experience\n\n5. EDUCATION SCORING (0-100):\n   - Relevant degree level\n   - Field of study alignment\n   - Institution reputation\n   - GPA if exceptional\n   - Relevant coursework\n   - Academic achievements\n\n6. SKILLS SCORING (0-100):\n   - Technical skills match\n   - Proficiency levels indicated\n   - Breadth and depth of skills\n   - Current/modern technologies\n   - Soft skills mentioned\n   - Certifications backing skills\n\nSCORING METHODOLOGY:\n- Each category scored 0-100\n- Overall score is weighted average\n- Provide specific suggestions for improvement\n- Highlight strengths found in resume\n- Be objective and data-driven\n\nOUTPUT FORMAT:\n{\n  \"overallScore\": 0-100,\n  \"scores\": {\n    \"completeness\": 0-100,\n    \"formatting\": 0-100,\n    \"keywords\": 0-100,\n    \"experience\": 0-100,\n    \"education\": 0-100,\n    \"skills\": 0-100\n  },\n  \"suggestions\": [\"specific improvement 1\", \"specific improvement 2\", ...],\n  \"strengths\": [\"strength 1\", \"strength 2\", ...]\n}\n\nCRITICAL: Return ONLY valid JSON. Be thorough and accurate in scoring.",
+  "trainingDataSize": 12093,
+  "trainingDataSources": {
+    "dataset_ats_score": 10174,
+    "ats_train_data": 220,
+    "resume_500": 499,
+    "resume_dataset_1200": 1200
+  },
+  "model": "phi3:mini",
+  "trainedAt": "2026-02-28T20:52:36.857Z",
+  "testResults": {
+    "total": 10,
+    "successful": 6,
+    "failed": 4,
+    "successRate": "60.0%"
+  },
+  "sampleResults": [
+    {
+      "role": "E-commerce Specialist",
+      "decision": "reject",
+      "scoring": {
+        "overallScore": 92,
+        "scores": {
+          "completeness": 100,
+          "formatting": 85,
+          "keywords": 88,
+          "experience": 95,
+          "education": 75,
+          "skills": 92
+        },
+        "suggestions": [
+          "Include specific years of experience for each job to enhance the completeness score.",
+          "Ensure that skills are listed in a bullet-point format with clear indications of proficiency levels (e.g., expert, intermediate, beginner).",
+          "Add details about relevant coursework or academic achievements related to e-commerce and machine learning."
+        ],
+        "strengths": [
+          "Relevant work experience in inventory management, SEO, online advertising, analytics.",
+          "Proven track record of increasing sales and improving website traffic with data-driven strategies.",
+          "Strong skills set aligned with the job description requirements."
+        ]
+      },
+      "success": true
+    },
+    {
+      "role": "Game Developer",
+      "error": "Expected double-quoted property name in JSON at position 149 (line 8 column 24)",
+      "success": false
+    },
+    {
+      "role": "Human Resources Specialist",
+      "decision": "reject",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 70,
+          "keywords": 80,
+          "experience": 95,
+          "education": 60,
+          "skills": 85
+        },
+        "suggestions": [
+          "Include a more detailed education section with specific coursework and academic achievements.",
+          "Ensure the resume has consistent formatting throughout for better ATS readability.",
+          "Add quantifiable metrics to experience descriptions where possible, such as number of employees onboarded or conflict resolutions handled."
+        ],
+        "strengths": [
+          "Strong work history with relevant roles and growth at XYZ Corporation",
+          "Relevant education in Human Resources field"
+        ]
+      },
+      "success": true
+    },
+    {
+      "role": "E-commerce Specialist",
+      "decision": "select",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 75,
+          "keywords": 95,
+          "experience": 90,
+          "education": 100,
+          "skills": 85
+        },
+        "suggestions": [
+          "Include a more detailed professional summary that aligns closely with the job description.",
+          "Add specific technical skills related to cloud computing and e-commerce platforms mentioned in the job posting.",
+          "Highlight leadership roles or significant projects undertaken during previous employment."
+        ],
+        "strengths": [
+          "Relevant work experience directly aligning with E-commerce Specialist role requirements",
+          "Strong educational background and relevant degree level for a specialized position in cloud computing.",
+          "Proven track record of increasing sales, improving customer satisfaction, and implementing SEO strategies."
+        ]
+      },
+      "success": true
+    },
+    {
+      "role": "E-commerce Specialist",
+      "decision": "reject",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 75,
+          "keywords": 88,
+          "experience": 92,
+          "education": 63,
+          "skills": 91
+        },
+        "suggestions": [
+          "Include a more detailed professional summary that aligns with the job description.",
+          "Add specific data science skills and experiences to match the E-commerce Specialist role requirements."
+        ],
+        "strengths": [
+          "Strong work experience in e-commerce roles, including relevant responsibilities",
+          "Relevant educational background with a focus on business administration"
+        ]
+      },
+      "success": true
+    },
+    {
+      "role": "Mobile App Developer",
+      "error": "Expected double-quoted property name in JSON at position 150 (line 8 column 24)",
+      "success": false
+    },
+    {
+      "role": "UX Designer",
+      "error": "Expected double-quoted property name in JSON at position 150 (line 8 column 24)",
+      "success": false
+    },
+    {
+      "role": "Cloud Engineer",
+      "error": "Expected double-quoted property name in JSON at position 149 (line 8 column 24)",
+      "success": false
+    },
+    {
+      "role": "Digital Marketing Specialist",
+      "decision": "select",
+      "scoring": {
+        "overallScore": 85,
+        "scores": {
+          "completeness": 90,
+          "formatting": 70,
+          "keywords": 80,
+          "experience": 95,
+          "education": 60,
+          "skills": 85
+        },
+        "suggestions": [
+          "Include a clear objective or summary at the top of your resume",
+          "Ensure consistent date formats and proper use of bullet points throughout the document",
+          "Provide details about specific projects, tools used, and measurable outcomes in experience descriptions"
+        ],
+        "strengths": [
+          "Strong work history with relevant job titles at reputable companies (XYZ Corporation)",
+          "Relevant skills including SEO, Google Ads management",
+          "Proven track record of increasing website traffic and conversions through data-driven strategies"
+        ]
+      },
+      "success": true
+    },
+    {
+      "role": "AI Researcher",
+      "decision": "select",
+      "scoring": {
+        "overallScore": 92,
+        "scores": {
+          "completeness": 100,
+          "formatting": 85,
+          "keywords": 95,
+          "experience": 97,
+          "education": 93,
+          "skills": 98
+        },
+        "suggestions": [
+          "Include a cover letter to provide context and personalize the application.",
+          "Ensure that all contact information is current before submission."
+        ],
+        "strengths": [
+          "Strong technical skills with deep knowledge of AI research areas such as GANs, Transformers, and Reinforcement Learning.",
+          "Relevant work experience at a Research Institution demonstrating both leadership in developing models and teaching capabilities.",
+          "Highly relevant education background including Ph.D. specialization directly aligned to the job description."
+        ]
+      },
+      "success": true
+    }
+  ]
+}

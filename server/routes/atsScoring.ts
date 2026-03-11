@@ -2,8 +2,44 @@ import { Router } from 'express';
 import unifiedAuth, { AuthRequest } from '../middleware/unifiedAuth.js';
 import { getDatabase } from '../database/connection.js';
 import { atsScorer } from '../services/dspy/atsScorer.js';
+import { fallbackATSScorer } from '../services/dspy/fallbackATSScorer.js';
+import { groqService } from '../services/groqService.js';
 
 const router = Router();
+
+/**
+ * GET /api/ats/health
+ * Check if ATS service is available
+ */
+router.get('/health', async (req, res) => {
+  try {
+    console.log('🔍 ATS Health Check requested');
+    
+    // Check Groq service
+    const groqAvailable = await groqService.isServiceAvailable();
+    console.log('🔍 Groq service available:', groqAvailable);
+    
+    // Check ATS scorer initialization
+    await atsScorer.initialize();
+    console.log('✅ ATS Scorer initialized successfully');
+    
+    res.json({
+      success: true,
+      status: 'healthy',
+      services: {
+        groq: groqAvailable,
+        atsScorer: true
+      }
+    });
+  } catch (error) {
+    console.error('❌ ATS Health Check failed:', error);
+    res.status(500).json({
+      success: false,
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
+});
 
 /**
  * POST /api/ats/calculate/:resumeId
@@ -15,9 +51,10 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
 
   console.log(`🎯 ATS calculation requested for resume ${resumeId} by user ${userId}`);
 
-  const db = await getDatabase();
-
   try {
+    const db = await getDatabase();
+    console.log('✅ Database connection established');
+
     // Get resume data
     const result = await db.query(
       'SELECT * FROM resumes WHERE id = $1 AND user_id = $2::uuid',
@@ -25,6 +62,7 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
     );
 
     if (result.rows.length === 0) {
+      console.log(`❌ Resume ${resumeId} not found for user ${userId}`);
       return res.status(404).json({
         success: false,
         error: 'Resume not found'
@@ -32,6 +70,26 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
     }
 
     const resume = result.rows[0];
+    console.log(`✅ Resume found: ${resume.id}`);
+
+    // Initialize ATS scorer if needed
+    let useGroqScorer = true;
+    try {
+      await atsScorer.initialize();
+      console.log('✅ ATS Scorer initialized');
+      
+      // Check if Groq service is available
+      const groqAvailable = await groqService.isServiceAvailable();
+      if (!groqAvailable) {
+        console.warn('⚠️ Groq service is not available, using fallback scorer');
+        useGroqScorer = false;
+      } else {
+        console.log('✅ Groq service is available');
+      }
+    } catch (initError) {
+      console.warn('⚠️ ATS Scorer initialization failed, using fallback scorer:', initError.message);
+      useGroqScorer = false;
+    }
 
     // Prepare resume data for scoring
     const resumeData = {
@@ -111,38 +169,67 @@ router.post('/calculate/:resumeId', unifiedAuth.requireAuth, async (req: AuthReq
     }
 
     console.log('📊 Calculating ATS score...');
-    const atsScore = await atsScorer.calculateScore(resumeData);
-    console.log(`✅ ATS Score: ${atsScore.overallScore}/100`);
+    let atsScore;
+    try {
+      if (useGroqScorer) {
+        console.log('🤖 Using AI-powered ATS scorer');
+        atsScore = await atsScorer.calculateScore(resumeData);
+      } else {
+        console.log('🔧 Using fallback rule-based ATS scorer');
+        atsScore = await fallbackATSScorer.calculateScore(resumeData);
+      }
+      console.log(`✅ ATS Score calculated: ${atsScore.overallScore}/100`);
+    } catch (scoreError) {
+      console.error('❌ ATS Score calculation failed:', scoreError);
+      console.log('🔧 Falling back to rule-based scorer');
+      try {
+        atsScore = await fallbackATSScorer.calculateScore(resumeData);
+        console.log(`✅ Fallback ATS Score calculated: ${atsScore.overallScore}/100`);
+      } catch (fallbackError) {
+        console.error('❌ Fallback ATS Score calculation also failed:', fallbackError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to calculate ATS score. Please try again.'
+        });
+      }
+    }
 
     // Update resume with ATS score
-    await db.query(
-      `UPDATE resumes SET
-        ats_score = $1,
-        ats_score_completeness = $2,
-        ats_score_formatting = $3,
-        ats_score_keywords = $4,
-        ats_score_experience = $5,
-        ats_score_education = $6,
-        ats_score_skills = $7,
-        ats_suggestions = $8,
-        ats_strengths = $9,
-        ats_scored_at = NOW()
-      WHERE id = $10`,
-      [
-        atsScore.overallScore,
-        atsScore.scores.completeness,
-        atsScore.scores.formatting,
-        atsScore.scores.keywords,
-        atsScore.scores.experience,
-        atsScore.scores.education,
-        atsScore.scores.skills,
-        JSON.stringify(atsScore.suggestions),
-        JSON.stringify(atsScore.strengths),
-        resumeId
-      ]
-    );
-
-    console.log(`✅ ATS score stored for resume ${resumeId}`);
+    try {
+      await db.query(
+        `UPDATE resumes SET
+          ats_score = $1,
+          ats_score_completeness = $2,
+          ats_score_formatting = $3,
+          ats_score_keywords = $4,
+          ats_score_experience = $5,
+          ats_score_education = $6,
+          ats_score_skills = $7,
+          ats_suggestions = $8,
+          ats_strengths = $9,
+          ats_scored_at = NOW()
+        WHERE id = $10`,
+        [
+          atsScore.overallScore,
+          atsScore.scores.completeness,
+          atsScore.scores.formatting,
+          atsScore.scores.keywords,
+          atsScore.scores.experience,
+          atsScore.scores.education,
+          atsScore.scores.skills,
+          JSON.stringify(atsScore.suggestions),
+          JSON.stringify(atsScore.strengths),
+          resumeId
+        ]
+      );
+      console.log(`✅ ATS score stored for resume ${resumeId}`);
+    } catch (dbError) {
+      console.error('❌ Database update failed:', dbError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to save ATS score. Please try again.'
+      });
+    }
 
     return res.json({
       success: true,

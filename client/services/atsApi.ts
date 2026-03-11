@@ -48,19 +48,54 @@ class ATSApiClient extends BaseApiClient {
   }
 
   /**
+   * Check if circuit breaker is preventing requests
+   */
+  isCircuitBreakerActive() {
+    return super.isCircuitBreakerActive();
+  }
+
+  /**
+   * Get detailed circuit breaker status
+   */
+  getCircuitBreakerStatus() {
+    return super.getCircuitBreakerStatus();
+  }
+
+  /**
    * Calculate ATS score for a resume
    */
   async calculateScore(resumeId: number) {
     try {
-      return await this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
-    } catch (error) {
+      console.log(`🎯 ATS API: Starting calculation for resume ${resumeId}`);
+      
+      // Check circuit breaker status before attempting
+      if (this.isCircuitBreakerActive()) {
+        console.log('🚨 Circuit breaker is active, attempting reset...');
+        this.resetCircuitBreaker();
+        // Wait a moment after reset
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      const result = await this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
+      console.log(`✅ ATS API: Calculation completed for resume ${resumeId}`, result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ ATS API: Error calculating score for resume ${resumeId}:`, error);
+      
       // If circuit breaker is active, reset it and try once more
-      if (error.message?.includes('Circuit breaker')) {
+      if (error.message?.includes('Circuit breaker') || error.message?.includes('Service temporarily unavailable')) {
         console.log('🔄 Circuit breaker detected, resetting and retrying ATS calculation...');
         this.resetCircuitBreaker();
         // Wait a moment before retrying
         await new Promise(resolve => setTimeout(resolve, 1000));
-        return await this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
+        try {
+          const retryResult = await this.post<ATSCalculateResponse>(`/ats/calculate/${resumeId}`, {});
+          console.log(`✅ ATS API: Retry successful for resume ${resumeId}`, retryResult);
+          return retryResult;
+        } catch (retryError) {
+          console.error(`❌ ATS API: Retry failed for resume ${resumeId}:`, retryError);
+          throw retryError;
+        }
       }
       throw error;
     }
@@ -119,3 +154,23 @@ class ATSApiClient extends BaseApiClient {
 }
 
 export const atsApi = new ATSApiClient();
+
+// Global circuit breaker utilities for debugging in production
+if (typeof window !== 'undefined') {
+  (window as any).atsApiDebug = {
+    resetCircuitBreaker: () => {
+      atsApi.resetCircuitBreaker();
+      console.log('✅ ATS API circuit breaker reset from console');
+    },
+    getStatus: () => {
+      const status = atsApi.getCircuitBreakerStatus();
+      console.log('🔍 ATS API Circuit Breaker Status:', status);
+      return status;
+    },
+    isActive: () => {
+      const active = atsApi.isCircuitBreakerActive();
+      console.log('🔍 ATS API Circuit Breaker Active:', active);
+      return active;
+    }
+  };
+}

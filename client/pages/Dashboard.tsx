@@ -720,6 +720,12 @@ export default function Dashboard() {
 
   const handleCalculateATS = async (resumeId: string) => {
     try {
+      console.log('🎯 Dashboard: Starting ATS calculation for resume', resumeId);
+      
+      // Check circuit breaker status first
+      const cbStatus = atsApi.getCircuitBreakerStatus();
+      console.log('🔍 Circuit breaker status before ATS call:', cbStatus);
+      
       const result = await atsApi.calculateScore(Number(resumeId));
       
       if (result.success && result.data?.atsScore) {
@@ -729,6 +735,7 @@ export default function Dashboard() {
             ? { ...r, atsScore: result.data.atsScore }
             : r
         ));
+        console.log('✅ ATS score updated successfully');
       } else {
         console.error('Failed to calculate ATS score:', result.error);
         // Show user-friendly error message
@@ -738,8 +745,18 @@ export default function Dashboard() {
       console.error('Error calculating ATS score:', error);
       
       // Handle circuit breaker errors specifically
-      if (error.message?.includes('Circuit breaker')) {
-        alert('Service temporarily unavailable due to multiple failures. The system has automatically reset and you can try again.');
+      if (error.message?.includes('Circuit breaker') || error.message?.includes('Service temporarily unavailable')) {
+        const shouldRetry = confirm(
+          'Service temporarily unavailable due to multiple failures. ' +
+          'Would you like to reset the connection and try again?'
+        );
+        
+        if (shouldRetry) {
+          console.log('🔄 User requested circuit breaker reset, retrying...');
+          atsApi.resetCircuitBreaker();
+          // Retry the calculation
+          setTimeout(() => handleCalculateATS(resumeId), 1000);
+        }
       } else {
         alert('Error calculating ATS score. Please try again.');
       }

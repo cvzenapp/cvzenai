@@ -27,6 +27,8 @@ export class BaseApiClient {
   private tokenExpirationBuffer = 5 * 60 * 1000; // 5 minutes in milliseconds
   private failedRequestCount = 0;
   private maxFailedRequests = 5; // Reduced from 10 to trigger circuit breaker sooner
+  private circuitBreakerResetTime = 2 * 60 * 1000; // Reset circuit breaker after 2 minutes
+  private lastFailureTime = 0;
   private lastRequestTime = 0;
   private minRequestInterval = 200; // Increased from 100ms to 200ms
   private pendingRequests = new Map<string, Promise<ApiResponse<any>>>();
@@ -47,6 +49,46 @@ export class BaseApiClient {
    */
   public resetCircuitBreaker(): void {
     this.failedRequestCount = 0;
+    this.lastFailureTime = 0;
+    console.log('🔄 Circuit breaker manually reset');
+  }
+
+  /**
+   * Check if circuit breaker is currently active
+   */
+  public isCircuitBreakerActive(): boolean {
+    this.shouldResetCircuitBreaker(); // Check for auto-reset first
+    return this.failedRequestCount >= this.maxFailedRequests;
+  }
+
+  /**
+   * Get circuit breaker status for debugging
+   */
+  public getCircuitBreakerStatus() {
+    return {
+      isActive: this.isCircuitBreakerActive(),
+      failedCount: this.failedRequestCount,
+      maxFailed: this.maxFailedRequests,
+      lastFailureTime: this.lastFailureTime,
+      timeSinceLastFailure: this.lastFailureTime > 0 ? Date.now() - this.lastFailureTime : 0,
+      resetTimeMs: this.circuitBreakerResetTime
+    };
+  }
+
+  /**
+   * Check if circuit breaker should be automatically reset
+   */
+  private shouldResetCircuitBreaker(): boolean {
+    if (this.failedRequestCount >= this.maxFailedRequests && this.lastFailureTime > 0) {
+      const timeSinceLastFailure = Date.now() - this.lastFailureTime;
+      if (timeSinceLastFailure > this.circuitBreakerResetTime) {
+        console.log('🔄 Auto-resetting circuit breaker after timeout');
+        this.failedRequestCount = 0;
+        this.lastFailureTime = 0;
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -407,15 +449,25 @@ export class BaseApiClient {
     const { skipAuth = false, retries = this.maxRetries, skipTokenRefresh = false, ...requestConfig } = config;
 
     // Circuit breaker: if too many requests have failed, stop making requests
+    // But first check if we should auto-reset the circuit breaker
+    this.shouldResetCircuitBreaker();
+    
     if (this.failedRequestCount >= this.maxFailedRequests) {
       console.error('🚨 Circuit breaker activated: too many failed requests', {
         failedCount: this.failedRequestCount,
         maxFailed: this.maxFailedRequests,
-        endpoint
+        endpoint,
+        timeSinceLastFailure: this.lastFailureTime > 0 ? Date.now() - this.lastFailureTime : 0,
+        resetTimeMs: this.circuitBreakerResetTime
       });
+      
+      // Provide a way for users to manually reset
+      const resetMessage = 'Service temporarily unavailable due to multiple failures. ' +
+        'This will automatically reset in a few minutes, or you can refresh the page to try again.';
+      
       return {
         success: false,
-        error: 'Too many failed requests. Please refresh the page.',
+        error: resetMessage,
         message: 'Service temporarily unavailable'
       };
     }
@@ -603,6 +655,7 @@ export class BaseApiClient {
         // This prevents circuit breaker from triggering due to database connectivity issues
         if (response.status >= 500 && !endpoint.includes('/interviews/')) {
           this.failedRequestCount++;
+          this.lastFailureTime = Date.now();
         }
 
         lastError = authError;
@@ -616,6 +669,7 @@ export class BaseApiClient {
 
         // Increment failed request counter
         this.failedRequestCount++;
+        this.lastFailureTime = Date.now();
 
         // Don't retry on network errors if this is the last attempt
         if (attempt === retries) {
