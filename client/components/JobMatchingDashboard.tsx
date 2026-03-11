@@ -192,19 +192,38 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
   if (recommendationsLoading) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Job Recommendations</h2>
+        {/* Loading Header */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-brand-main to-brand-background rounded-xl flex items-center justify-center shadow-lg">
+                <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div>
+                <div className="h-6 bg-slate-200 rounded w-48 mb-2 animate-pulse"></div>
+                <div className="h-4 bg-slate-200 rounded w-32 animate-pulse"></div>
+              </div>
+            </div>
+            <div className="h-10 bg-slate-200 rounded animate-pulse"></div>
+          </div>
         </div>
-        <div className="grid gap-4 sm:gap-6">
+        
+        {/* Loading Job Cards */}
+        <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4 sm:p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </CardContent>
-            </Card>
+            <div key={i} className="bg-white rounded-xl border border-slate-200 shadow-sm animate-pulse">
+              <div className="p-4 sm:p-6">
+                <div className="h-6 bg-slate-200 rounded w-3/4 mb-3"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/2 mb-4"></div>
+                <div className="h-4 bg-slate-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-slate-200 rounded w-2/3 mb-4"></div>
+                <div className="flex gap-2">
+                  <div className="h-6 bg-slate-200 rounded w-16"></div>
+                  <div className="h-6 bg-slate-200 rounded w-20"></div>
+                  <div className="h-6 bg-slate-200 rounded w-24"></div>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -215,25 +234,39 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
   if (recommendationsError) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Job Recommendations</h2>
+        {/* Error Header */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 font-jakarta">Job Recommendations</h2>
+                <p className="text-sm text-slate-600 mt-1 font-jakarta">Unable to load recommendations</p>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <Card className="text-center py-8 sm:py-12 border-red-200 bg-red-50">
-          <CardContent>
-            <Briefcase className="h-8 w-8 sm:h-12 sm:w-12 text-red-400 mx-auto mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Error Loading Recommendations</h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-4 max-w-md mx-auto">
+        {/* Error Content */}
+        <div className="bg-white rounded-xl border border-red-200 shadow-sm">
+          <div className="p-8 sm:p-12 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Briefcase className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2 font-jakarta">Error Loading Recommendations</h3>
+            <p className="text-sm text-slate-600 mb-4 max-w-md mx-auto font-jakarta">
               {recommendationsError instanceof Error ? recommendationsError.message : 'Failed to load job recommendations'}
             </p>
-            <p className="text-xs sm:text-sm text-gray-500 mb-4">
-              Debug info: userId={userId || 'undefined'}, hasRecommendations={!!recommendations}
-            </p>
-            <Button onClick={() => window.location.reload()} className="bg-brand-main hover:bg-brand-background transition-all duration-200">
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
+            <button
+              onClick={() => window.location.reload()}
+              className="h-10 px-6 bg-gradient-to-r from-brand-main to-brand-background text-white rounded-lg hover:shadow-lg transition-all font-jakarta font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -241,30 +274,44 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
   if (!recommendations?.jobs || recommendations.jobs.length === 0) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Job Recommendations</h2>
+        {/* Empty State Header */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-brand-main to-brand-background rounded-xl flex items-center justify-center shadow-lg">
+                <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 font-jakarta">Job Recommendations</h2>
+                <p className="text-sm text-slate-600 mt-1 font-jakarta">No matches found yet</p>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <Card className="text-center py-8 sm:py-12">
-          <CardContent>
-            <Briefcase className="h-8 w-8 sm:h-12 sm:w-12 text-brand-main/60 mx-auto mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No Job Recommendations Yet</h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-4 max-w-md mx-auto">
+        {/* Empty State Content */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="p-8 sm:p-12 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-brand-main/10 to-brand-background/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Briefcase className="h-8 w-8 text-brand-main" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2 font-jakarta">No Job Recommendations Yet</h3>
+            <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto font-jakarta">
               {!resumeData 
                 ? "Complete your resume to get personalized job recommendations based on your skills and experience."
                 : "We're working on finding the perfect job matches for you. Check back soon!"
               }
             </p>
-            <p className="text-xs sm:text-sm text-gray-500 mb-4">
-              Debug: userId={userId || 'undefined'}, recommendations={JSON.stringify(recommendations)}
-            </p>
             {!resumeData && (
-              <Button onClick={() => window.location.href = '/builder'} className="bg-brand-main hover:bg-brand-background transition-all duration-200">
+              <button
+                onClick={() => window.location.href = '/builder'}
+                className="h-10 px-6 bg-gradient-to-r from-brand-main to-brand-background text-white rounded-lg hover:shadow-lg transition-all font-jakarta font-medium"
+              >
                 Complete Your Resume
-              </Button>
+              </button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -316,89 +363,88 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
       {/* Recommendations/Search Tabs */}
       {activeTab !== 'applications' && (
         <>
-      {/* Header with Search */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-            {activeTab === 'recommendations' ? 'Job Recommendations' : 'Search Jobs'}
-          </h2>
-          <p className="text-sm sm:text-base text-gray-600">
-            {activeTab === 'recommendations' 
-              ? 'Personalized job matches based on your profile'
-              : 'Find your next opportunity'
-            }
-          </p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <div className="relative flex-1 sm:flex-none">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search jobs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full sm:w-64 border-brand-main/30 focus:border-brand-main focus:ring-brand-main/20"
-            />
-          </div>
-          <Button variant="outline" size="sm" className="border-brand-main/30 text-brand-main hover:bg-brand-main hover:text-white transition-all duration-200">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-        </div>
-      </div>
+          {/* Compact Header with CVZen Branding */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col gap-4">
+                {/* Title and Stats Row */}
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-brand-main to-brand-background rounded-xl flex items-center justify-center shadow-lg">
+                      <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 font-jakarta">
+                        {activeTab === 'recommendations' ? 'Job Recommendations' : 'Search Jobs'}
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-1 font-jakarta">
+                        {activeTab === 'recommendations' 
+                          ? `${recommendations?.jobs?.length || 0} personalized matches found`
+                          : 'Find your next opportunity'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Quick Stats - Compact */}
+                  {analytics && (
+                    <div className="flex gap-3 sm:gap-4">
+                      <div className="text-center">
+                        <div className="text-lg sm:text-xl font-bold text-slate-900 font-jakarta">
+                          {analytics.applications?.total || 0}
+                        </div>
+                        <div className="text-xs text-slate-600 font-jakarta">Applications</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg sm:text-xl font-bold text-slate-900 font-jakarta">
+                          {analytics.savedJobs || 0}
+                        </div>
+                        <div className="text-xs text-slate-600 font-jakarta">Saved</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg sm:text-xl font-bold text-slate-900 font-jakarta">
+                          {analytics.searches?.last30Days || 0}
+                        </div>
+                        <div className="text-xs text-slate-600 font-jakarta">Searches</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Filters Row */}
+                <div className="flex flex-col lg:flex-row gap-3">
+                  {/* Search Bar */}
+                  <div className="flex gap-2 flex-1">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-brand-main/60" />
+                      <input
+                        placeholder="Search jobs by title, company, or skills..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:border-brand-main focus:ring-brand-main/20 focus:ring-2 focus:outline-none font-jakarta"
+                      />
+                    </div>
+                  </div>
 
-      {/* Quick Stats */}
-      {analytics && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-brand-main" />
-                <span className="text-xs sm:text-sm text-gray-600">Applications</span>
+                  {/* Filter Buttons */}
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 border border-slate-200 rounded-lg hover:border-brand-main hover:text-brand-main transition-colors text-sm font-jakarta font-medium flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      <span className="hidden sm:inline">Filters</span>
+                    </button>
+                    <button className="px-4 py-2 border border-slate-200 rounded-lg hover:border-brand-main hover:text-brand-main transition-colors text-sm font-jakarta font-medium flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span className="hidden sm:inline">Location</span>
+                    </button>
+                    <button className="px-4 py-2 border border-slate-200 rounded-lg hover:border-brand-main hover:text-brand-main transition-colors text-sm font-jakarta font-medium flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      <span className="hidden sm:inline">Salary</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                {analytics.applications?.total || 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2">
-                <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                <span className="text-xs sm:text-sm text-gray-600">Saved Jobs</span>
-              </div>
-              <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                {analytics.savedJobs || 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2">
-                <Search className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                <span className="text-xs sm:text-sm text-gray-600">Searches</span>
-              </div>
-              <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                {analytics.searches?.last30Days || 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2">
-                <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
-                <span className="text-xs sm:text-sm text-gray-600">Active Alerts</span>
-              </div>
-              <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                {analytics.alerts?.active || 0}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          </div>
 
       {/* Job Recommendations */}
       <div className="grid gap-4 sm:gap-6">

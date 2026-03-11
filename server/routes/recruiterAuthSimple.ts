@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { emailService } from "../services/emailService";
+import { companyDataExtractionService } from "../services/companyDataExtractionService";
 import {
   RecruiterAuthResponse,
   Recruiter,
@@ -60,12 +61,41 @@ const recruiterRegisterSchema = z
     jobTitle: z.string().min(2),
     phone: z.string().optional(),
     linkedinUrl: z.string().url().optional().or(z.literal("")),
+    companyWebsite: z.string().min(1, "Company website is required"),
     acceptTerms: z.boolean().refine((val) => val === true),
     acceptPrivacyPolicy: z.boolean().refine((val) => val === true),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => {
+    // Validate website format
+    const websiteRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    return websiteRegex.test(data.companyWebsite);
+  }, {
+    message: "Please enter a valid website URL",
+    path: ["companyWebsite"],
+  })
+  .refine((data) => {
+    // Validate email domain matches website domain
+    const getEmailDomain = (email: string) => email.split('@')[1]?.toLowerCase();
+    const getWebsiteDomain = (website: string) => {
+      try {
+        const url = website.startsWith('http') ? website : `https://${website}`;
+        return new URL(url).hostname.replace('www.', '').toLowerCase();
+      } catch {
+        return website.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].toLowerCase();
+      }
+    };
+
+    const emailDomain = getEmailDomain(data.email);
+    const websiteDomain = getWebsiteDomain(data.companyWebsite);
+    
+    return emailDomain === websiteDomain;
+  }, {
+    message: "Email domain must match company website domain",
+    path: ["email"],
   });
 
 const recruiterLoginSchema = z.object({
@@ -142,6 +172,9 @@ router.post("/register", async (req: Request, res: Response) => {
 
     console.log("🔍 REGISTER: Email is available");
 
+    // Start transaction
+    await client.query('BEGIN');
+
     // Create user
     console.log("🔍 REGISTER: Creating user account");
     const saltRounds = 12;
@@ -164,11 +197,62 @@ router.post("/register", async (req: Request, res: Response) => {
     const user = userResult.rows[0];
     console.log("🔍 REGISTER: User created with ID:", user.id);
 
-    // Create recruiter profile (without company - will be added later from dashboard)
+    // Extract company data from website (async, don't block registration)
+    let companyId = null;
+    try {
+      console.log("🔍 REGISTER: Starting company data extraction for:", validatedData.companyWebsite);
+      
+      const companyData = await companyDataExtractionService.extractCompanyDataFromWebsite(validatedData.companyWebsite);
+      
+      // Check if company already exists
+      const existingCompanyQuery = `SELECT id FROM companies WHERE website = $1`;
+      const existingCompanyResult = await client.query(existingCompanyQuery, [validatedData.companyWebsite]);
+      
+      if (existingCompanyResult.rows.length > 0) {
+        companyId = existingCompanyResult.rows[0].id;
+        console.log("🔍 REGISTER: Using existing company with ID:", companyId);
+      } else {
+        // Create new company
+        const insertCompanyQuery = `
+          INSERT INTO companies (
+            name, website, description, industry, size_range, location,
+            founded_year, employee_count, company_type, work_environment,
+            company_values, specialties, benefits, created_by
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          RETURNING id
+        `;
+
+        const companyResult = await client.query(insertCompanyQuery, [
+          companyData.name,
+          companyData.website,
+          companyData.description,
+          companyData.industry,
+          companyData.size_range,
+          companyData.location,
+          companyData.founded_year,
+          companyData.employee_count,
+          companyData.company_type,
+          companyData.work_environment,
+          companyData.company_values,
+          JSON.stringify(companyData.specialties || []),
+          JSON.stringify(companyData.benefits || []),
+          user.id
+        ]);
+
+        companyId = companyResult.rows[0].id;
+        console.log("🔍 REGISTER: Created new company with ID:", companyId);
+      }
+    } catch (companyError) {
+      console.error("⚠️ REGISTER: Company data extraction failed, continuing without company:", companyError);
+      // Don't fail registration if company extraction fails
+    }
+
+    // Create recruiter profile
     console.log("🔍 REGISTER: Creating recruiter profile");
     const insertProfileQuery = `
-      INSERT INTO recruiter_profiles (user_id, job_title, phone, linkedin_url)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO recruiter_profiles (user_id, job_title, phone, linkedin_url, company_id)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
 
@@ -177,12 +261,16 @@ router.post("/register", async (req: Request, res: Response) => {
       validatedData.jobTitle,
       validatedData.phone || null,
       validatedData.linkedinUrl || null,
+      companyId
     ]);
 
     const profile = profileResult.rows[0];
     console.log("🔍 REGISTER: Profile created with ID:", profile.id);
 
-    // Create recruiter object (no company yet)
+    // Commit transaction
+    await client.query('COMMIT');
+
+    // Create recruiter object
     const recruiter = createRecruiterFromData(user, profile);
 
     // Generate JWT token
@@ -192,7 +280,7 @@ router.post("/register", async (req: Request, res: Response) => {
       success: true,
       recruiter,
       token,
-      message: "Registration successful! Welcome to the platform.",
+      message: "Registration successful! Welcome to the platform. Your company information has been automatically populated from your website.",
     };
 
     console.log("✅ REGISTRATION SUCCESS for recruiter:", validatedData.email);
@@ -214,6 +302,9 @@ router.post("/register", async (req: Request, res: Response) => {
     res.status(201).json(response);
     
   } catch (error) {
+    if (client) {
+      await client.query('ROLLBACK');
+    }
     console.error("❌ Recruiter registration error:", error);
 
     if (error instanceof z.ZodError) {

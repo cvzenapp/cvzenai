@@ -48,6 +48,7 @@ import jobApplicationsRouter from "./routes/jobApplications";
 import fileUploadRouter from "./routes/fileUpload";
 import resumeSharingRouter from "./routes/resumeSharing";
 import resumeUpvotesRouter from "./routes/resumeUpvotes";
+import testCompanyExtractionRouter from "./routes/testCompanyExtraction";
 import resumeMetadataRouter from "./routes/resumeMetadata";
 import recruiterShortlistRouter from "./routes/recruiterShortlist";
 import adminUsersRouter from "./routes/adminUsers";
@@ -376,6 +377,11 @@ export function createServer() {
 
   // Job preferences routes
   app.use("/api/job-preferences", jobPreferencesRouter);
+
+  // Test routes (development only)
+  if (process.env.NODE_ENV === 'development') {
+    app.use("/api/test", testCompanyExtractionRouter);
+  }
 
   // Location search routes (for interview scheduling)
   app.use("/api/location", locationSearchRouter);

@@ -1115,12 +1115,12 @@ export default function Dashboard() {
 
         {/* Sidebar Navigation */}
         <aside className={`
-          fixed lg:static inset-y-0 left-0 z-40
+          fixed inset-y-0 left-0 z-40
           bg-card border-r transition-all duration-300 ease-in-out shrink-0 flex flex-col
           ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${isSidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}
           w-72 sm:w-64
-          mt-16 lg:mt-0
+          top-16
         `}>
           {/* Mobile Close Button */}
           <div className="lg:hidden flex justify-end p-2 border-b">
@@ -1340,7 +1340,9 @@ export default function Dashboard() {
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden flex flex-col">
+        <main className={`flex-1 overflow-hidden flex flex-col transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+        }`}>
           <div className={`${activeTab === 'ai-chat' ? 'p-3 sm:p-4 lg:p-6 flex-1 flex flex-col' : 'p-3 sm:p-4 lg:p-6 overflow-y-auto'}`}>
             {activeTab === 'overview' && (
               <div className="space-y-4 sm:space-y-6">

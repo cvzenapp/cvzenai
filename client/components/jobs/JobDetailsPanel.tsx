@@ -236,7 +236,7 @@ export function JobDetailsPanel({ job, onClose }: JobDetailsPanelProps) {
             <button
               onClick={() => setShowApplicationModal(true)}
               disabled={checkingStatus}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
+              className="w-full h-10 bg-brand-main text-white rounded-lg hover:bg-brand-background font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               {checkingStatus ? 'Loading...' : 'Apply for this Position'}
             </button>

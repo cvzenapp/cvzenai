@@ -36,12 +36,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
     jobTitle: "",
     phone: "",
     linkedinUrl: "",
-    companyName: "",
     companyWebsite: "",
-    companyIndustry: "",
-    companySizeRange: "",
-    companyLocation: "",
-    companyDescription: "",
     acceptTerms: false,
     acceptPrivacyPolicy: false
   });
@@ -102,29 +97,45 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
       return;
     }
 
-    // if (!signUpData.companyName.trim()) {
-    //   setError("Company name is required");
-    //   setLoading(false);
-    //   return;
-    // }
-
     if (!signUpData.jobTitle.trim()) {
       setError("Job title is required");
       setLoading(false);
       return;
     }
 
-    // if (!signUpData.companySizeRange) {
-    //   setError("Company size is required");
-    //   setLoading(false);
-    //   return;
-    // }
+    if (!signUpData.companyWebsite.trim()) {
+      setError("Company website is required");
+      setLoading(false);
+      return;
+    }
 
-    // if (!signUpData.companyLocation.trim()) {
-    //   setError("Company location is required");
-    //   setLoading(false);
-    //   return;
-    // }
+    // Validate website format
+    const websiteRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    if (!websiteRegex.test(signUpData.companyWebsite)) {
+      setError("Please enter a valid website URL");
+      setLoading(false);
+      return;
+    }
+
+    // Extract domain from website and email
+    const getEmailDomain = (email: string) => email.split('@')[1]?.toLowerCase();
+    const getWebsiteDomain = (website: string) => {
+      try {
+        const url = website.startsWith('http') ? website : `https://${website}`;
+        return new URL(url).hostname.replace('www.', '').toLowerCase();
+      } catch {
+        return website.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].toLowerCase();
+      }
+    };
+
+    const emailDomain = getEmailDomain(signUpData.email);
+    const websiteDomain = getWebsiteDomain(signUpData.companyWebsite);
+
+    if (emailDomain !== websiteDomain) {
+      setError(`Email domain (${emailDomain}) must match company website domain (${websiteDomain})`);
+      setLoading(false);
+      return;
+    }
 
     if (!signUpData.acceptTerms) {
       setError("You must accept the terms and conditions");
@@ -167,12 +178,7 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
           jobTitle: signUpData.jobTitle,
           phone: signUpData.phone,
           linkedinUrl: signUpData.linkedinUrl,
-          companyName: signUpData.companyName,
           companyWebsite: signUpData.companyWebsite,
-          companyIndustry: signUpData.companyIndustry,
-          companySizeRange: signUpData.companySizeRange,
-          companyLocation: signUpData.companyLocation,
-          companyDescription: signUpData.companyDescription,
           acceptTerms: signUpData.acceptTerms,
           acceptPrivacyPolicy: signUpData.acceptPrivacyPolicy
         }),
@@ -411,6 +417,23 @@ export default function RecruiterAuthModal({ isOpen, onSuccess, onCancel, messag
                     className="focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-companyWebsite" className="text-sm font-medium text-slate-700">Company Website</Label>
+                <div className="relative">
+                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Input
+                    id="signup-companyWebsite"
+                    type="url"
+                    placeholder="https://company.com or company.com"
+                    value={signUpData.companyWebsite || ""}
+                    onChange={(e) => setSignUpData({ ...signUpData, companyWebsite: e.target.value })}
+                    className="pl-10 focus:ring-2 focus:ring-brand-main focus:border-brand-main transition-colors"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Your email domain must match your company website domain</p>
               </div>
             </div>
 

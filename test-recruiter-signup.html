@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Recruiter Signup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+        .loading {
+            color: blue;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Recruiter Signup with Company Data Extraction</h1>
+    
+    <form id="signupForm">
+        <div class="form-group">
+            <label for="firstName">First Name:</label>
+            <input type="text" id="firstName" name="firstName" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="lastName">Last Name:</label>
+            <input type="text" id="lastName" name="lastName" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+            <small>Must match company website domain</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="companyWebsite">Company Website:</label>
+            <input type="url" id="companyWebsite" name="companyWebsite" required>
+            <small>e.g., https://company.com or company.com</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="jobTitle">Job Title:</label>
+            <input type="text" id="jobTitle" name="jobTitle" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="phone">Phone (Optional):</label>
+            <input type="tel" id="phone" name="phone">
+        </div>
+        
+        <div class="form-group">
+            <label for="linkedinUrl">LinkedIn URL (Optional):</label>
+            <input type="url" id="linkedinUrl" name="linkedinUrl">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required minlength="8">
+        </div>
+        
+        <div class="form-group">
+            <label for="confirmPassword">Confirm Password:</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" required>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="acceptTerms" name="acceptTerms" required>
+                I accept the Terms and Conditions
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="acceptPrivacyPolicy" name="acceptPrivacyPolicy" required>
+                I accept the Privacy Policy
+            </label>
+        </div>
+        
+        <button type="submit">Sign Up</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <hr style="margin: 40px 0;">
+    
+    <h2>Test Company Data Extraction Only</h2>
+    <form id="testForm">
+        <div class="form-group">
+            <label for="testWebsite">Website URL:</label>
+            <input type="url" id="testWebsite" name="testWebsite" placeholder="https://example.com" required>
+        </div>
+        <button type="submit">Test Extraction</button>
+    </form>
+    
+    <div id="testResult"></div>
+
+    <script>
+        // Test company data extraction only
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('testResult');
+            const website = document.getElementById('testWebsite').value;
+            
+            resultDiv.innerHTML = '<div class="loading">Testing company data extraction...</div>';
+            
+            try {
+                const response = await fetch('/api/test/test-extraction', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ website })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>Extraction Successful!</h3>
+                            <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">Error: ${result.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Network Error: ${error.message}</div>`;
+            }
+        });
+
+        // Full recruiter signup test
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('result');
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Convert checkboxes to boolean
+            data.acceptTerms = document.getElementById('acceptTerms').checked;
+            data.acceptPrivacyPolicy = document.getElementById('acceptPrivacyPolicy').checked;
+            
+            resultDiv.innerHTML = '<div class="loading">Creating account and extracting company data...</div>';
+            
+            try {
+                const response = await fetch('/api/recruiter/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>Registration Successful!</h3>
+                            <p>${result.message}</p>
+                            <p><strong>Token:</strong> ${result.token.substring(0, 20)}...</p>
+                            <p><strong>Recruiter ID:</strong> ${result.recruiter.id}</p>
+                        </div>
+                    `;
+                } else {
+                    let errorMsg = result.message || 'Registration failed';
+                    if (result.errors) {
+                        errorMsg += '<br><br>Validation Errors:<br>';
+                        for (const [field, error] of Object.entries(result.errors)) {
+                            errorMsg += `• ${field}: ${error}<br>`;
+                        }
+                    }
+                    resultDiv.innerHTML = `<div class="error">${errorMsg}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Network Error: ${error.message}</div>`;
+            }
+        });
+        
+        // Real-time domain validation
+        document.getElementById('email').addEventListener('input', validateDomain);
+        document.getElementById('companyWebsite').addEventListener('input', validateDomain);
+        
+        function validateDomain() {
+            const email = document.getElementById('email').value;
+            const website = document.getElementById('companyWebsite').value;
+            
+            if (email && website) {
+                const emailDomain = email.split('@')[1]?.toLowerCase();
+                let websiteDomain;
+                
+                try {
+                    const url = website.startsWith('http') ? website : `https://${website}`;
+                    websiteDomain = new URL(url).hostname.replace('www.', '').toLowerCase();
+                } catch {
+                    websiteDomain = website.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0].toLowerCase();
+                }
+                
+                const emailInput = document.getElementById('email');
+                if (emailDomain !== websiteDomain) {
+                    emailInput.style.borderColor = 'red';
+                    emailInput.title = `Email domain (${emailDomain}) must match website domain (${websiteDomain})`;
+                } else {
+                    emailInput.style.borderColor = 'green';
+                    emailInput.title = 'Domain match confirmed!';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

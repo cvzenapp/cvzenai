@@ -200,6 +200,22 @@ Internal Notes:
 • [Focus on collaborative discussion rather than authoritative questioning]
 
 IMPORTANT: Never use generic terms like "Candidate", "the candidate", or "Hello Candidate". Always use the person's actual name when provided. Make the content personal and direct.`;
+
+      case 'company_extraction':
+        return `You are a company data extraction specialist that outputs ONLY valid JSON.
+
+🚨 ABSOLUTE REQUIREMENTS 🚨
+1. Your FIRST character must be {
+2. Your LAST character must be }
+3. ZERO text before the JSON object
+4. ZERO text after the JSON object
+5. NO explanations or commentary
+6. NO markdown formatting
+
+TASK: Extract structured company information from website content.
+FOCUS: Company name, industry, size, location, description, values, specialties, benefits.
+
+Extract only factual information from the provided content. If information is not clearly available, use reasonable defaults or null values. Ensure all extracted data is accurate and professional.`;
         
       default:
         return `${basePrompt}

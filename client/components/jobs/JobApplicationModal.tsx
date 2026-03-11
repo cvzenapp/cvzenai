@@ -4,6 +4,7 @@ import { jobApplicationApi } from '../../services/jobApplicationApi';
 import { coverLetterApi } from '../../services/coverLetterApi';
 import { resumeOptimizationApi } from '../../services/resumeOptimizationApi';
 import { jobMatchingApi } from '../../services/jobMatchingApi';
+import { CVZenLogo } from '../CVZenLogo';
 import type { UserResume } from '@shared/jobApplication';
 
 interface JobApplicationModalProps {
@@ -208,43 +209,46 @@ export function JobApplicationModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Apply for {jobTitle}</h2>
-            <p className="text-sm text-gray-600">{company}</p>
+        <div className="sticky top-0 bg-brand-background text-white border-b px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <CVZenLogo className="h-8 w-auto" showCaption={false} />
+            <div>
+              <h2 className="text-xl font-bold">Apply for {jobTitle}</h2>
+              <p className="text-sm text-brand-auxiliary-1">{company}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-brand-auxiliary-1 hover:text-white transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Progress indicator */}
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b bg-gray-50">
           <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 ${step === 'select-resume' ? 'text-blue-600' : 'text-green-600'}`}>
+            <div className={`flex items-center gap-2 ${step === 'select-resume' ? 'text-brand-main' : 'text-green-600'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step === 'select-resume' ? 'bg-blue-100' : 'bg-green-100'
+                step === 'select-resume' ? 'bg-brand-main/10 text-brand-main' : 'bg-green-100 text-green-600'
               }`}>
                 1
               </div>
               <span className="font-medium">Select Resume</span>
             </div>
             <div className="flex-1 h-0.5 bg-gray-200"></div>
-            <div className={`flex items-center gap-2 ${step === 'optimize-resume' ? 'text-blue-600' : step === 'cover-letter' ? 'text-green-600' : 'text-gray-400'}`}>
+            <div className={`flex items-center gap-2 ${step === 'optimize-resume' ? 'text-brand-main' : step === 'cover-letter' ? 'text-green-600' : 'text-gray-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step === 'optimize-resume' ? 'bg-blue-100' : step === 'cover-letter' ? 'bg-green-100' : 'bg-gray-100'
+                step === 'optimize-resume' ? 'bg-brand-main/10 text-brand-main' : step === 'cover-letter' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
               }`}>
                 2
               </div>
               <span className="font-medium">AI Optimize</span>
             </div>
             <div className="flex-1 h-0.5 bg-gray-200"></div>
-            <div className={`flex items-center gap-2 ${step === 'cover-letter' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <div className={`flex items-center gap-2 ${step === 'cover-letter' ? 'text-brand-main' : 'text-gray-400'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step === 'cover-letter' ? 'bg-blue-100' : 'bg-gray-100'
+                step === 'cover-letter' ? 'bg-brand-main/10 text-brand-main' : 'bg-gray-100 text-gray-400'
               }`}>
                 3
               </div>
@@ -282,7 +286,7 @@ export function JobApplicationModal({
                   </p>
                   <button
                     onClick={() => window.location.href = '/builder'}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                    className="h-10 px-6 bg-brand-main text-white rounded-lg hover:bg-brand-background font-medium transition-colors"
                   >
                     Create Your First Resume
                   </button>
@@ -295,13 +299,13 @@ export function JobApplicationModal({
                       onClick={() => setSelectedResumeId(resume.id)}
                       className={`w-full p-4 border-2 rounded-lg text-left transition-colors ${
                         selectedResumeId === resume.id
-                          ? 'border-blue-600 bg-blue-50'
+                          ? 'border-brand-main bg-brand-main/5'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <FileText className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                          selectedResumeId === resume.id ? 'text-blue-600' : 'text-gray-400'
+                          selectedResumeId === resume.id ? 'text-brand-main' : 'text-gray-400'
                         }`} />
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">{resume.title}</h4>
@@ -310,7 +314,7 @@ export function JobApplicationModal({
                           </p>
                         </div>
                         {selectedResumeId === resume.id && (
-                          <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                          <div className="w-5 h-5 bg-brand-main rounded-full flex items-center justify-center">
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
@@ -335,8 +339,8 @@ export function JobApplicationModal({
 
               {!resumeOptimized ? (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl mx-auto flex items-center justify-center mb-6">
-                    <Zap className="w-10 h-10 text-purple-600" />
+                  <div className="w-20 h-20 bg-gradient-to-br from-brand-main/10 to-brand-background/10 rounded-2xl mx-auto flex items-center justify-center mb-6">
+                    <Zap className="w-10 h-10 text-brand-main" />
                   </div>
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Ready to Optimize</h4>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
@@ -351,7 +355,7 @@ export function JobApplicationModal({
                   <button
                     onClick={optimizeResume}
                     disabled={optimizingResume}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all mx-auto"
+                    className="flex items-center gap-2 h-10 px-6 bg-gradient-to-r from-brand-main to-brand-background text-white rounded-lg hover:from-brand-background hover:to-brand-main disabled:opacity-50 disabled:cursor-not-allowed transition-all mx-auto"
                   >
                     {optimizingResume ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -422,7 +426,7 @@ export function JobApplicationModal({
                           window.open(`/resume/${selectedResumeId}`, '_blank');
                         }
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+                      className="flex items-center gap-2 h-10 px-4 bg-brand-main text-white rounded-lg hover:bg-brand-background transition-colors mx-auto"
                     >
                       <Eye className="w-4 h-4" />
                       Preview
@@ -460,7 +464,7 @@ export function JobApplicationModal({
                   <button
                     onClick={generateAICoverLetter}
                     disabled={generatingCoverLetter || !selectedResumeId}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex items-center gap-2 h-8 px-3 bg-gradient-to-r from-brand-main to-brand-background text-white text-sm rounded-lg hover:from-brand-background hover:to-brand-main disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {generatingCoverLetter ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -503,7 +507,7 @@ export function JobApplicationModal({
                 setStep('optimize-resume');
               }
             }}
-            className="px-4 py-2 text-gray-700 hover:text-gray-900"
+            className="h-10 px-4 text-gray-700 hover:text-gray-900 transition-colors"
             disabled={loading || optimizingResume}
           >
             {step === 'select-resume' ? 'Cancel' : 'Back'}
@@ -513,7 +517,7 @@ export function JobApplicationModal({
             <button
               onClick={handleNext}
               disabled={!selectedResumeId || loadingResumes}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="h-10 px-6 bg-brand-main text-white rounded-lg hover:bg-brand-background disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>
@@ -521,7 +525,7 @@ export function JobApplicationModal({
             <button
               onClick={handleNext}
               disabled={!resumeOptimized}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="h-10 px-6 bg-brand-main text-white rounded-lg hover:bg-brand-background disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               Continue to Cover Letter
             </button>
@@ -529,7 +533,7 @@ export function JobApplicationModal({
             <button
               onClick={handleSubmit}
               disabled={loading || !selectedResumeId}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="h-10 px-6 bg-brand-main text-white rounded-lg hover:bg-brand-background disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Submitting...' : 'Submit Application'}
             </button>

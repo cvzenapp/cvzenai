@@ -171,6 +171,29 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
     mapUrl: string;
     placeId?: string;
   } | null>(null);
+  // Sync form data with basic details when they change
+  React.useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      interviewType: basicDetails.interviewType,
+      proposedDatetime: basicDetails.proposedDatetime,
+      durationMinutes: basicDetails.durationMinutes,
+      timezone: basicDetails.timezone,
+      meetingLocation: selectedLocation?.address || prev.meetingLocation
+    }));
+  }, [basicDetails, selectedLocation]);
+
+  // Initialize location data for editing
+  React.useEffect(() => {
+    if (editingInterview?.meetingLocation && basicDetails.interviewType === 'in_person') {
+      // If editing and has a location, set it as selected
+      setSelectedLocation({
+        address: editingInterview.meetingLocation,
+        mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(editingInterview.meetingLocation)}`
+      });
+    }
+  }, [editingInterview, basicDetails.interviewType]);
+
   // Cleanup timeout on unmount
   React.useEffect(() => {
     return () => {
@@ -323,8 +346,13 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
       return;
     }
 
-    if (!formData.title || !formData.proposedDatetime) {
+    if (!formData.title || !basicDetails.proposedDatetime) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    if (basicDetails.interviewType === 'in_person' && !selectedLocation && !formData.meetingLocation) {
+      setError('Please select a meeting location for in-person interviews');
       return;
     }
 
@@ -337,13 +365,13 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
         const updateRequest: Partial<CreateInterviewRequest> = {
           title: formData.title,
           description: formData.description,
-          interviewType: formData.interviewType,
+          interviewType: basicDetails.interviewType,
           interviewRoundType: basicDetails.interviewRoundType || undefined,
-          proposedDatetime: formData.proposedDatetime,
-          durationMinutes: formData.durationMinutes,
-          timezone: formData.timezone,
+          proposedDatetime: basicDetails.proposedDatetime,
+          durationMinutes: basicDetails.durationMinutes,
+          timezone: basicDetails.timezone,
           meetingLink: formData.meetingLink,
-          meetingLocation: formData.meetingLocation,
+          meetingLocation: selectedLocation?.address || formData.meetingLocation,
           meetingInstructions: formData.meetingInstructions,
           recruiterNotes: formData.recruiterNotes
         };
@@ -832,6 +860,25 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
                 </div>
               )}
 
+              {/* Meeting Link for Video Call Interviews */}
+              {basicDetails.interviewType === 'video_call' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 font-jakarta">
+                    Meeting Link
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.meetingLink || ''}
+                    onChange={(e) => handleInputChange('meetingLink', e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-main/20 focus:border-brand-main transition-colors font-jakarta text-sm"
+                    placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+                  />
+                  <p className="text-xs text-slate-500 mt-1 font-jakarta">
+                    Optional: Provide the video call link. If left empty, a CVZen meeting room will be auto-generated.
+                  </p>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
                 <button
@@ -865,32 +912,203 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
                 </div>
               )}
 
-              {/* Selected Details Summary */}
-              <div className="bg-gradient-to-r from-brand-main/5 to-brand-background/5 border border-brand-main/20 rounded-xl p-4">
-                <h3 className="font-semibold text-slate-900 mb-3 font-jakarta">Interview Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              {/* Editable Basic Details for Edit Mode */}
+              {editingInterview ? (
+                <div className="bg-gradient-to-r from-brand-main/5 to-brand-background/5 border border-brand-main/20 rounded-xl p-4 space-y-4">
+                  <h3 className="font-semibold text-slate-900 mb-3 font-jakarta">Edit Interview Details</h3>
+                  
+                  {/* Interview Type */}
                   <div>
-                    <p className="text-slate-600 font-jakarta">Candidate</p>
-                    <p className="font-semibold text-slate-900 font-jakarta">{selectedCandidate?.name}</p>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 font-jakarta">
+                      Interview Mode *
+                    </label>
+                    <select
+                      value={basicDetails.interviewType}
+                      onChange={(e) => setBasicDetails(prev => ({ ...prev, interviewType: e.target.value as any }))}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-main/20 focus:border-brand-main transition-colors font-jakarta"
+                      required
+                    >
+                      {interviewTypes.map(type => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div>
-                    <p className="text-slate-600 font-jakarta">Mode</p>
-                    <p className="font-semibold text-slate-900 font-jakarta">
-                      {interviewTypes.find(t => t.value === basicDetails.interviewType)?.label}
-                    </p>
+
+                  {/* Date and Time */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 font-jakarta">
+                        Interview Date *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={basicDetails.proposedDatetime}
+                        onChange={(e) => setBasicDetails(prev => ({ ...prev, proposedDatetime: e.target.value }))}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-main/20 focus:border-brand-main transition-colors font-jakarta"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 font-jakarta">
+                        Duration *
+                      </label>
+                      <select
+                        value={basicDetails.durationMinutes}
+                        onChange={(e) => setBasicDetails(prev => ({ ...prev, durationMinutes: parseInt(e.target.value) }))}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-main/20 focus:border-brand-main transition-colors font-jakarta"
+                        required
+                      >
+                        <option value={15}>15 minutes</option>
+                        <option value={30}>30 minutes</option>
+                        <option value={45}>45 minutes</option>
+                        <option value={60}>1 hour</option>
+                        <option value={90}>1.5 hours</option>
+                        <option value={120}>2 hours</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-600 font-jakarta">Date</p>
-                    <p className="font-semibold text-slate-900 font-jakarta">
-                      {basicDetails.proposedDatetime ? new Date(basicDetails.proposedDatetime).toLocaleDateString() : 'Not set'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-600 font-jakarta">Duration</p>
-                    <p className="font-semibold text-slate-900 font-jakarta">{basicDetails.durationMinutes} min</p>
-                  </div>
+
+                  {/* Location for in-person interviews */}
+                  {basicDetails.interviewType === 'in_person' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2 font-jakarta">
+                        Interview Location *
+                      </label>
+                      {!selectedLocation ? (
+                        <div className="relative">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={locationSearch}
+                              onChange={(e) => {
+                                setLocationSearch(e.target.value);
+                                debouncedSearchLocations(e.target.value);
+                              }}
+                              onKeyPress={(e) => e.key === 'Enter' && handleLocationSearch()}
+                              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-main/20 focus:border-brand-main transition-colors font-jakarta text-sm"
+                              placeholder="Search for office address or meeting location..."
+                            />
+                            <button
+                              type="button"
+                              onClick={handleLocationSearch}
+                              disabled={!locationSearch.trim() || isSearchingLocations}
+                              className="px-3 py-2 bg-brand-main text-white rounded-lg hover:bg-brand-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isSearchingLocations ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <Search className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                          
+                          {/* Location Suggestions Dropdown */}
+                          {locationSuggestions.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                              {locationSuggestions.map((suggestion, index) => {
+                                const placeId = String(suggestion.place_id || '');
+                                const isLocal = placeId.startsWith('local_');
+                                const isFallback = placeId.startsWith('fallback_') || placeId.startsWith('manual_');
+                                
+                                return (
+                                  <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => selectLocationFromSuggestion(suggestion)}
+                                    className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-b-0 transition-colors"
+                                  >
+                                    <div className="flex items-start space-x-2">
+                                      {isLocal ? (
+                                        <div className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0">🏙️</div>
+                                      ) : isFallback ? (
+                                        <div className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0">📍</div>
+                                      ) : (
+                                        <MapPin className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-slate-900 font-jakarta truncate">
+                                          {suggestion.display_name.split(',')[0]}
+                                        </p>
+                                        <p className="text-xs text-slate-500 font-jakarta truncate">
+                                          {suggestion.display_name.includes('(') 
+                                            ? suggestion.display_name.split(',').slice(1).join(',').trim()
+                                            : suggestion.display_name.split(',').slice(1).join(',').trim()
+                                          }
+                                          {isLocal && <span className="ml-1 text-blue-500">• Popular</span>}
+                                          {isFallback && <span className="ml-1 text-orange-500">• Manual</span>}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <MapPin className="w-4 h-4 text-green-600" />
+                                <span className="text-sm font-medium text-green-800 font-jakarta">Selected Location</span>
+                              </div>
+                              <p className="text-sm text-green-700 font-jakarta mb-2">{selectedLocation.address}</p>
+                              <a
+                                href={selectedLocation.mapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center space-x-1 text-xs text-brand-main hover:text-brand-background transition-colors font-jakarta"
+                              >
+                                <span>View on Google Maps</span>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={clearLocation}
+                              className="text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {!editingInterview && (
+              ) : (
+                /* Selected Details Summary for New Interviews */
+                <div className="bg-gradient-to-r from-brand-main/5 to-brand-background/5 border border-brand-main/20 rounded-xl p-4">
+                  <h3 className="font-semibold text-slate-900 mb-3 font-jakarta">Interview Details</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-600 font-jakarta">Candidate</p>
+                      <p className="font-semibold text-slate-900 font-jakarta">{selectedCandidate?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 font-jakarta">Mode</p>
+                      <p className="font-semibold text-slate-900 font-jakarta">
+                        {interviewTypes.find(t => t.value === basicDetails.interviewType)?.label}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 font-jakarta">Date</p>
+                      <p className="font-semibold text-slate-900 font-jakarta">
+                        {basicDetails.proposedDatetime ? new Date(basicDetails.proposedDatetime).toLocaleDateString() : 'Not set'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 font-jakarta">Duration</p>
+                      <p className="font-semibold text-slate-900 font-jakarta">{basicDetails.durationMinutes} min</p>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setCurrentStep('basic')}
@@ -899,8 +1117,8 @@ export const ScheduleInterviewForm: React.FC<ScheduleInterviewFormProps> = ({
                     <ArrowLeft className="w-3 h-3" />
                     <span>Edit basic details</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Interview Title */}
               <div>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Video, Phone, MapPin, Monitor, CheckCircle, XCircle, AlertCircle, User, Building, Plus, Edit, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, Video, Phone, MapPin, Monitor, CheckCircle, XCircle, AlertCircle, User, Building, Plus, Edit, Search, Filter, Eye, Star } from 'lucide-react';
 import { interviewApi } from '../../services/interviewApi';
 import { recruiterInterviewApi } from '../../services/recruiterInterviewApi';
 import { InterviewResponseModal } from './InterviewResponseModal';
 import { InterviewCompletionModal } from './InterviewCompletionModal';
+import { InterviewDetailsModal } from './InterviewDetailsModal';
+import { InterviewResultsModal } from './InterviewResultsModal';
 import { VideoCallLauncher } from '../video/VideoCallLauncher';
 import { ScheduleInterviewWithSelector } from './ScheduleInterviewWithSelector';
 import { ScheduleInterviewForm } from './ScheduleInterviewForm';
@@ -50,6 +52,8 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInterview, setSelectedInterview] = useState<InterviewInvitation | null>(null);
+  const [detailsInterview, setDetailsInterview] = useState<InterviewInvitation | null>(null);
+  const [resultsInterview, setResultsInterview] = useState<InterviewInvitation | null>(null);
   const [completionInterview, setCompletionInterview] = useState<InterviewInvitation | null>(null);
   const [videoCallInterview, setVideoCallInterview] = useState<InterviewInvitation | null>(null);
   const [editingInterview, setEditingInterview] = useState<InterviewInvitation | null>(null);
@@ -420,32 +424,7 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
                               </>
                             )}
                           </div>
-                          {/* Show feedback for completed interviews (job seeker view) */}
-                          {userType === 'job_seeker' && interview.status === 'completed' && interview.applicationStatus && interview.recruiterFeedback && (
-                            <div className="mt-4 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border border-slate-200">
-                              <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 mt-0.5">
-                                  {interview.applicationStatus === 'accepted' && (
-                                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                                  )}
-                                  {interview.applicationStatus === 'rejected' && (
-                                    <XCircle className="w-5 h-5 text-red-600" />
-                                  )}
-                                  {interview.applicationStatus === 'under_review' && (
-                                    <AlertCircle className="w-5 h-5 text-amber-600" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-jakarta font-semibold text-slate-900 mb-1">
-                                    Status: {interview.applicationStatus === 'accepted' ? 'Hired' : interview.applicationStatus === 'rejected' ? 'Rejected' : 'On Hold'}
-                                  </p>
-                                  <p className="text-sm text-slate-600 font-jakarta">
-                                    {interview.recruiterFeedback}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                          {/* Show feedback for completed interviews (job seeker view) - removed separate card */}
                         </div>
                       </div>
                     </div>
@@ -456,8 +435,43 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
                         {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                       </div>
                       
+                      {/* Hiring Status for Job Seekers with Completed Interviews */}
+                      {userType === 'job_seeker' && interview.status === 'completed' && interview.applicationStatus && (
+                        <div className={`inline-flex items-center px-3 py-2 rounded-lg text-sm font-jakarta font-medium border ${
+                          interview.applicationStatus === 'accepted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          interview.applicationStatus === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {interview.applicationStatus === 'accepted' && <CheckCircle className="w-4 h-4 mr-2" />}
+                          {interview.applicationStatus === 'rejected' && <XCircle className="w-4 h-4 mr-2" />}
+                          {interview.applicationStatus === 'under_review' && <AlertCircle className="w-4 h-4 mr-2" />}
+                          {interview.applicationStatus === 'accepted' ? 'Hired' : 
+                           interview.applicationStatus === 'rejected' ? 'Not Selected' : 'Under Review'}
+                        </div>
+                      )}
+                      
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
+                        {/* View Details button for all users */}
+                        <button
+                          onClick={() => setDetailsInterview(interview)}
+                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-xs sm:text-sm font-jakarta font-medium flex items-center gap-1 sm:gap-2"
+                        >
+                          <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="hidden sm:inline">Details</span>
+                        </button>
+
+                        {/* View Results button for job seekers with completed interviews */}
+                        {userType === 'job_seeker' && interview.status === 'completed' && interview.applicationStatus && interview.recruiterFeedback && (
+                          <button
+                            onClick={() => setResultsInterview(interview)}
+                            className="px-3 py-2 bg-gradient-to-r from-brand-main to-brand-background text-white rounded-lg hover:shadow-lg transition-all text-xs sm:text-sm font-jakarta font-medium flex items-center gap-1 sm:gap-2"
+                          >
+                            <Star className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline">View Results</span>
+                          </button>
+                        )}
+
                         {/* Edit button for recruiters */}
                         {userType === 'recruiter' && (
                           <button
@@ -550,6 +564,24 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
           onClose={() => setSelectedInterview(null)}
           interview={selectedInterview}
           onSuccess={handleResponseSuccess}
+        />
+      )}
+
+      {/* Interview Details Modal */}
+      {detailsInterview && (
+        <InterviewDetailsModal
+          isOpen={true}
+          onClose={() => setDetailsInterview(null)}
+          interview={detailsInterview}
+        />
+      )}
+
+      {/* Interview Results Modal */}
+      {resultsInterview && (
+        <InterviewResultsModal
+          isOpen={true}
+          onClose={() => setResultsInterview(null)}
+          interview={resultsInterview}
         />
       )}
 
