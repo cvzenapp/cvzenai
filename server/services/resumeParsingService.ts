@@ -588,7 +588,20 @@ class ResumeParsingService {
         objective: parsedData.objective || '',
         skills: processedSkills, // Use processed skills with core detection
         skillCategories: parsedData.skillCategories || {},
-        experience: parsedData.experience || [],
+        experience: (parsedData.experience || []).map(exp => ({
+          company: exp.company || '',
+          position: exp.position || exp.title || '',
+          title: exp.title || exp.position || '',
+          location: exp.location || '',
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
+          current: exp.current || false,
+          description: exp.description || '',
+          skills: exp.skills || [],
+          responsibilities: exp.responsibilities || [],
+          achievements: exp.achievements || [],
+          others: []
+        })),
         education: (parsedData.education || []).map(edu => ({
           institution: edu.institution || '',
           degree: edu.degree || '',
@@ -627,19 +640,19 @@ class ResumeParsingService {
         }))
       };
       
-      console.log('✅ Resume parsed successfully with DSPy-trained parser (4.1M+ records):', {
-        name: result.personalInfo?.fullName || 'N/A',
-        email: result.personalInfo?.email || 'N/A',
-        phone: result.personalInfo?.phone || 'N/A',
-        skills: result.skills?.length || 0,
-        coreSkills: processedSkills.filter(s => s.isCore).length || 0,
-        experience: result.experience?.length || 0,
-        education: result.education?.length || 0,
-        projects: result.projects?.length || 0,
-        certifications: result.certifications?.length || 0,
-        personalInfoSource: 'local_extraction',
-        trainingData: '4.1M+ records from 8 datasets'
-      });
+      // console.log('✅ Resume parsed successfully with DSPy-trained parser (4.1M+ records):', {
+      //   name: result.personalInfo?.fullName || 'N/A',
+      //   email: result.personalInfo?.email || 'N/A',
+      //   phone: result.personalInfo?.phone || 'N/A',
+      //   skills: result.skills?.length || 0,
+      //   coreSkills: processedSkills.filter(s => s.isCore).length || 0,
+      //   experience: result.experience?.length || 0,
+      //   education: result.education?.length || 0,
+      //   projects: result.projects?.length || 0,
+      //   certifications: result.certifications?.length || 0,
+      //   personalInfoSource: 'local_extraction',
+      //   trainingData: '4.1M+ records from 8 datasets'
+      // });
       
       if (result.projects && result.projects.length > 0) {
         console.log(`📋 Project details: ${result.projects.map(p => `"${p.name}" (${(p.technologies || []).join(', ')})`).join(', ')}`);

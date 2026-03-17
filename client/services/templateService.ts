@@ -173,6 +173,10 @@ export interface CustomizationOptions {
 }
 
 export interface TemplateConfig {
+  primaryColor: string;
+  accentColor: string;
+  fontFamily: string;
+  headingWeight: string;
   id: string;
   name: string;
   category: TemplateCategory;

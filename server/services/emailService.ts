@@ -23,7 +23,7 @@ interface EmailResponse {
 }
 
 interface EmailLogData {
-  emailType: 'account_creation' | 'job_application' | 'shortlisted' | 'candidate_notification' | 'recruiter_notification';
+  emailType: 'account_creation' | 'job_application' | 'shortlisted' | 'candidate_notification' | 'recruiter_notification' | 'recruiter_account_creation';
   senderEmail: string;
   recipientEmail: string;
   subject: string;
