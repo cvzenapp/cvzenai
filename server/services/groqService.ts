@@ -763,7 +763,7 @@ class OpenAIService {
     try {
       const { default: OpenAI } = await import('openai');
       this.openai = new OpenAI({
-        apiKey: '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'
+        apiKey: process.env.OPENAI_API_KEY
       });
       this.initialized = true;
       console.log('✅ [OPENAI] Service initialized');
