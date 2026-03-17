@@ -993,3 +993,76 @@ body:has([data-radix-dialog-overlay]) {
 .animate-scan-down {
   animation: scan-down 2s ease-in-out infinite;
 }
+
+/* Premium Scanner Border Animation for AI Icon */
+@keyframes border-shimmer {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+.premium-border-animation {
+  position: relative;
+  isolation: isolate;
+}
+
+.premium-border-animation::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  background: linear-gradient(
+    90deg,
+    #3b82f6 0%,
+    #8b5cf6 25%,
+    #06b6d4 50%,
+    #3b82f6 75%,
+    #8b5cf6 100%
+  );
+  background-size: 200% 100%;
+  animation: border-shimmer 3s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: -1;
+}
+
+.premium-border-animation::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%);
+  z-index: -1;
+}
+
+
+/* Text Scanner Animation */
+@keyframes text-scan {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.text-scanner {
+  background: linear-gradient(
+    90deg,
+    #1e3a8a 0%,
+    #1e3a8a 30%,
+    #60a5fa 45%,
+    #a78bfa 50%,
+    #06b6d4 55%,
+    #3b82f6 70%,
+    #3b82f6 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-scan 3s linear infinite;
+}

@@ -73,6 +73,36 @@ export class MockTestService {
     // No need for pool parameter - using getDatabase() like other services
   }
 
+  /**
+   * Safely parse JSON with better error handling
+   */
+  private safeJsonParse(jsonString: any, fieldName: string): any {
+    try {
+      // If it's already an object, return it
+      if (typeof jsonString === 'object' && jsonString !== null) {
+        return jsonString;
+      }
+      
+      // If it's a string, try to parse it
+      if (typeof jsonString === 'string') {
+        // Check for the problematic "[object Object]" string
+        if (jsonString.startsWith('[object ') && jsonString.endsWith(']')) {
+          console.warn(`⚠️ [MOCK TEST] Invalid JSON string detected for ${fieldName}: ${jsonString}`);
+          return null;
+        }
+        return JSON.parse(jsonString);
+      }
+      
+      // For other types, return null
+      console.warn(`⚠️ [MOCK TEST] Unexpected data type for ${fieldName}:`, typeof jsonString, jsonString);
+      return null;
+    } catch (error) {
+      console.error(`❌ [MOCK TEST] Failed to parse JSON for ${fieldName}:`, error.message);
+      console.error(`   Raw data:`, jsonString);
+      return null;
+    }
+  }
+
   async generateMockTest(
     candidateId: string,
     interviewId: number,
@@ -117,23 +147,23 @@ export class MockTestService {
       
       // Parse requirements from JSONB
       const jobRequirements = interview.requirements ? 
-        (typeof interview.requirements === 'string' ? JSON.parse(interview.requirements) : interview.requirements) : [];
+        this.safeJsonParse(interview.requirements, 'requirements') : [];
       
       // Build resume content from separate fields
       const personalInfo = interview.personal_info ? 
-        (typeof interview.personal_info === 'string' ? JSON.parse(interview.personal_info) : interview.personal_info) : {};
+        this.safeJsonParse(interview.personal_info, 'personal_info') : {};
       const experience = interview.experience ? 
-        (typeof interview.experience === 'string' ? JSON.parse(interview.experience) : interview.experience) : [];
+        this.safeJsonParse(interview.experience, 'experience') : [];
       const education = interview.education ? 
-        (typeof interview.education === 'string' ? JSON.parse(interview.education) : interview.education) : [];
+        this.safeJsonParse(interview.education, 'education') : [];
       const projects = interview.projects ? 
-        (typeof interview.projects === 'string' ? JSON.parse(interview.projects) : interview.projects) : [];
+        this.safeJsonParse(interview.projects, 'projects') : [];
       const certifications = interview.certifications ? 
-        (typeof interview.certifications === 'string' ? JSON.parse(interview.certifications) : interview.certifications) : [];
+        this.safeJsonParse(interview.certifications, 'certifications') : [];
       
       // Extract candidate skills from resume
       const resumeSkills = interview.resume_skills ? 
-        (typeof interview.resume_skills === 'string' ? JSON.parse(interview.resume_skills) : interview.resume_skills) : [];
+        this.safeJsonParse(interview.resume_skills, 'resume_skills') : [];
       const candidateSkills = Array.isArray(resumeSkills) ? resumeSkills : [];
       
       // Build comprehensive resume content for AI
@@ -330,65 +360,39 @@ IMPORTANT:
 
     try {
       const response = await groqService.generateResponse(
-        `Generate a comprehensive mock test for interview preparation with the following details:
+        `Generate a mock test for ${jobTitle} position.
 
-JOB TITLE: ${jobTitle}
-
-JOB DESCRIPTION:
-${jobDescription}
-
-JOB REQUIREMENTS:
-${jobRequirements.join(', ')}
-
-CANDIDATE RESUME SUMMARY:
-${resumeContent}
-
-CANDIDATE SKILLS:
-${candidateSkills.join(', ')}
-
+CANDIDATE SKILLS: ${candidateSkills.slice(0, 5).join(', ')}
+JOB REQUIREMENTS: ${jobRequirements.slice(0, 3).join(', ')}
 TEST LEVEL: ${testLevel}
 
-Generate exactly 15 questions with the following distribution:
-- 5 MCQ (Multiple Choice Questions) with 4 options each
-- 3 Single Selection questions with 3-4 options each  
-- 4 Objective questions (open-ended, can include coding if relevant to skills)
-- 3 Coding questions (if technical skills are present, otherwise more objective questions)
+Generate exactly ${testLevel === 'basic' ? 5 : testLevel === 'moderate' ? 8 : 10} questions:
+- Mix of MCQ (4 options) and objective questions
+- Match ${testLevel} difficulty level
+- Focus on candidate skills vs job requirements
 
-Requirements:
-1. Questions must be personalized based on the candidate's resume and skills vs job requirements
-2. Difficulty should match the ${testLevel} level
-3. Include a mix of technical, behavioral, and domain-specific questions
-4. For MCQ and Single Selection: provide clear options with only one correct answer
-5. For Objective/Coding: provide detailed correct answers and explanations
-6. Each question should have appropriate points (1-3 points based on complexity)
-
-Format the response as a JSON object with this exact structure:
+JSON format:
 {
   "questions": [
     {
-      "questionText": "Question text here",
-      "questionType": "mcq|single_selection|objective|coding",
-      "questionCategory": "technical|behavioral|domain_specific",
-      "options": [
-        {"id": "A", "text": "Option text", "isCorrect": false},
-        {"id": "B", "text": "Option text", "isCorrect": true}
-      ],
-      "correctAnswer": "Correct answer or explanation",
-      "explanation": "Detailed explanation of why this is correct",
-      "points": 2
+      "questionText": "Question here",
+      "questionType": "mcq|objective", 
+      "questionCategory": "technical",
+      "options": [{"id": "A", "text": "Option", "isCorrect": true}],
+      "correctAnswer": "Answer",
+      "explanation": "Why correct",
+      "points": 5
     }
   ]
 }
 
-IMPORTANT: 
-- For MCQ/Single Selection: options array is required, correctAnswer should be the option ID
-- For Objective/Coding: options should be null/undefined, correctAnswer should be the full answer
-- Ensure JSON is valid and properly formatted
-- Make questions challenging but fair for the ${testLevel} level`,
+For MCQ: include options array, correctAnswer = option ID
+For objective: no options, correctAnswer = full answer
+Return valid JSON only.`,
         prompt,
         {
           temperature: 0.7,
-          maxTokens: 3000,
+          maxTokens: 2000, // Reduced to prevent truncation
           auditContext: {
             serviceName: 'mock_test_generation',
             operationType: 'generate_questions',
@@ -406,28 +410,270 @@ IMPORTANT:
         throw new Error('Failed to generate mock test questions');
       }
 
-      // Parse the AI response
+      // Parse the AI response with enhanced error handling
       const cleanedResponse = response.response.trim();
-      let jsonStart = cleanedResponse.indexOf('{');
-      let jsonEnd = cleanedResponse.lastIndexOf('}') + 1;
+      console.log('🔍 [MOCK TEST] Raw AI Response length:', cleanedResponse.length);
+      console.log('🔍 [MOCK TEST] Raw AI Response preview:', cleanedResponse.substring(0, 300) + '...');
+      console.log('🔍 [MOCK TEST] Raw AI Response ending:', cleanedResponse.substring(Math.max(0, cleanedResponse.length - 200)));
       
-      if (jsonStart === -1 || jsonEnd === 0) {
-        throw new Error('Invalid JSON response from AI');
+      let parsedResponse;
+      
+      // Try multiple JSON extraction strategies
+      const jsonExtractionStrategies = [
+        // Strategy 1: Find complete JSON object
+        () => {
+          const jsonStart = cleanedResponse.indexOf('{');
+          const jsonEnd = cleanedResponse.lastIndexOf('}') + 1;
+          if (jsonStart === -1 || jsonEnd === 0 || jsonEnd <= jsonStart) {
+            throw new Error('No valid JSON boundaries found');
+          }
+          return cleanedResponse.substring(jsonStart, jsonEnd);
+        },
+        
+        // Strategy 2: Find JSON with "questions" key
+        () => {
+          const questionsIndex = cleanedResponse.indexOf('"questions"');
+          if (questionsIndex === -1) {
+            throw new Error('No questions key found');
+          }
+          
+          // Work backwards to find opening brace
+          let jsonStart = questionsIndex;
+          while (jsonStart > 0 && cleanedResponse[jsonStart] !== '{') {
+            jsonStart--;
+          }
+          
+          // Work forwards to find closing brace, counting nested braces
+          let braceCount = 0;
+          let jsonEnd = jsonStart;
+          for (let i = jsonStart; i < cleanedResponse.length; i++) {
+            if (cleanedResponse[i] === '{') braceCount++;
+            if (cleanedResponse[i] === '}') braceCount--;
+            if (braceCount === 0 && i > jsonStart) {
+              jsonEnd = i + 1;
+              break;
+            }
+          }
+          
+          if (jsonEnd <= jsonStart) {
+            throw new Error('Could not find complete JSON object');
+          }
+          
+          return cleanedResponse.substring(jsonStart, jsonEnd);
+        },
+        
+        // Strategy 3: Try to repair truncated JSON
+        () => {
+          const jsonStart = cleanedResponse.indexOf('{');
+          if (jsonStart === -1) {
+            throw new Error('No opening brace found');
+          }
+          
+          let jsonString = cleanedResponse.substring(jsonStart);
+          
+          // If JSON appears truncated, try to close it properly
+          if (!jsonString.trim().endsWith('}')) {
+            console.log('⚠️ [MOCK TEST] JSON appears truncated, attempting repair...');
+            
+            // Count open braces and brackets
+            let braceCount = 0;
+            let bracketCount = 0;
+            let inString = false;
+            let lastValidPos = 0;
+            
+            for (let i = 0; i < jsonString.length; i++) {
+              const char = jsonString[i];
+              const prevChar = i > 0 ? jsonString[i - 1] : '';
+              
+              if (char === '"' && prevChar !== '\\') {
+                inString = !inString;
+              }
+              
+              if (!inString) {
+                if (char === '{') braceCount++;
+                if (char === '}') braceCount--;
+                if (char === '[') bracketCount++;
+                if (char === ']') bracketCount--;
+                
+                // Track last position where we had valid structure
+                if (braceCount >= 0 && bracketCount >= 0) {
+                  lastValidPos = i;
+                }
+              }
+            }
+            
+            // Truncate to last valid position and close structures
+            jsonString = jsonString.substring(0, lastValidPos + 1);
+            
+            // Close any open brackets first
+            while (bracketCount > 0) {
+              jsonString += ']';
+              bracketCount--;
+            }
+            
+            // Close any open braces
+            while (braceCount > 0) {
+              jsonString += '}';
+              braceCount--;
+            }
+            
+            console.log('🔧 [MOCK TEST] Repaired JSON length:', jsonString.length);
+          }
+          
+          return jsonString;
+        }
+      ];
+      
+      let jsonString = '';
+      let strategyUsed = '';
+      
+      for (let i = 0; i < jsonExtractionStrategies.length; i++) {
+        try {
+          jsonString = jsonExtractionStrategies[i]();
+          strategyUsed = `Strategy ${i + 1}`;
+          console.log(`✅ [MOCK TEST] JSON extracted using ${strategyUsed}`);
+          break;
+        } catch (strategyError) {
+          console.log(`⚠️ [MOCK TEST] Strategy ${i + 1} failed:`, strategyError.message);
+          if (i === jsonExtractionStrategies.length - 1) {
+            throw new Error('All JSON extraction strategies failed');
+          }
+        }
+      }
+      
+      console.log('🔍 [MOCK TEST] Extracted JSON length:', jsonString.length);
+      console.log('🔍 [MOCK TEST] Extracted JSON preview:', jsonString.substring(0, 300) + '...');
+      
+      // Try to parse the extracted JSON
+      try {
+        parsedResponse = JSON.parse(jsonString);
+        console.log(`✅ [MOCK TEST] JSON parsed successfully using ${strategyUsed}`);
+      } catch (parseError) {
+        console.error('❌ [MOCK TEST] Failed to parse extracted JSON:', parseError.message);
+        console.error('   JSON string length:', jsonString.length);
+        console.error('   JSON preview:', jsonString.substring(0, 500));
+        console.error('   JSON ending:', jsonString.substring(Math.max(0, jsonString.length - 200)));
+        
+        // Try jsonrepair as last resort
+        try {
+          const { jsonrepair } = await import('jsonrepair');
+          const repairedJson = jsonrepair(jsonString);
+          parsedResponse = JSON.parse(repairedJson);
+          console.log('✅ [MOCK TEST] JSON repaired and parsed successfully');
+        } catch (repairError) {
+          console.error('❌ [MOCK TEST] JSON repair also failed:', repairError.message);
+          throw new Error(`Failed to parse AI response JSON: ${parseError.message}. Repair attempt also failed: ${repairError.message}`);
+        }
       }
 
-      const jsonString = cleanedResponse.substring(jsonStart, jsonEnd);
-      const parsedResponse = JSON.parse(jsonString);
-
       if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
+        console.error('❌ [MOCK TEST] Invalid questions format in AI response:', parsedResponse);
         throw new Error('Invalid questions format in AI response');
       }
 
-      return parsedResponse;
+      // Validate each question has required fields
+      const validQuestions = parsedResponse.questions.filter((q: any, index: number) => {
+        const isValid = q.questionText && q.questionType && q.correctAnswer;
+        if (!isValid) {
+          console.warn(`⚠️ [MOCK TEST] Question ${index + 1} is invalid:`, q);
+        }
+        return isValid;
+      });
+
+      if (validQuestions.length === 0) {
+        console.error('❌ [MOCK TEST] No valid questions found in AI response');
+        throw new Error('No valid questions generated by AI');
+      }
+
+      console.log(`✅ [MOCK TEST] Generated ${validQuestions.length} valid questions out of ${parsedResponse.questions.length} total`);
+      
+      return {
+        ...parsedResponse,
+        questions: validQuestions
+      };
       
     } catch (error) {
-      console.error('Error generating questions with AI:', error);
-      throw new Error('Failed to generate mock test questions');
+      console.error('❌ [MOCK TEST] Error generating questions with AI:', error);
+      
+      // Try fallback question generation
+      console.log('🔄 [MOCK TEST] Attempting fallback question generation...');
+      try {
+        return await this.generateFallbackQuestions(jobTitle, testLevel, candidateSkills, jobRequirements);
+      } catch (fallbackError) {
+        console.error('❌ [MOCK TEST] Fallback question generation also failed:', fallbackError);
+        throw new Error('Failed to generate mock test questions: ' + error.message);
+      }
     }
+  }
+
+  /**
+   * Generate fallback questions when AI fails
+   */
+  private async generateFallbackQuestions(
+    jobTitle: string,
+    testLevel: 'basic' | 'moderate' | 'complex',
+    candidateSkills: string[],
+    jobRequirements: string[]
+  ): Promise<any> {
+    console.log('🔄 [MOCK TEST] Generating fallback questions...');
+    
+    const fallbackQuestions = [];
+    const questionCount = testLevel === 'basic' ? 5 : testLevel === 'moderate' ? 8 : 10;
+    
+    // Generate basic technical questions based on skills
+    const commonSkills = ['JavaScript', 'Python', 'Java', 'React', 'Node.js', 'SQL', 'HTML', 'CSS'];
+    const relevantSkills = candidateSkills.filter(skill => 
+      commonSkills.some(common => skill.toLowerCase().includes(common.toLowerCase()))
+    ).slice(0, 3);
+    
+    if (relevantSkills.length === 0) {
+      relevantSkills.push('Programming', 'Software Development', 'Problem Solving');
+    }
+    
+    for (let i = 0; i < questionCount; i++) {
+      const skill = relevantSkills[i % relevantSkills.length];
+      const questionTypes = ['mcq', 'objective'];
+      const questionType = questionTypes[i % questionTypes.length];
+      
+      let question;
+      
+      if (questionType === 'mcq') {
+        question = {
+          questionText: `What is a key concept in ${skill} that every developer should understand?`,
+          questionType: 'mcq',
+          questionCategory: 'technical',
+          options: [
+            { id: 'a', text: 'Basic syntax and fundamentals', isCorrect: true },
+            { id: 'b', text: 'Advanced optimization techniques', isCorrect: false },
+            { id: 'c', text: 'Historical development', isCorrect: false },
+            { id: 'd', text: 'Marketing applications', isCorrect: false }
+          ],
+          correctAnswer: 'a',
+          explanation: `Understanding basic syntax and fundamentals is crucial for any ${skill} developer.`,
+          points: testLevel === 'basic' ? 5 : testLevel === 'moderate' ? 7 : 10
+        };
+      } else {
+        question = {
+          questionText: `Explain the importance of ${skill} in modern software development.`,
+          questionType: 'objective',
+          questionCategory: 'technical',
+          correctAnswer: `${skill} is important because it enables developers to build efficient and scalable applications.`,
+          explanation: `This tests understanding of ${skill}'s role in development.`,
+          points: testLevel === 'basic' ? 8 : testLevel === 'moderate' ? 10 : 15
+        };
+      }
+      
+      fallbackQuestions.push(question);
+    }
+    
+    console.log(`✅ [MOCK TEST] Generated ${fallbackQuestions.length} fallback questions`);
+    
+    return {
+      questions: fallbackQuestions,
+      totalQuestions: fallbackQuestions.length,
+      testLevel: testLevel,
+      generatedBy: 'fallback_system'
+    };
   }
 
   async getMockTestSession(sessionId: number, candidateId: string): Promise<MockTestSession | null> {
@@ -463,7 +709,7 @@ IMPORTANT:
       questionType: row.question_type,
       questionCategory: row.question_category,
       difficultyLevel: row.difficulty_level,
-      options: row.options ? JSON.parse(row.options) : undefined,
+      options: row.options ? this.safeJsonParse(row.options, 'options') : undefined,
       correctAnswer: row.correct_answer,
       explanation: row.explanation,
       points: row.points,
@@ -552,7 +798,7 @@ IMPORTANT:
         questionId: responseResult.rows[0].question_id,
         candidateAnswer: responseResult.rows[0].candidate_answer,
         selectedOptions: responseResult.rows[0].selected_options ? 
-          JSON.parse(responseResult.rows[0].selected_options) : undefined,
+          this.safeJsonParse(responseResult.rows[0].selected_options, 'selected_options') : undefined,
         isCorrect: responseResult.rows[0].is_correct,
         pointsEarned: responseResult.rows[0].points_earned,
         aiFeedback: responseResult.rows[0].ai_feedback,
@@ -655,7 +901,7 @@ IMPORTANT:
       sessionId: row.session_id,
       questionId: row.question_id,
       candidateAnswer: row.candidate_answer,
-      selectedOptions: row.selected_options ? JSON.parse(row.selected_options) : undefined,
+      selectedOptions: row.selected_options ? this.safeJsonParse(row.selected_options, 'selected_options') : undefined,
       isCorrect: row.is_correct,
       pointsEarned: row.points_earned,
       aiFeedback: row.ai_feedback,
@@ -694,7 +940,7 @@ IMPORTANT:
       case 'mcq':
         if (Array.isArray(answer)) {
           // For MCQ, check if all selected options are correct
-          const options = JSON.parse(question.options || '[]');
+          const options = this.safeJsonParse(question.options || '[]', 'question_options');
           const correctOptions = options.filter((opt: any) => opt.isCorrect).map((opt: any) => opt.id);
           const isCorrect = answer.length === correctOptions.length && 
             answer.every(opt => correctOptions.includes(opt));

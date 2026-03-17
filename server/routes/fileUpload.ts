@@ -144,16 +144,16 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
         console.warn('⚠️ Parsed data validation warnings:', validation.errors);
       }
       
-      console.log('✅ Resume parsed successfully');
-      console.log('📊 Parsed data structure:', {
-        personalInfo: parsedData.personalInfo,
-        skillsCount: parsedData.skills?.length,
-        firstSkills: parsedData.skills?.slice(0, 3),
-        experienceCount: parsedData.experience?.length,
-        firstExperience: parsedData.experience?.[0],
-        educationCount: parsedData.education?.length,
-        projectsCount: parsedData.projects?.length
-      });
+      // console.log('✅ Resume parsed successfully');
+      // console.log('📊 Parsed data structure:', {
+      //   personalInfo: parsedData.personalInfo,
+      //   skillsCount: parsedData.skills?.length,
+      //   firstSkills: parsedData.skills?.slice(0, 3),
+      //   experienceCount: parsedData.experience?.length,
+      //   firstExperience: parsedData.experience?.[0],
+      //   educationCount: parsedData.education?.length,
+      //   projectsCount: parsedData.projects?.length
+      // });
       
       // Create resume in database
       const { getDatabase } = await import('../database/connection.js');
@@ -161,9 +161,9 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
       
       const resumeTitle = `${parsedData.personalInfo.fullName}'s Resume` || 'Imported Resume';
       
-      // Add IDs to array items for ResumeBuilder compatibility
+      // Add IDs to array items for ResumeBuilder compatibility - preserve raw AI JSON
       const experienceWithIds = (parsedData.experience || []).map((exp: any, index: number) => ({
-        ...exp,
+        ...exp, // Keep ALL properties from AI response including skills
         id: exp.id || `exp-${Date.now()}-${index}`
       }));
       
@@ -264,7 +264,12 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
           experience: parsedData.experience?.length,
           education: parsedData.education?.length,
           projects: parsedData.projects?.length
-        }
+        },
+        experienceWithSkills: experienceWithIds.map(exp => ({
+          title: exp.title,
+          company: exp.company,
+          skillsCount: exp.skills?.length || 0
+        }))
       });
 
       // Generate shareToken automatically using proper slug generator

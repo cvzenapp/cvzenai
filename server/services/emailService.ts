@@ -999,19 +999,19 @@ ${nextSteps}
             <p style="margin: 0; color: #856404;"><strong>📎 Calendar Invite:</strong> A calendar invite (.ics file) is attached to this email. Add it to your calendar to get reminders!</p>
           </div>
           
-          // <div style="text-align: center; margin: 30px 0;">
-          //   <p style="margin-bottom: 15px; color: #666;">Please confirm your attendance:</p>
-          //   <div style="display: inline-block;">
-          //     <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept" 
-          //        style="background: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px; display: inline-block;">
-          //       ✅ Accept
-          //     </a>
-          //     <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline" 
-          //        style="background: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-          //       ❌ Decline
-          //     </a>
-          //   </div>
-          // </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="margin-bottom: 15px; color: #666;">Please confirm your attendance:</p>
+            <div style="display: inline-block;">
+              <a href="${process.env.APP_URL || 'https://cvzen.ai'}/dashboard/interview/${interviewId}/accept" 
+                 style="background: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px; display: inline-block;">
+                ✅ Accept
+              </a>
+              <a href="${process.env.APP_URL || 'https://cvzen.ai'}/dashboard/interview/${interviewId}/decline" 
+                 style="background: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                ❌ Decline
+              </a>
+            </div>
+          </div>
           
           <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #1891db;">Need to reschedule?</h3>
@@ -1054,8 +1054,8 @@ ${nextSteps}
       📎 A calendar invite (.ics file) is attached to this email.
       
       Please confirm your attendance:
-      Accept: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept
-      Decline: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline
+      Accept: ${process.env.APP_URL || 'https://cvzen.ai'}/dashboard/interview/${interviewId}/accept
+      Decline: ${process.env.APP_URL || 'https://cvzen.ai'}/dashboard/interview/${interviewId}/decline
       
       Need to reschedule? Please reply to this email or contact ${recruiterName}.
       
@@ -1253,11 +1253,11 @@ ${nextSteps}
           <div style="text-align: center; margin: 30px 0;">
             <p style="font-size: 16px; margin-bottom: 20px;">Please confirm your availability for the new time:</p>
             <div style="display: inline-block; gap: 15px;">
-              <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}" 
+              <a href="${process.env.APP_URL || 'https://cvzen.com'}/dashboard/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}" 
                  style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 0 10px; display: inline-block;">
                 ✅ Accept New Time
               </a>
-              <a href="${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}" 
+              <a href="${process.env.APP_URL || 'https://cvzen.com'}/dashboard/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}" 
                  style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 0 10px; display: inline-block;">
                 ❌ Decline
               </a>
@@ -1300,8 +1300,8 @@ ${nextSteps}
       📎 A calendar invite (.ics file) is attached to this email.
       
       Please confirm your attendance for the new time:
-      Accept: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}
-      Decline: ${process.env.APP_URL || 'https://cvzen.com'}/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}
+      Accept: ${process.env.APP_URL || 'https://cvzen.com'}/dashboard/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}
+      Decline: ${process.env.APP_URL || 'https://cvzen.com'}/dashboard/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}
       
       Best regards,
       ${recruiterName}

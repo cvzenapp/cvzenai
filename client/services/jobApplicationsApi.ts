@@ -33,7 +33,26 @@ class JobApplicationsApiService {
   }
 
   async getMyApplications(): Promise<{ success: boolean; applications: any[] }> {
-    return this.request<{ success: boolean; applications: any[] }>("");
+    const response = await this.request<{ success: boolean; data: any[] }>("/my-applications");
+    return {
+      success: response.success,
+      applications: response.data
+    };
+  }
+
+  async getApplicationStats(): Promise<{ success: boolean; data: any }> {
+    const response = await this.request<{ success: boolean; data: any }>("/my-applications");
+    // Calculate stats from applications data
+    const applications = response.data || [];
+    const stats = {
+      total: applications.length,
+      pending: applications.filter((app: any) => app.status === 'pending').length,
+      reviewed: applications.filter((app: any) => app.status === 'reviewed').length,
+      shortlisted: applications.filter((app: any) => app.status === 'shortlisted').length,
+      accepted: applications.filter((app: any) => app.status === 'accepted').length,
+      rejected: applications.filter((app: any) => app.status === 'rejected').length
+    };
+    return { success: true, data: stats };
   }
 }
 

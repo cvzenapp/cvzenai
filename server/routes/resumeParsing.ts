@@ -102,12 +102,7 @@ router.post('/parse', unifiedAuth.requireAuth, upload.single('resume'), async (r
     
     // Step 2: Parse resume with AI
     const parsedData = await resumeParsingService.parseResumeWithAI(resumeText);
-    
-    console.log('🔍 [ROUTE] Parsed data received from parsing service:', {
-      hasAtsScore: !!parsedData.atsScore,
-      atsScoreValue: parsedData.atsScore?.overallScore,
-      atsScoreKeys: parsedData.atsScore ? Object.keys(parsedData.atsScore) : []
-    });
+     
     
     // Step 3: Validate parsed data
     const validation = resumeParsingService.validateParsedData(parsedData);

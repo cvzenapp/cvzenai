@@ -1,5 +1,5 @@
 export interface StreamingChatMessage {
-  type: 'connected' | 'typing' | 'chunk' | 'complete' | 'error' | 'jobs';
+  type: 'connected' | 'typing' | 'chunk' | 'complete' | 'error' | 'jobs' | 'job';
   content?: string;
   message?: string;
   isComplete?: boolean;
@@ -9,6 +9,7 @@ export interface StreamingChatMessage {
   memoryUpdated?: boolean;
   contextUsed?: string[];
   jobResults?: any[];
+  job?: any; // Single job for streaming
 }
 
 export interface StreamingChatRequest {
@@ -27,6 +28,7 @@ export interface StreamingCallbacks {
   onTyping?: (message: string) => void;
   onChunk?: (content: string) => void;
   onJobs?: (jobs: any[]) => void;
+  onJob?: (job: any) => void; // Single job callback
   onComplete?: (data: {
     suggestions?: string[];
     actionItems?: string[];
@@ -143,6 +145,13 @@ class AIChatStreamingService {
         }
         if (data.content) {
           callbacks.onChunk?.(data.content);
+        }
+        break;
+        
+      case 'job':
+        console.log('💼 Streaming service received single job:', data.job);
+        if (data.job && callbacks.onJob) {
+          callbacks.onJob(data.job);
         }
         break;
         

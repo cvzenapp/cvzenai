@@ -471,6 +471,9 @@ export default function ModernTechTemplate({
                             {edu.degree} in {edu.field}
                           </h3>
                           <p className="text-blue-600">{edu.institution}</p>
+                          {edu.location && (
+                            <p className="text-sm text-slate-500">📍 {edu.location}</p>
+                          )}
                         </div>
                         <span className="text-sm text-slate-500">
                           {formatDateRange(edu.startDate, edu.endDate)}

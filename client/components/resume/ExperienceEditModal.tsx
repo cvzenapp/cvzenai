@@ -41,10 +41,80 @@ export function ExperienceEditModal({
   // Initialize with current experiences when modal opens
   useEffect(() => {
     if (isOpen) {
-      const experiencesWithIds = currentExperiences.map((exp, index) => ({
-        ...exp,
-        id: exp.id || `exp-${Date.now()}-${index}`
-      }));
+      console.log('Original experiences data:', currentExperiences);
+      
+      const experiencesWithIds = currentExperiences.map((exp, index) => {
+        console.log(`Experience ${index} dates:`, { startDate: exp.startDate, endDate: exp.endDate });
+        
+        // Format dates for month input (YYYY-MM format)
+        const formatDateForInput = (dateStr: string) => {
+          if (!dateStr) return '';
+          
+          console.log('Formatting date:', dateStr);
+          
+          // Handle different date formats
+          let date: Date;
+          
+          // Try parsing as ISO date first
+          if (dateStr.includes('-') && dateStr.length >= 7) {
+            // Already in YYYY-MM or YYYY-MM-DD format
+            if (dateStr.length === 7) {
+              console.log('Date already in YYYY-MM format:', dateStr);
+              return dateStr; // Already YYYY-MM
+            } else {
+              const formatted = dateStr.substring(0, 7);
+              console.log('Extracted YYYY-MM from YYYY-MM-DD:', formatted);
+              return formatted; // Extract YYYY-MM from YYYY-MM-DD
+            }
+          }
+          
+          // Try parsing as "MMM YYYY" format (e.g., "Jul 2022")
+          if (dateStr.includes(' ')) {
+            const parts = dateStr.split(' ');
+            if (parts.length === 2) {
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const monthIndex = monthNames.indexOf(parts[0]);
+              if (monthIndex !== -1) {
+                const year = parts[1];
+                const month = String(monthIndex + 1).padStart(2, '0');
+                const formatted = `${year}-${month}`;
+                console.log('Converted MMM YYYY to YYYY-MM:', dateStr, '->', formatted);
+                return formatted;
+              }
+            }
+          }
+          
+          // Try parsing as full date string
+          try {
+            date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const formatted = `${year}-${month}`;
+              console.log('Parsed date string to YYYY-MM:', dateStr, '->', formatted);
+              return formatted;
+            }
+          } catch (e) {
+            console.warn('Could not parse date:', dateStr);
+          }
+          
+          console.log('Could not format date, returning empty:', dateStr);
+          return '';
+        };
+
+        const formatted = {
+          ...exp,
+          id: exp.id || `exp-${Date.now()}-${index}`,
+          startDate: formatDateForInput(exp.startDate),
+          endDate: formatDateForInput(exp.endDate),
+          current: Boolean(exp.current) // Ensure current is properly converted to boolean
+        };
+        
+        console.log(`Formatted experience ${index}:`, formatted);
+        return formatted;
+      });
+      
       setExperiences(experiencesWithIds.length > 0 ? experiencesWithIds : [createNewExperience()]);
       setSelectedExperienceIndex(0);
     }
@@ -62,11 +132,13 @@ export function ExperienceEditModal({
   });
 
   const handleExperienceChange = (field: keyof Experience, value: string | boolean) => {
+    console.log(`Changing ${field} to:`, value);
     const updatedExperiences = [...experiences];
     updatedExperiences[selectedExperienceIndex] = {
       ...updatedExperiences[selectedExperienceIndex],
       [field]: value
     };
+    console.log('Updated experience:', updatedExperiences[selectedExperienceIndex]);
     setExperiences(updatedExperiences);
   };
 
@@ -140,7 +212,31 @@ export function ExperienceEditModal({
         exp.company?.trim() && exp.position?.trim()
       );
       
-      await onSave(validExperiences);
+      // Convert dates back to the format expected by the backend
+      const formattedExperiences = validExperiences.map(exp => {
+        const formatDateForSave = (dateStr: string) => {
+          if (!dateStr) return '';
+          
+          // If it's in YYYY-MM format, convert to a more readable format
+          if (dateStr.match(/^\d{4}-\d{2}$/)) {
+            const [year, month] = dateStr.split('-');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${monthNames[parseInt(month) - 1]} ${year}`;
+          }
+          
+          return dateStr;
+        };
+
+        return {
+          ...exp,
+          startDate: formatDateForSave(exp.startDate),
+          endDate: exp.current ? '' : formatDateForSave(exp.endDate)
+        };
+      });
+      
+      console.log('Saving experiences with formatted dates:', formattedExperiences);
+      await onSave(formattedExperiences);
       onClose();
     } catch (error) {
       console.error('Error saving experiences:', error);
@@ -277,7 +373,7 @@ export function ExperienceEditModal({
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="current"
+                id="currentWork"
                 checked={selectedExperience.current}
                 onChange={(e) => {
                   handleExperienceChange('current', e.target.checked);
@@ -285,16 +381,16 @@ export function ExperienceEditModal({
                     handleExperienceChange('endDate', '');
                   }
                 }}
-                className="rounded border-gray-300"
+                className="h-4 w-4"
               />
-              <Label htmlFor="current" className="text-sm">
+              <label htmlFor="currentWork" className="text-sm cursor-pointer">
                 I currently work here
-              </Label>
+              </label>
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <Label htmlFor="description">Job Description</Label>
+                <Label htmlFor="description">Job Description & Achievements</Label>
                 <Button
                   onClick={generateAIDescription}
                   disabled={isGenerating || !selectedExperience.company || !selectedExperience.position}
@@ -310,10 +406,13 @@ export function ExperienceEditModal({
                 id="description"
                 value={selectedExperience.description}
                 onChange={(e) => handleExperienceChange('description', e.target.value)}
-                placeholder="Describe your key responsibilities and achievements..."
-                rows={8}
+                placeholder="Describe your key responsibilities and achievements...&#10;&#10;Key Achievements:&#10;• Increased sales by 25% through strategic initiatives&#10;• Led team of 10 developers on major project&#10;• Reduced processing time by 40%"
+                rows={10}
                 className="resize-none"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Include both responsibilities and achievements. Use bullet points for achievements.
+              </p>
             </div>
             </div>
             

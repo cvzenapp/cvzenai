@@ -39,13 +39,27 @@ const chatMessageSchema = z.object({
   usePremium: z.boolean().optional(),
   context: z.object({
     userProfile: z.object({
-      skills: z.array(z.string()).optional(),
+      skills: z.array(z.union([z.string(), z.object({
+        name: z.string().optional(),
+        level: z.string().optional(),
+        category: z.string().optional(),
+      }).passthrough()])).optional(),
       experience: z.array(z.any()).optional(),
       location: z.string().optional(),
       jobTitle: z.string().optional(),
     }).optional(),
     resumeData: z.any().optional(),
     jobPreferences: z.any().optional(),
+    jobFilters: z.object({
+      country: z.string().optional(),
+      state: z.string().optional(),
+      jobType: z.string().optional(),
+      experienceLevel: z.string().optional(),
+      salary: z.string().optional(),
+      industry: z.string().optional(),
+      datePosted: z.string().optional(),
+      remote: z.boolean().optional(),
+    }).optional(),
   }).optional(),
 });
 
@@ -91,6 +105,72 @@ interface ChatResponse {
     contextUsed?: string[];
   };
 }
+
+// POST /api/ai-chat/initial-jobs - Get initial job recommendations based on user profile
+router.post("/initial-jobs", unifiedAuth.requireAuth, async (req: Request, res: Response) => {
+  try {
+    console.log('🔍 Initial jobs endpoint hit');
+    const user = (req as any).user;
+    const { skills, location } = req.body;
+    console.log('👤 User:', user?.id, 'Skills:', skills, 'Location:', location);
+
+    // Use provided skills or default
+    let jobQuery = skills?.join(' ') || 'software developer javascript react';
+    let jobLocation = location || 'Remote';
+    
+    console.log('🎯 Job search params:', { jobQuery, jobLocation });
+    
+    try {
+      console.log('🔍 Searching initial jobs for user:', { userId: user.id, query: jobQuery, location });
+      
+      // Search for jobs using Tavily
+      const jobParams = { query: jobQuery, location: jobLocation || undefined };
+      const jobs = await aiService.searchJobsWithTavily(jobParams);
+      console.log('✅ Found jobs:', jobs.length);
+      
+      const chatResponse: ChatResponse = {
+        success: true,
+        response: {
+          type: 'jobs',
+          content: '',
+          jobResults: jobs,
+          suggestions: [
+            'Tailor resume for these roles',
+            'Research companies before applying',
+            'Network with professionals'
+          ]
+        }
+      };
+      
+      console.log(`✅ Sending response with ${jobs.length} jobs:`, JSON.stringify(chatResponse, null, 2));
+      return res.json(chatResponse);
+      
+    } catch (jobSearchError) {
+      console.error('Initial job search error:', jobSearchError);
+      
+      // Fallback response if job search fails
+      return res.json({
+        success: true,
+        response: {
+          type: 'text',
+          content: "Hi! I'm your AI career assistant. I can help you find jobs, improve your resume, provide career advice, and prepare for interviews. What would you like to explore today?",
+          jobResults: [],
+          suggestions: ['Find jobs', 'Analyze my resume', 'Get career advice', 'Interview preparation'],
+          actionItems: ['Tell me about your career goals to get started']
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error("❌ Initial jobs error:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "Failed to load initial job recommendations. Please try again.",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // POST /api/ai-chat/message
 router.post("/message", unifiedAuth.requireAuth, async (req: Request, res: Response) => {
@@ -263,20 +343,49 @@ router.post("/stream", unifiedAuth.requireAuth, async (req: Request, res: Respon
     
     // Get user information for personalization
     const user = (req as any).user;
+    console.log('👤 [STREAM] User object:', { id: user?.id, email: user?.email });
     
     // Fetch user's active resume for personalized context
     let activeResumeData = null;
     try {
       const { getDatabase } = await import('../database/connection.js');
       const db = await getDatabase();
+      
+      // First check if ANY resumes exist for this user
+      const allResumesResult = await db.query(`
+        SELECT id, title, is_active FROM resumes WHERE user_id = $1
+      `, [user.id]);
+      
+      console.log('📋 [STREAM] All resumes for user:', {
+        count: allResumesResult.rows.length,
+        resumes: allResumesResult.rows
+      });
+      
+      console.log('🔍 [STREAM] Querying active resume for user_id:', user.id);
+      
       const resumeResult = await db.query(`
         SELECT * FROM resumes 
-        WHERE user_id = $1 AND is_active = true 
-        ORDER BY updated_at DESC LIMIT 1
+        WHERE user_id = $1
+        ORDER BY 
+          CASE WHEN is_active = true THEN 0 ELSE 1 END,
+          updated_at DESC 
+        LIMIT 1
       `, [user.id]);
+      
+      console.log('📊 [STREAM] Resume query result:', {
+        rowCount: resumeResult.rows.length,
+        hasRows: resumeResult.rows.length > 0
+      });
       
       if (resumeResult.rows.length > 0) {
         const resume = resumeResult.rows[0];
+        console.log('✅ [STREAM] Found resume:', {
+          id: resume.id,
+          title: resume.title,
+          hasExperience: !!resume.experience,
+          experienceType: typeof resume.experience
+        });
+        
         activeResumeData = {
           title: resume.title,
           summary: resume.summary || '',
@@ -287,9 +396,17 @@ router.post("/stream", unifiedAuth.requireAuth, async (req: Request, res: Respon
           projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
           certifications: typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || [])
         };
+        
+        console.log('📄 [STREAM] Parsed resume data:', {
+          hasSkills: activeResumeData.skills.length > 0,
+          experienceCount: activeResumeData.experience.length,
+          firstExpLocation: activeResumeData.experience[0]?.location
+        });
+      } else {
+        console.log('⚠️ [STREAM] No active resume found for user');
       }
     } catch (resumeError) {
-      console.error('Error fetching active resume:', resumeError);
+      console.error('❌ [STREAM] Error fetching active resume:', resumeError);
     }
     
     // Set up Server-Sent Events
@@ -323,59 +440,64 @@ router.post("/stream", unifiedAuth.requireAuth, async (req: Request, res: Respon
       // Send typing indicator
       res.write(`data: ${JSON.stringify({ type: 'typing', message: 'AI is thinking...' })}\n\n`);
 
-      // Handle job search with Tavily
+      // Handle job search with Tavily - STREAM JOBS ONE BY ONE
       if (aiType === 'job_search') {
         try {
           res.write(`data: ${JSON.stringify({ type: 'typing', message: 'Searching for jobs...' })}\n\n`);
           
-          // Extract job search parameters from the message
-          const jobParams = aiService.extractJobSearchParams(message);
-          console.log('🔍 Extracted job search params:', jobParams);
+          // Use structured filters if provided, otherwise extract from message
+          let jobParams;
+          if (context?.jobFilters) {
+            const location = context.jobFilters.country && context.jobFilters.state 
+              ? `${context.jobFilters.state}, ${context.jobFilters.country}`
+              : context.jobFilters.country || undefined;
+              
+            jobParams = {
+              query: context.jobFilters.jobType || 'developer',
+              location: location,
+              jobType: context.jobFilters.jobType || undefined,
+              experienceLevel: context.jobFilters.experienceLevel || undefined,
+              maxResults: 10
+            };
+            console.log('🎯 Using structured job filters:', jobParams);
+          } else {
+            jobParams = aiService.extractJobSearchParams(message);
+            console.log('🔍 Extracted job search params from message:', jobParams);
+          }
           
-          // Search for jobs using Tavily
-          const jobs = await aiService.searchJobsWithTavily(jobParams);
-          
-          // Stream the job results
-          res.write(`data: ${JSON.stringify({ 
-            type: 'jobs',
-            jobResults: jobs,
-            content: `I found ${jobs.length} relevant job opportunities for you. Here are the details:`,
-            isComplete: false
-          })}\n\n`);
-          
-          // Generate AI commentary on the results
-          await aiService.generateStreamingResponse({
-            type: aiType,
-            content: `Provide brief insights and recommendations for these ${jobs.length} job opportunities: ${jobs.slice(0, 3).map(j => j.title).join(', ')}`,
-            usePremium: usePremium,
-            context: {
-              userProfile: {
-                ...context?.userProfile,
-                userId: user?.id,
-                email: user?.email
-              },
-              resumeData: activeResumeData || context?.resumeData,
-              jobPreferences: context?.jobPreferences,
-              userId: user?.id
+          // Stream jobs one by one with AI match scoring
+          await aiService.streamJobSearchWithScoring(
+            jobParams,
+            activeResumeData,
+            (job) => {
+              // Stream each job as it's processed
+              res.write(`data: ${JSON.stringify({ 
+                type: 'job',
+                job: job
+              })}\n\n`);
             }
-          }, (chunk) => {
-            res.write(`data: ${JSON.stringify({ 
-              type: 'chunk', 
-              content: chunk.content,
-              isComplete: chunk.isComplete,
-              suggestions: chunk.suggestions,
-              actionItems: chunk.actionItems
-            })}\n\n`);
-          });
+          );
           
-          // Send completion signal
-          res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);
+          // Send completion with suggestions
+          res.write(`data: ${JSON.stringify({ 
+            type: 'complete',
+            suggestions: [
+              'Tailor resume for these roles',
+              'Research companies before applying',
+              'Network with professionals'
+            ]
+          })}\n\n`);
           res.end();
           return;
           
         } catch (jobSearchError) {
           console.error('Job search error in streaming:', jobSearchError);
-          // Fall back to regular streaming response
+          res.write(`data: ${JSON.stringify({ 
+            type: 'error', 
+            message: 'Failed to search jobs' 
+          })}\n\n`);
+          res.end();
+          return;
         }
       }
 

@@ -37,6 +37,35 @@ export function EducationEditModal({
     location: ""
   });
 
+  // Convert various date formats to YYYY-MM-DD for HTML date inputs
+  const convertToDateInputFormat = (dateStr: string): string => {
+    if (!dateStr) return '';
+    
+    // Already in correct format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    
+    // Just a year (e.g., "2005")
+    if (/^\d{4}$/.test(dateStr)) {
+      return `${dateStr}-01-01`;
+    }
+    
+    // Try to parse various date formats
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+    
+    // Extract year from string like "Jan 2005" or "2005-2007"
+    const yearMatch = dateStr.match(/(\d{4})/);
+    if (yearMatch) {
+      return `${yearMatch[1]}-01-01`;
+    }
+    
+    return '';
+  };
+
   // Initialize with first education if available
   useEffect(() => {
     if (isOpen && currentEducation && currentEducation.length > 0) {
@@ -47,8 +76,8 @@ export function EducationEditModal({
         institution: firstEdu.institution || "",
         degree: firstEdu.degree || "",
         field: firstEdu.field || "",
-        startDate: firstEdu.startDate || "",
-        endDate: firstEdu.endDate || "",
+        startDate: convertToDateInputFormat(firstEdu.startDate || ""),
+        endDate: convertToDateInputFormat(firstEdu.endDate || ""),
         gpa: firstEdu.gpa || "",
         description: firstEdu.description || "",
         location: firstEdu.location || ""
@@ -115,8 +144,8 @@ export function EducationEditModal({
       institution: edu.institution,
       degree: edu.degree,
       field: edu.field,
-      startDate: edu.startDate,
-      endDate: edu.endDate,
+      startDate: convertToDateInputFormat(edu.startDate),
+      endDate: convertToDateInputFormat(edu.endDate),
       gpa: edu.gpa || "",
       description: edu.description || "",
       location: edu.location || ""

@@ -9,6 +9,8 @@ import QuickSignupModal from '@/components/QuickSignupModal';
 import { jobPostingsApi } from '@/services/jobPostingsApi';
 import CVZenLogo from '@/components/CVZenLogo';
 import { FormattedJobContent } from '@/lib/jobContentFormatter';
+import { JobSocialShareIcons } from '@/components/JobSocialShareIcons';
+import { JobMetaTags } from '@/components/JobMetaTags';
 
 interface JobPosting {
   id: string;
@@ -194,6 +196,19 @@ export const PublicJobPosting: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Meta Tags for Social Sharing */}
+      <JobMetaTags
+        jobTitle={job.title}
+        companyName={job.company.name}
+        location={job.location}
+        description={job.description}
+        jobUrl={window.location.href}
+        companyLogo={job.company.logoUrl}
+        salaryRange={formatSalary(job.salaryMin, job.salaryMax, job.currency)}
+        jobType={job.jobType}
+        experienceLevel={job.experienceLevel}
+      />
+
       {/* Header */}
       <div className="bg-brand-background border-b border-brand-main/20">
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -240,14 +255,6 @@ export const PublicJobPosting: React.FC = () => {
                   Sign In
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" onClick={copyJobLink} className="border-white/30 text-white hover:bg-white hover:text-brand-background bg-transparent">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Copy Link
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleShare} className="border-white/30 text-white hover:bg-white hover:text-brand-background bg-transparent">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
             </div>
           </div>
         </div>
@@ -287,18 +294,41 @@ export const PublicJobPosting: React.FC = () => {
                 
                 <Button 
                   size="lg" 
-                  className="w-full bg-brand-main hover:bg-brand-background"
+                  className="w-full bg-brand-main hover:bg-brand-background mb-4"
                   onClick={() => setShowApplicationModal(true)}
                 >
                   Apply for this Position
                 </Button>
+                
+                {/* Social Share Icons */}
+                <div className="border-t pt-4">
+                  <JobSocialShareIcons
+                    jobTitle={job.title}
+                    companyName={job.company.name}
+                    location={job.location}
+                    jobUrl={window.location.href}
+                    variant="buttons"
+                    size="sm"
+                    className="justify-center"
+                  />
+                </div>
               </CardContent>
             </Card>
 
             {/* Job Description */}
             <Card>
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Job Description</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Job Description</h2>
+                  <JobSocialShareIcons
+                    jobTitle={job.title}
+                    companyName={job.company.name}
+                    location={job.location}
+                    jobUrl={window.location.href}
+                    variant="icons"
+                    size="sm"
+                  />
+                </div>
                 <FormattedJobContent 
                   content={job.description} 
                   className="prose max-w-none"

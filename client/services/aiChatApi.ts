@@ -241,6 +241,26 @@ class AiChatApiService extends BaseApiClient {
     }
     throw new Error(response.error as string || 'Failed to update session name');
   }
+
+  /**
+   * Get initial job recommendations based on user profile
+   */
+  async getInitialJobs(skills?: string[], location?: string): Promise<ChatResponse> {
+    try {
+      console.log('🚀 Calling initial-jobs API with:', { skills, location });
+      const response = await this.post('/initial-jobs', { skills, location });
+      console.log('📨 API response:', response);
+      
+      if (response.success) {
+        return response;
+      }
+      
+      throw new Error(response.message || 'Failed to load initial jobs');
+    } catch (error) {
+      console.error('Initial Jobs API Error:', error);
+      throw error instanceof Error ? error : new Error('Failed to load initial job recommendations');
+    }
+  }
 }
 
 export const aiChatApi = new AiChatApiService();

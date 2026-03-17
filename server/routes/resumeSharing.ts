@@ -642,7 +642,56 @@ router.get("/resume/:shareToken", async (req: Request, res: Response) => {
         
         return [];
       })(),
-      experiences: parseJsonField(resumeData.experience),
+      experiences: (() => {
+        const experienceData = parseJsonField(resumeData.experience);
+        if (!experienceData) return [];
+        
+        const parsed = Array.isArray(experienceData) ? experienceData : [];
+        
+        console.log('🔍 [SHARED RESUME] Processing experience data:', parsed);
+        
+        return parsed.map((exp, index) => {
+          console.log(`🔍 [SHARED RESUME] Experience ${index}:`, {
+            title: exp.title,
+            position: exp.position,
+            company: exp.company,
+            description: exp.description,
+            responsibilities: exp.responsibilities,
+            achievements: exp.achievements,
+            skills: exp.skills
+          });
+          
+          let combinedDescription = exp.description || '';
+          
+          // Add responsibilities if they exist
+          if (exp.responsibilities && Array.isArray(exp.responsibilities) && exp.responsibilities.length > 0) {
+            if (combinedDescription) combinedDescription += '\n\n';
+            combinedDescription += exp.responsibilities.map((resp: string) => `- ${resp}`).join('\n');
+          }
+          
+          // Add achievements if they exist
+          if (exp.achievements && Array.isArray(exp.achievements) && exp.achievements.length > 0) {
+            if (combinedDescription) combinedDescription += '\n\n';
+            combinedDescription += '**Key Achievements:**\n';
+            combinedDescription += exp.achievements.map((achievement: string) => `- ${achievement}`).join('\n');
+          }
+          
+          const result = {
+            id: exp.id || `exp-${Date.now()}-${Math.random()}`,
+            company: exp.company || '',
+            position: exp.title || exp.position || '', // Try both title and position fields
+            location: exp.location || '',
+            startDate: exp.startDate || '',
+            endDate: exp.endDate || '',
+            current: exp.endDate?.toLowerCase() === 'present' || exp.current || false,
+            description: combinedDescription,
+            skills: exp.skills || []
+          };
+          
+          console.log(`✅ [SHARED RESUME] Processed experience ${index}:`, result);
+          return result;
+        });
+      })(),
       education: parseJsonField(resumeData.education),
       projects: parseJsonField(resumeData.projects),
       jobPreferences: jobPreferences, // Add job preferences to shared resume data

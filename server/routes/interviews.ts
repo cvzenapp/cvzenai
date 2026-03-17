@@ -1960,4 +1960,226 @@ router.get("/:interviewId/feedback", async (req: Request, res: Response) => {
   }
 });
 
+// Accept interview invitation (from email link)
+router.get("/:interviewId/accept", async (req: Request, res: Response) => {
+  try {
+    const { interviewId } = req.params;
+    const { userId } = req.query;
+
+    // Check if user is logged in
+    const auth = await authenticateUser(req);
+    
+    if (!auth) {
+      // User is not logged in, redirect to login with return URL
+      const returnUrl = encodeURIComponent(`/interview/${interviewId}/accept${userId ? `?userId=${userId}` : ''}`);
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/login?returnUrl=${returnUrl}&message=Please log in to accept the interview invitation`);
+    }
+
+    const db = await getDatabase();
+
+    // Verify interview exists and belongs to the candidate
+    const interviewCheck = await db.query(
+      'SELECT id, candidate_id, guest_candidate_email, status, title FROM interview_invitations WHERE id = $1',
+      [interviewId]
+    );
+
+    if (interviewCheck.rows.length === 0) {
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?error=Interview not found`);
+    }
+
+    const interview = interviewCheck.rows[0];
+
+    // Check if user is authorized (either the candidate or guest with matching email)
+    const isAuthorized = interview.candidate_id === auth.userId || 
+                        (interview.guest_candidate_email && auth.userType === 'job_seeker');
+
+    if (!isAuthorized) {
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?error=Not authorized to accept this interview`);
+    }
+
+    if (interview.status !== 'pending') {
+      const message = interview.status === 'accepted' ? 'Interview already accepted' : 
+                     interview.status === 'declined' ? 'Interview was previously declined' :
+                     'Interview invitation is no longer available';
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?message=${encodeURIComponent(message)}`);
+    }
+
+    // Update interview status to accepted
+    await db.query(
+      `UPDATE interview_invitations 
+       SET status = 'accepted', responded_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [interviewId]
+    );
+
+    // Send email notification to recruiter
+    try {
+      const interviewDetailsQuery = await db.query(`
+        SELECT 
+          i.*,
+          COALESCE(rec.first_name || ' ' || rec.last_name, rec.email) as recruiter_name,
+          rec.email as recruiter_email,
+          COALESCE(c.first_name || ' ' || c.last_name, c.email, i.guest_candidate_name) as candidate_name,
+          COALESCE(c.email, i.guest_candidate_email) as candidate_email,
+          comp.name as company_name
+        FROM interview_invitations i
+        LEFT JOIN users rec ON i.recruiter_id = rec.id
+        LEFT JOIN users c ON i.candidate_id = c.id
+        LEFT JOIN recruiter_profiles rp ON rec.id = rp.user_id
+        LEFT JOIN companies comp ON rp.company_id = comp.id
+        WHERE i.id = $1
+      `, [interviewId]);
+
+      if (interviewDetailsQuery.rows.length > 0) {
+        const interviewData = interviewDetailsQuery.rows[0];
+        
+        await emailService.sendInterviewResponseNotification(
+          interviewData.recruiter_email,
+          interviewData.recruiter_name || 'Recruiter',
+          interviewData.candidate_name || 'Candidate',
+          {
+            title: interviewData.title,
+            proposedDatetime: interviewData.proposed_datetime,
+            interviewType: interviewData.interview_type,
+            status: 'accepted',
+            candidateResponse: null
+          },
+          interviewId.toString(),
+          interviewData.company_name,
+          auth.userId
+        );
+
+        console.log('✅ Interview acceptance email sent to recruiter');
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send interview acceptance email:', emailError);
+      // Don't fail the acceptance if email fails
+    }
+
+    console.log('✅ Interview accepted via email link:', {
+      interviewId,
+      candidateId: auth.userId,
+      title: interview.title
+    });
+
+    // Redirect to dashboard with success message
+    return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?message=${encodeURIComponent('Interview invitation accepted successfully!')}&tab=interviews`);
+
+  } catch (error) {
+    console.error('❌ Error accepting interview via email link:', error);
+    return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?error=${encodeURIComponent('Failed to accept interview invitation')}`);
+  }
+});
+
+// Decline interview invitation (from email link)
+router.get("/:interviewId/decline", async (req: Request, res: Response) => {
+  try {
+    const { interviewId } = req.params;
+    const { userId } = req.query;
+
+    // Check if user is logged in
+    const auth = await authenticateUser(req);
+    
+    if (!auth) {
+      // User is not logged in, redirect to login with return URL
+      const returnUrl = encodeURIComponent(`/interview/${interviewId}/decline${userId ? `?userId=${userId}` : ''}`);
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/login?returnUrl=${returnUrl}&message=Please log in to decline the interview invitation`);
+    }
+
+    const db = await getDatabase();
+
+    // Verify interview exists and belongs to the candidate
+    const interviewCheck = await db.query(
+      'SELECT id, candidate_id, guest_candidate_email, status, title FROM interview_invitations WHERE id = $1',
+      [interviewId]
+    );
+
+    if (interviewCheck.rows.length === 0) {
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?error=Interview not found`);
+    }
+
+    const interview = interviewCheck.rows[0];
+
+    // Check if user is authorized (either the candidate or guest with matching email)
+    const isAuthorized = interview.candidate_id === auth.userId || 
+                        (interview.guest_candidate_email && auth.userType === 'job_seeker');
+
+    if (!isAuthorized) {
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?error=Not authorized to decline this interview`);
+    }
+
+    if (interview.status !== 'pending') {
+      const message = interview.status === 'accepted' ? 'Interview was already accepted' : 
+                     interview.status === 'declined' ? 'Interview already declined' :
+                     'Interview invitation is no longer available';
+      return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?message=${encodeURIComponent(message)}`);
+    }
+
+    // Update interview status to declined
+    await db.query(
+      `UPDATE interview_invitations 
+       SET status = 'declined', candidate_response = 'Declined via email link', responded_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [interviewId]
+    );
+
+    // Send email notification to recruiter
+    try {
+      const interviewDetailsQuery = await db.query(`
+        SELECT 
+          i.*,
+          COALESCE(rec.first_name || ' ' || rec.last_name, rec.email) as recruiter_name,
+          rec.email as recruiter_email,
+          COALESCE(c.first_name || ' ' || c.last_name, c.email, i.guest_candidate_name) as candidate_name,
+          COALESCE(c.email, i.guest_candidate_email) as candidate_email,
+          comp.name as company_name
+        FROM interview_invitations i
+        LEFT JOIN users rec ON i.recruiter_id = rec.id
+        LEFT JOIN users c ON i.candidate_id = c.id
+        LEFT JOIN recruiter_profiles rp ON rec.id = rp.user_id
+        LEFT JOIN companies comp ON rp.company_id = comp.id
+        WHERE i.id = $1
+      `, [interviewId]);
+
+      if (interviewDetailsQuery.rows.length > 0) {
+        const interviewData = interviewDetailsQuery.rows[0];
+        
+        await emailService.sendInterviewResponseNotification(
+          interviewData.recruiter_email,
+          interviewData.recruiter_name || 'Recruiter',
+          interviewData.candidate_name || 'Candidate',
+          {
+            title: interviewData.title,
+            proposedDatetime: interviewData.proposed_datetime,
+            interviewType: interviewData.interview_type,
+            status: 'declined',
+            candidateResponse: 'Declined via email link'
+          },
+          interviewId.toString(),
+          interviewData.company_name,
+          auth.userId
+        );
+
+        console.log('✅ Interview decline email sent to recruiter');
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send interview decline email:', emailError);
+      // Don't fail the decline if email fails
+    }
+
+    console.log('✅ Interview declined via email link:', {
+      interviewId,
+      candidateId: auth.userId,
+      title: interview.title
+    });
+
+    // Redirect to dashboard with message
+    return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?message=${encodeURIComponent('Interview invitation declined')}&tab=interviews`);
+
+  } catch (error) {
+    console.error('❌ Error declining interview via email link:', error);
+    return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?error=${encodeURIComponent('Failed to decline interview invitation')}`);
+  }
+});
+
 export default router;

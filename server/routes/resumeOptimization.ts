@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 import { initializeDatabase } from "../database/connection.js";
+import { atsImprover } from "../services/dspy/atsImprover.js";
+import { atsScorer } from "../services/dspy/atsScorer.js";
 import { groqService } from "../services/groqService.js";
 
 const router = Router();
@@ -69,164 +71,78 @@ router.post("/optimize", async (req: Request, res: Response) => {
 
     // Prepare current resume data for AI
     const resumeData = {
+      personalInfo: currentResume.personal_info || {
+        fullName: '',
+        email: '',
+        phone: '',
+        location: '',
+        linkedin: '',
+        github: ''
+      },
       summary: currentResume.summary || '',
-      careerObjective: currentResume.objective || '',
+      objective: currentResume.objective || '',
       skills: currentResume.skills || [],
       experience: currentResume.experience || [],
       education: currentResume.education || [],
       projects: currentResume.projects || [],
-      certifications: currentResume.certifications || []
+      certifications: currentResume.certifications || [],
+      languages: currentResume.languages || []
     };
 
-    // Generate optimized resume using Groq AI
-    const systemPrompt = `You are an expert resume optimizer and ATS specialist. Optimize the provided resume for the specific job posting to maximize ATS compatibility and relevance.
-
-CRITICAL INSTRUCTIONS:
-1. Return ONLY a valid JSON object - no markdown, no explanations, no extra text
-2. Ensure all strings are properly escaped and terminated
-3. Use double quotes for all JSON keys and string values
-4. Do not include trailing commas
-5. Ensure the JSON is complete and well-formed
-
-Return ONLY this exact JSON structure:
-{
-  "summary": "optimized professional summary text",
-  "careerObjective": "compelling career objective statement", 
-  "skills": ["skill1", "skill2", "skill3"],
-  "experience": [
-    {
-      "title": "Job Title",
-      "company": "Company Name",
-      "duration": "2020-2023", 
-      "description": "Optimized bullet points with quantified achievements"
-    }
-  ],
-  "projects": [
-    {
-      "name": "Project Name",
-      "description": "Enhanced project description with relevant keywords",
-      "technologies": ["tech1", "tech2"]
-    }
-  ]
-}
-
-Optimization Guidelines:
-- Add relevant keywords from job description naturally
-- Quantify achievements with numbers/percentages where possible
-- Enhance project descriptions to match job requirements
-- Create compelling professional summary if missing
-- Maintain truthfulness while optimizing presentation
-- Focus on skills and experience that match the job posting
-- Use action verbs and industry terminology
-- Ensure all JSON strings are properly escaped and complete`;
-
-    const userPrompt = `Job Title: ${validatedData.jobTitle}
-Company: ${validatedData.companyName}
-
-Job Description:
-${validatedData.jobDescription}
-
-${validatedData.jobRequirements ? `Job Requirements: ${validatedData.jobRequirements.join(', ')}` : ''}
-
-Current Resume Data:
-${JSON.stringify(resumeData, null, 2)}
-
-Please optimize this resume for the job posting. Return ONLY the JSON object with no additional text or formatting.`;
-
-    const optimizationResponse = await groqService.generateResponse(systemPrompt, userPrompt, {
-      temperature: 0.3,  // Lower temperature for more consistent JSON output
-      maxTokens: 2000    // Increased token limit for complete responses
+    console.log('📊 Current resume data structure:', {
+      skillsCount: Array.isArray(resumeData.skills) ? resumeData.skills.length : 'not array',
+      experienceCount: Array.isArray(resumeData.experience) ? resumeData.experience.length : 'not array',
+      projectsCount: Array.isArray(resumeData.projects) ? resumeData.projects.length : 'not array'
     });
 
-    console.log('✅ Resume optimization response:', optimizationResponse);
+    // Calculate current ATS score
+    console.log('🔍 About to calculate ATS score...');
+    const currentATSScore = await atsScorer.calculateScore(resumeData);
+    console.log('📈 Current ATS Score:', currentATSScore.overallScore);
 
-    // Parse the optimized resume data
-    let optimizedData;
-    try {
-      const responseText = typeof optimizationResponse === 'string' 
-        ? optimizationResponse 
-        : optimizationResponse.response || '';
-      console.log('Raw AI response:', responseText);
-      
-      // Clean the response text to handle common JSON issues
-      let cleanedResponse = responseText.trim();
-      
-      // Remove any markdown code blocks if present
-      cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
-      
-      // Find the JSON object boundaries
-      const jsonStart = cleanedResponse.indexOf('{');
-      const jsonEnd = cleanedResponse.lastIndexOf('}') + 1;
-      
-      if (jsonStart === -1 || jsonEnd === 0) {
-        throw new Error('No valid JSON object found in response');
-      }
-      
-      const jsonString = cleanedResponse.substring(jsonStart, jsonEnd);
-      console.log('Extracted JSON string:', jsonString);
-      
-      // Try to fix common JSON issues
-      let fixedJson = jsonString
-        .replace(/,\s*}/g, '}')  // Remove trailing commas
-        .replace(/,\s*]/g, ']')  // Remove trailing commas in arrays
-        .replace(/\n/g, ' ')     // Replace newlines with spaces
-        .replace(/\r/g, '')      // Remove carriage returns
-        .replace(/\t/g, ' ')     // Replace tabs with spaces
-        .replace(/\s+/g, ' ')    // Normalize whitespace
-        .trim();
-      
-      // Attempt to parse the cleaned JSON
-      optimizedData = JSON.parse(fixedJson);
-      
-    } catch (parseError) {
-      console.error('Failed to parse optimization response:', parseError);
-      console.error('Response text:', typeof optimizationResponse === 'string' 
-        ? optimizationResponse 
-        : optimizationResponse.response || 'No response text');
-      
-      // Create a fallback optimization with basic improvements
-      console.log('Creating fallback optimization...');
-      optimizedData = {
-        summary: currentResume.summary || `Experienced professional with expertise in ${validatedData.jobTitle}`,
-        careerObjective: currentResume.objective || `Seeking opportunities in ${validatedData.jobTitle} at ${validatedData.companyName}`,
-        skills: currentResume.skills || [],
-        experience: currentResume.experience || [],
-        projects: currentResume.projects || []
-      };
-      
-      // Add job-relevant keywords to summary if possible
-      if (validatedData.jobDescription) {
-        const keywords = validatedData.jobDescription
-          .toLowerCase()
-          .match(/\b(javascript|python|react|node|sql|aws|docker|kubernetes|agile|scrum)\b/g) || [];
-        
-        if (keywords.length > 0 && optimizedData.summary) {
-          optimizedData.summary += ` Skilled in ${keywords.slice(0, 3).join(', ')}.`;
-        }
-      }
-      
-      console.log('Using fallback optimization data');
-    }
+    // Use atsImprover for optimization with data preservation
+    console.log('🔍 About to improve resume...');
+    const improvementResult = await atsImprover.improveResume(resumeData, currentATSScore);
+    const optimizedResumeData = improvementResult.improvedData;
 
-    // Update the resume in database
+    console.log('✅ Resume optimization completed:', {
+      originalSkillsCount: Array.isArray(resumeData.skills) ? resumeData.skills.length : 'not array',
+      optimizedSkillsCount: Array.isArray(optimizedResumeData.skills) ? optimizedResumeData.skills.length : 'not array',
+      originalExperienceCount: Array.isArray(resumeData.experience) ? resumeData.experience.length : 'not array',
+      optimizedExperienceCount: Array.isArray(optimizedResumeData.experience) ? optimizedResumeData.experience.length : 'not array',
+      originalProjectsCount: Array.isArray(resumeData.projects) ? resumeData.projects.length : 'not array',
+      optimizedProjectsCount: Array.isArray(optimizedResumeData.projects) ? optimizedResumeData.projects.length : 'not array',
+      estimatedNewScore: improvementResult.estimatedNewScore
+    });
+
+    // Update the resume in database with preserved data structure
+    console.log('🔍 About to update database...');
     const updateQuery = `
       UPDATE resumes SET
-        summary = $1,
-        objective = $2,
-        skills = $3,
-        experience = $4,
-        projects = $5,
+        personal_info = $1,
+        summary = $2,
+        objective = $3,
+        skills = $4,
+        experience = $5,
+        education = $6,
+        projects = $7,
+        certifications = $8,
+        languages = $9,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6 AND user_id = $7
+      WHERE id = $10 AND user_id = $11
       RETURNING *
     `;
 
     const updateValues = [
-      optimizedData.summary || currentResume.summary,
-      optimizedData.careerObjective || currentResume.objective,
-      JSON.stringify(optimizedData.skills || currentResume.skills),
-      JSON.stringify(optimizedData.experience || currentResume.experience),
-      JSON.stringify(optimizedData.projects || currentResume.projects),
+      JSON.stringify(optimizedResumeData.personalInfo || currentResume.personal_info),
+      optimizedResumeData.summary || currentResume.summary,
+      optimizedResumeData.objective || currentResume.objective,
+      JSON.stringify(optimizedResumeData.skills || currentResume.skills),
+      JSON.stringify(optimizedResumeData.experience || currentResume.experience),
+      JSON.stringify(optimizedResumeData.education || currentResume.education),
+      JSON.stringify(optimizedResumeData.projects || currentResume.projects),
+      JSON.stringify(optimizedResumeData.certifications || currentResume.certifications),
+      JSON.stringify(optimizedResumeData.languages || currentResume.languages),
       validatedData.resumeId,
       userId
     ];
@@ -240,14 +156,21 @@ Please optimize this resume for the job posting. Return ONLY the JSON object wit
         optimizedResume: {
           id: updatedResume.id,
           title: updatedResume.title,
+          personalInfo: typeof updatedResume.personal_info === 'string' ? JSON.parse(updatedResume.personal_info) : updatedResume.personal_info,
           summary: updatedResume.summary,
-          careerObjective: updatedResume.objective,
+          objective: updatedResume.objective,
           skills: typeof updatedResume.skills === 'string' ? JSON.parse(updatedResume.skills) : updatedResume.skills,
           experience: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : updatedResume.experience,
+          education: typeof updatedResume.education === 'string' ? JSON.parse(updatedResume.education) : updatedResume.education,
           projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : updatedResume.projects,
+          certifications: typeof updatedResume.certifications === 'string' ? JSON.parse(updatedResume.certifications) : updatedResume.certifications,
+          languages: typeof updatedResume.languages === 'string' ? JSON.parse(updatedResume.languages) : updatedResume.languages,
           updatedAt: updatedResume.updated_at
         },
-        message: "Resume optimized successfully"
+        improvements: improvementResult.improvements,
+        changesApplied: improvementResult.changesApplied,
+        estimatedNewScore: improvementResult.estimatedNewScore,
+        message: "Resume optimized successfully with data preservation"
       },
     });
 

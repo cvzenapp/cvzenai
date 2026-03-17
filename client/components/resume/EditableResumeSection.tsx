@@ -94,7 +94,7 @@ export function EditableResumeSection({
         <Button
           variant="outline"
           size="sm"
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/90 backdrop-blur-sm border-gray-200 hover:bg-gray-50"
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/90 backdrop-blur-sm border-gray-200 hover:bg-gray-50 shadow-sm z-10"
           onClick={() => setIsEditModalOpen(true)}
         >
           <Edit3 className="h-3 w-3 mr-1" />

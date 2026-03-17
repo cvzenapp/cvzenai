@@ -44,7 +44,7 @@ class GroqService {
   private isAvailable: boolean = true;
 
   constructor() {
-    this.defaultModel = 'llama-3.1-8b-instant'; // Faster model with higher rate limits
+    this.defaultModel = 'llama-3.3-70b-versatile'; // Faster model with higher rate limits
   }
 
   private initialize() {
@@ -224,6 +224,30 @@ Provide helpful career and professional development advice. Be conversational an
     }
   }
 
+  async formatJobDescription(rawContent: string): Promise<string> {
+    try {
+      this.initialize();
+      
+      const prompt = `Convert this raw job description into a clean, readable 2-3 sentence summary. Remove all URLs, markdown, and special characters. Focus on key responsibilities and requirements only:
+
+${rawContent}
+
+Return ONLY the clean summary, no extra text.`;
+
+      const completion = await this.groq!.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: this.defaultModel,
+        temperature: 0.3,
+        max_tokens: 150
+      });
+
+      return completion.choices[0]?.message?.content?.trim() || rawContent.substring(0, 250);
+    } catch (error) {
+      console.error('Failed to format job description:', error);
+      return rawContent.substring(0, 250);
+    }
+  }
+
   // New signature with separate parameters and audit context
   async generateResponse(
     systemPrompt: string,
@@ -273,8 +297,8 @@ Provide helpful career and professional development advice. Be conversational an
       let userMessage: string;
       let auditContext: any = {};
       let requestType: string;
-      let temperature = 0.3;
-      let maxTokens = 2048;
+      let temperature = 0;
+      let maxTokens = 6000;
       let modelToUse = this.defaultModel;
       let request: GroqRequest | undefined;
       
@@ -723,3 +747,90 @@ Please provide contextual content that matches this specific role, candidate bac
 }
 
 export const groqService = new GroqService();
+
+// OpenAI Service for Resume Parsing
+class OpenAIService {
+  private openai: any;
+  private initialized = false;
+
+  constructor() {
+    this.initialize();
+  }
+
+  private async initialize() {
+    if (this.initialized) return;
+    
+    try {
+      const { default: OpenAI } = await import('openai');
+      this.openai = new OpenAI({
+        apiKey: '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'
+      });
+      this.initialized = true;
+      console.log('✅ [OPENAI] Service initialized');
+    } catch (error) {
+      console.error('❌ [OPENAI] Failed to initialize:', error);
+    }
+  }
+
+  async generateResponse(
+    systemPrompt: string,
+    userPrompt: string,
+    options?: {
+      temperature?: number;
+      maxTokens?: number;
+      model?: string;
+      auditContext?: {
+        serviceName?: string;
+        operationType?: string;
+        userContext?: any;
+      };
+    }
+  ): Promise<{ success: boolean; response: string }> {
+    await this.initialize();
+    
+    const startTime = Date.now();
+    
+    try {
+      const completion = await this.openai.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        model: options?.model || 'gpt-4o-mini',
+        temperature: options?.temperature || 0,
+        max_tokens: options?.maxTokens || 16000,
+        top_p: 1,
+        stream: false
+      });
+
+      const responseText = completion.choices[0]?.message?.content || '';
+      const latencyMs = Date.now() - startTime;
+      
+      console.log('✅ [OPENAI] Response generated:', {
+        responseLength: responseText.length,
+        model: options?.model || 'gpt-4o-mini',
+        latency: latencyMs + 'ms'
+      });
+
+      return {
+        success: true,
+        response: responseText
+      };
+      
+    } catch (error: any) {
+      const latencyMs = Date.now() - startTime;
+      console.error('❌ [OPENAI] Error generating response:', {
+        message: error.message,
+        latency: latencyMs + 'ms'
+      });
+      
+      return {
+        success: false,
+        response: 'I apologize, but I encountered an error processing your request. Please try again.'
+      };
+    }
+  }
+}
+
+const openaiService = new OpenAIService();
+export { openaiService };

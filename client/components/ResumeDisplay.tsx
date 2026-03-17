@@ -427,7 +427,7 @@ export default function ResumeDisplay({
               </div>
 
               {/* Desktop: Show full buttons with text */}
-              <div className="hidden sm:flex items-center space-x-2">
+              <div className="mr-10 hidden sm:flex items-right space-x-2">
                 {/* Upvote Button - Desktop */}
                 {mode !== 'preview' && (
                   <Button
@@ -479,7 +479,7 @@ export default function ResumeDisplay({
                 </Button>
                 
                 {/* ATS Improve Button - Desktop */}
-                {mode === 'preview' && (
+                {/* {mode === 'preview' && (
                   <Button
                     onClick={handleCalculateATS}
                     disabled={isCalculatingATS}
@@ -488,7 +488,7 @@ export default function ResumeDisplay({
                     <Sparkles className="h-4 w-4" />
                     <span className="hidden lg:inline">{isCalculatingATS ? 'Calculating...' : 'Improve ATS'}</span>
                   </Button>
-                )}
+                )} */}
 
                 {/* Job Preferences Button - Desktop */}
                 {(mode === 'preview' || mode === 'shared') && setIsEditingJobPreferences && (

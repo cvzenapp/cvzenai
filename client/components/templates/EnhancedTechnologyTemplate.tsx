@@ -319,6 +319,19 @@ export default function EnhancedTechnologyTemplate({
                background: `linear-gradient(135deg, var(--template-primary-color) 0%, var(--template-secondary-color) 100%)`,
                color: 'var(--template-background-color)'
              }}>
+          {/* Contact Edit Button - Positioned at header level */}
+          {showImproveButtons && (
+            <button
+              onClick={() => setIsEditingPersonalInfo?.(true)}
+              className="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 z-20 backdrop-blur-sm"
+              title="Edit Contact Info"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          )}
+          
           {/* Subtle Background Pattern */}
           <div className="absolute inset-0 opacity-5">
             <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl" 
@@ -380,19 +393,6 @@ export default function EnhancedTechnologyTemplate({
 
                   {/* Contact Information - Clean and Scannable */}
                   <div className="space-y-3 relative">
-                    {/* Contact Edit Button */}
-                    {showImproveButtons && (
-                      <button
-                        onClick={() => setIsEditingPersonalInfo?.(true)}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-                        title="Edit Contact Info"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                    )}
-                    
                     {resume.personalInfo?.location && (
                       <div className="flex items-center gap-2 transition-all duration-300 p-2 -m-2 rounded-lg">
                         <div className="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center">
@@ -684,6 +684,11 @@ export default function EnhancedTechnologyTemplate({
                               <p className="text-sm text-slate-600 mt-1">
                                 {edu.degree} in {edu.field}
                               </p>
+                              {edu.location && (
+                                <p className="text-xs text-slate-500 mt-1">
+                                  📍 {edu.location}
+                                </p>
+                              )}
                             </div>
                             <div className="sm:text-right flex-shrink-0">
                               <p className="text-sm text-slate-500">

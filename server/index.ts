@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -80,6 +81,7 @@ import emailTestRouter from "./routes/emailTest";
 import { createMockTestRoutes } from "./routes/mockTests";
 import { requireAuth } from "./middleware/unifiedAuth";
 import { getDatabase, initializeDatabase, closeDatabase } from "./database/connection";
+import jwt from 'jsonwebtoken';
 import { seedDatabase } from "./database/seedData";
 
 export function createServer() {
@@ -116,6 +118,7 @@ export function createServer() {
   }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(cookieParser());
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -154,6 +157,8 @@ export function createServer() {
       res.status(500).send('Error loading resume');
     }
   });
+
+
 
   // Health check and debug routes
   app.get("/api/ping", (_req, res) => {

@@ -179,6 +179,47 @@ function parseSkills(skillsData: any): any[] {
   return [];
 }
 
+/**
+ * Process experience data - merge achievements/responsibilities with description for display
+ */
+function processExperienceData(experienceData: any): any[] {
+  if (!experienceData) return [];
+  
+  const parsed = typeof experienceData === 'string' ? JSON.parse(experienceData) : experienceData;
+  if (!Array.isArray(parsed)) return [];
+  
+  return parsed.map(exp => {
+    let combinedDescription = exp.description || '';
+    
+    // Add responsibilities if they exist
+    if (exp.responsibilities && Array.isArray(exp.responsibilities) && exp.responsibilities.length > 0) {
+      if (combinedDescription) combinedDescription += '\n\n';
+      // Convert responsibilities to markdown list
+      combinedDescription += exp.responsibilities.map((resp: string) => `- ${resp}`).join('\n');
+    }
+    
+    // Add achievements if they exist
+    if (exp.achievements && Array.isArray(exp.achievements) && exp.achievements.length > 0) {
+      if (combinedDescription) combinedDescription += '\n\n';
+      combinedDescription += '**Key Achievements:**\n';
+      // Convert achievements to markdown list
+      combinedDescription += exp.achievements.map((achievement: string) => `- ${achievement}`).join('\n');
+    }
+    
+    return {
+      id: exp.id || `exp-${Date.now()}-${Math.random()}`,
+      company: exp.company || '',
+      position: exp.title || exp.position || '',
+      location: exp.location || '',
+      startDate: exp.startDate || '',
+      endDate: exp.endDate || '',
+      current: exp.endDate?.toLowerCase() === 'present' || exp.current || false,
+      description: combinedDescription,
+      skills: exp.skills || []
+    };
+  });
+}
+
 // API endpoint handlers
 export const getUserResumes = async (req: AuthRequest, res: Response) => {
   try {
@@ -245,7 +286,7 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
         createdAt: resume.created_at,
         updatedAt: resume.updated_at,
         personalInfo,
-        experiences: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
+        experiences: processExperienceData(resume.experience),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
@@ -334,7 +375,7 @@ export const getResumePublic = async (req: any, res: Response) => {
         createdAt: resume.created_at,
         updatedAt: resume.updated_at,
         personalInfo,
-        experiences: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
+        experiences: processExperienceData(resume.experience),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
@@ -425,7 +466,7 @@ export const getResume = async (req: AuthRequest, res: Response) => {
         createdAt: resume.created_at,
         updatedAt: resume.updated_at,
         personalInfo,
-        experiences: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
+        experiences: processExperienceData(resume.experience),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
@@ -551,7 +592,7 @@ export const createResume = async (req: AuthRequest, res: Response) => {
         summary: newResume.summary,
         objective: newResume.objective,
         skills: parseSkills(newResume.skills),
-        experiences: typeof newResume.experience === 'string' ? JSON.parse(newResume.experience) : (newResume.experience || []),
+        experiences: processExperienceData(newResume.experience),
         education: typeof newResume.education === 'string' ? JSON.parse(newResume.education) : (newResume.education || []),
         projects: typeof newResume.projects === 'string' ? JSON.parse(newResume.projects) : (newResume.projects || []),
         certifications: typeof newResume.certifications === 'string' ? JSON.parse(newResume.certifications) : (newResume.certifications || []),
@@ -677,7 +718,7 @@ export const updateResume = async (req: AuthRequest, res: Response) => {
         summary: updatedResume.summary,
         objective: updatedResume.objective,
         skills: parseSkills(updatedResume.skills),
-        experiences: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
+        experiences: processExperienceData(updatedResume.experience),
         education: typeof updatedResume.education === 'string' ? JSON.parse(updatedResume.education) : (updatedResume.education || []),
         projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : (updatedResume.projects || []),
         certifications: typeof updatedResume.certifications === 'string' ? JSON.parse(updatedResume.certifications) : (updatedResume.certifications || []),
@@ -934,7 +975,7 @@ export const updateResumeSection = async (req: AuthRequest, res: Response) => {
         summary: updatedResume.summary,
         objective: updatedResume.objective,
         skills: parseSkills(updatedResume.skills),
-        experiences: typeof updatedResume.experience === 'string' ? JSON.parse(updatedResume.experience) : (updatedResume.experience || []),
+        experiences: processExperienceData(updatedResume.experience),
         education: typeof updatedResume.education === 'string' ? JSON.parse(updatedResume.education) : (updatedResume.education || []),
         projects: typeof updatedResume.projects === 'string' ? JSON.parse(updatedResume.projects) : (updatedResume.projects || []),
         certifications: typeof updatedResume.certifications === 'string' ? JSON.parse(updatedResume.certifications) : (updatedResume.certifications || []),

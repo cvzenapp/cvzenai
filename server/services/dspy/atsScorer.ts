@@ -1,4 +1,4 @@
-import { groqService } from '../groqService.js';
+import { abstractedAiService } from '../abstractedAiService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -99,10 +99,10 @@ Return the scoring results now:`;
     console.log('🤖 Sending resume to AI for trained ATS analysis...');
     console.log(`📝 Resume text length: ${resumeText.length} characters`);
     
-    const response = await groqService.generateResponse(
+    const response = await abstractedAiService.generateResponse({
       systemPrompt,
       userPrompt,
-      {
+      options: {
         temperature: 0.1, // Low temperature for consistent scoring
         maxTokens: 1000,
         auditContext: {
@@ -110,7 +110,7 @@ Return the scoring results now:`;
           operationType: 'ats_scoring'
         }
       }
-    );
+    });
 
     // Parse AI response
     let aiResult;

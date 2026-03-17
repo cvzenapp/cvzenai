@@ -48,6 +48,7 @@ import { atsApi } from "@/services/atsApi";
 import { FakeJobDetector } from "@/components/dashboard/FakeJobDetector";
 import { JobSeekerSubscriptionDashboard } from "@/components/subscription/JobSeekerSubscriptionDashboard";
 import { JobSeekerPlanSelector } from "@/components/subscription/JobSeekerPlanSelector";
+import zenAiPilotIcon from '../assets/zenaipilot.png';
 import { JobSeekerUsageTracker } from "@/components/subscription/JobSeekerUsageTracker";
 import { MockTestDashboard } from "@/components/dashboard/MockTestDashboard";
 import { MyApplicationsList } from "@/components/jobs/MyApplicationsList";
@@ -1174,21 +1175,23 @@ export default function Dashboard() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <nav className="flex-1 p-2 sm:p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <button
               onClick={() => {
                 setActiveTab('ai-chat');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'ai-chat'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "AI Assistant" : ""}
             >
-              <MessageSquare className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">AI Assistant</span>}
+              <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible shrink-0">
+                <img src={zenAiPilotIcon} alt="AI" className="w-5 h-5 drop-shadow-lg relative z-10 brightness-110" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base text-scanner">AI Assistant</span>}
             </button>
             
             <button
@@ -1196,15 +1199,17 @@ export default function Dashboard() {
                 setActiveTab('overview');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'overview'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Overview" : ""}
             >
-              <TrendingUp className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Overview</span>}
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <TrendingUp className="h-4 w-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Overview</span>}
             </button>
             
             <button
@@ -1212,19 +1217,21 @@ export default function Dashboard() {
                 setActiveTab('resumes');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'resumes'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "My Resumes" : ""}
             >
-              <FileText className="h-5 w-5 shrink-0" />
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
               {!isSidebarCollapsed && (
                 <>
-                  <span className="flex-1 text-left text-sm sm:text-base">My Resumes</span>
+                  <span className="flex-1 text-left">My Resumes</span>
                   {resumes.length > 0 && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
+                    <Badge variant="secondary" className="ml-auto">
                       {resumes.length}
                     </Badge>
                   )}
@@ -1237,15 +1244,17 @@ export default function Dashboard() {
                 setActiveTab('jobs');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'jobs'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Jobs" : ""}
             >
-              <Search className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Jobs</span>}
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <Search className="h-4 w-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Jobs</span>}
             </button>
             
             <button
@@ -1253,15 +1262,17 @@ export default function Dashboard() {
                 setActiveTab('fake-job-detector');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'fake-job-detector'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "JD Trust Score" : ""}
             >
-              <Shield className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">JD Trust Score</span>}
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left">JD Trust Score</span>}
             </button>
             
             <button
@@ -1269,19 +1280,21 @@ export default function Dashboard() {
                 setActiveTab('applications');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'applications'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Applications" : ""}
             >
-              <FileText className="h-5 w-5 shrink-0" />
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
               {!isSidebarCollapsed && (
                 <>
-                  <span className="flex-1 text-left text-sm sm:text-base">Applications</span>
+                  <span className="flex-1 text-left">Applications</span>
                   {stats.applications > 0 && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
+                    <Badge variant="secondary" className="ml-auto">
                       {stats.applications}
                     </Badge>
                   )}
@@ -1294,19 +1307,21 @@ export default function Dashboard() {
                 setActiveTab('interviews');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'interviews'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Interviews" : ""}
             >
-              <Calendar className="h-5 w-5 shrink-0" />
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <Calendar className="h-4 w-4 text-white" />
+              </div>
               {!isSidebarCollapsed && (
                 <>
-                  <span className="flex-1 text-left text-sm sm:text-base">Interviews</span>
+                  <span className="flex-1 text-left">Interviews</span>
                   {stats.interviews > 0 && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
+                    <Badge variant="secondary" className="ml-auto">
                       {stats.interviews}
                     </Badge>
                   )}
@@ -1319,15 +1334,17 @@ export default function Dashboard() {
                 setActiveTab('mock-tests');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'mock-tests'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Mock Tests" : ""}
             >
-              <Brain className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Mock Tests</span>}
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <Brain className="h-4 w-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Mock Tests</span>}
             </button>
             
             <button
@@ -1335,15 +1352,17 @@ export default function Dashboard() {
                 setActiveTab('subscription');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'subscription'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Subscription" : ""}
             >
-              <Package className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Subscription</span>}
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <Package className="h-4 w-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Subscription</span>}
             </button>
             
             <button
@@ -1351,15 +1370,17 @@ export default function Dashboard() {
                 setActiveTab('settings');
                 setIsMobileSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'settings'
-                  ? 'bg-brand-background text-white'
+                  ? 'bg-brand-auxiliary-1 text-brand-background'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               } ${isSidebarCollapsed ? 'justify-center' : ''}`}
               title={isSidebarCollapsed ? "Settings" : ""}
             >
-              <Settings className="h-5 w-5 shrink-0" />
-              {!isSidebarCollapsed && <span className="flex-1 text-left text-sm sm:text-base">Settings</span>}
+              <div className="relative p-1 bg-gradient-to-br from-blue-400 to-blue-300 rounded shrink-0">
+                <Settings className="h-4 w-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && <span className="flex-1 text-left">Settings</span>}
             </button>
           </nav>
             
@@ -1705,12 +1726,12 @@ export default function Dashboard() {
 
             {activeTab === 'applications' && (
               <div className="space-y-6">
-                <div className="mb-6">
+                {/* <div className="mb-6">
                   <h2 className="text-2xl font-bold mb-2">My Applications</h2>
                   <p className="text-gray-600">
                     Track and manage your job applications
                   </p>
-                </div>
+                </div> */}
                 <MyApplicationsList />
               </div>
             )}

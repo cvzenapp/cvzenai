@@ -3,6 +3,7 @@ import { z } from "zod";
 import jwt from "jsonwebtoken";
 import { initializeDatabase } from "../database/connection.js";
 import { groqService } from "../services/groqService.js";
+import { jsonrepair } from 'jsonrepair';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -135,16 +136,40 @@ Calculate the ATS match score and provide analysis.`;
     // Parse the JSON response
     let matchData;
     try {
-      const responseText = response.response || response;
-      matchData = JSON.parse(responseText.trim());
+      const responseText = typeof response === 'string' ? response : response.response;
+      // Strip markdown code blocks if present
+      const cleanedText = responseText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
+      
+      // Find JSON object boundaries
+      const firstBrace = cleanedText.indexOf('{');
+      const lastBrace = cleanedText.lastIndexOf('}');
+      
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const jsonText = cleanedText.substring(firstBrace, lastBrace + 1);
+        matchData = JSON.parse(jsonText);
+      } else {
+        throw new Error('No valid JSON object found in response');
+      }
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError);
-      // Fallback if JSON parsing fails
-      matchData = {
-        score: 75,
-        reasons: ["Analysis completed"],
-        missing: []
-      };
+      
+      // Try jsonrepair
+      try {
+        const responseText = typeof response === 'string' ? response : response.response;
+        const cleanedText = responseText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
+        const repairedJson = jsonrepair(cleanedText);
+        matchData = JSON.parse(repairedJson);
+        console.log('✅ JSON successfully repaired and parsed');
+      } catch (repairError) {
+        console.error('❌ JSON repair also failed:', repairError);
+        
+        // Fallback if JSON parsing fails
+        matchData = {
+          score: 75,
+          reasons: ["Analysis completed"],
+          missing: []
+        };
+      }
     }
 
     return res.json({

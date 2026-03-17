@@ -234,18 +234,20 @@ class ResumeStorageService {
       };
       const skillsJson = JSON.stringify(skillsData);
       
-      const experienceJson = JSON.stringify(
-        (parsedData.experience || []).map(exp => ({
-          company: exp.company,
-          position: exp.title, // Map title to position
-          location: exp.location || '',
-          startDate: exp.startDate,
-          endDate: exp.endDate,
-          current: exp.current || false,
-          description: exp.description || '',
-          achievements: exp.responsibilities || [] // Map responsibilities to achievements
-        }))
-      );
+      // This is not required since as it is raw json will store
+      // const experienceJson = JSON.stringify(
+      //   (parsedData.experience || []).map(exp => ({
+      //     company: exp.company,
+      //     position: exp.title || exp.position, // Map title to position
+      //     location: exp.location || '',
+      //     startDate: exp.startDate,
+      //     endDate: exp.endDate,
+      //     current: exp.current || false,
+      //     description: exp.description || '',
+      //     skills: exp.skills || '',
+      //     achievements: exp.responsibilities || [] // Map responsibilities to achievements
+      //   }))
+      // );
       
       const educationJson = JSON.stringify(
         (parsedData.education || []).map(edu => ({
@@ -260,23 +262,23 @@ class ResumeStorageService {
         }))
       );
       
-      const projectsJson = JSON.stringify(
-        (parsedData.projects || []).map(proj => ({
-          name: proj.name,
-          description: proj.description,
-          technologies: proj.technologies || [],
-          link: proj.link || '',
-          startDate: proj.startDate || '',
-          endDate: proj.endDate || ''
-        }))
-      );
+      // const projectsJson = JSON.stringify(
+      //   (parsedData.projects || []).map(proj => ({
+      //     name: proj.name,
+      //     description: proj.description,
+      //     technologies: proj.technologies || [],
+      //     link: proj.link || '',
+      //     startDate: proj.startDate || '',
+      //     endDate: proj.endDate || ''
+      //   }))
+      // );
       
       // Log what we're about to store
       console.log('💾 Data being stored:');
       console.log('  Processed Skills:', JSON.stringify(processedSkills, null, 2));
-      console.log('  Experience:', experienceJson.substring(0, 200));
+      // console.log('  Experience:', experienceJson.substring(0, 200));
       console.log('  Education:', educationJson.substring(0, 200));
-      console.log('  Projects:', projectsJson.substring(0, 200));
+      // console.log('  Projects:', projectsJson.substring(0, 200));
       
       // Insert resume into database (without ATS score initially)
       const result = await db.query(
@@ -290,10 +292,11 @@ class ResumeStorageService {
           experience, 
           education, 
           projects,
+          certifications,
           template_id,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
         RETURNING id`,
         [
           userId,
@@ -302,10 +305,11 @@ class ResumeStorageService {
           parsedData.summary || '',
           parsedData.objective || '',
           skillsJson,
-          experienceJson,
+          JSON.stringify(parsedData.experience),
           educationJson,
-          projectsJson,
-          'modern-professional' // Default template
+          JSON.stringify(parsedData.projects),
+          JSON.stringify(parsedData.certifications),
+          'modern-professional'
         ]
       );
       const resumeId = result.rows[0].id;

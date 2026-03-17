@@ -516,11 +516,13 @@ class AIService {
   }
 
   private extractSuggestions(text: string): string[] {
-    return this.extractSection(text, 'suggestions');
+    const suggestions = this.extractSection(text, 'suggestions');
+    return suggestions.slice(0, 4); // Limit to 4 suggestions
   }
 
   private extractActionItems(text: string): string[] {
-    return this.extractSection(text, 'action items');
+    const actionItems = this.extractSection(text, 'action items');
+    return actionItems.slice(0, 4); // Limit to 4 action items
   }
 
   // ===== NEW MEMORY INTEGRATION METHODS =====
@@ -1207,6 +1209,49 @@ class AIService {
       return jobs;
     } catch (error) {
       console.error('❌ Tavily job search failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stream job search results one by one with AI-based match scoring
+   */
+  async streamJobSearchWithScoring(
+    params: JobSearchParams,
+    resumeData: any,
+    onJob: (job: any) => void
+  ): Promise<void> {
+    try {
+      console.log('🔍 Streaming job search with AI scoring:', params);
+      console.log('📄 Resume data:', JSON.stringify(resumeData, null, 2));
+      
+      // Extract locations from resume experience only if no location filter is set
+      if (!params.location) {
+        const resumeLocations = resumeData?.experience?.map((exp: any) => exp.location).filter(Boolean) || [];
+        console.log('📍 Extracted locations from resume:', resumeLocations);
+        
+        if (resumeLocations.length > 0) {
+          params.location = resumeLocations[0]; // Use first location from resume
+          console.log('✅ Using location from resume:', params.location);
+        }
+      } else {
+        console.log('✅ Using filter location:', params.location);
+      }
+      
+      // If query is vague (like "more"), use resume data to build better query
+      if (!params.query || params.query.length < 5 || params.query === 'more') {
+        const skills = resumeData?.skills?.slice(0, 3).join(' ') || '';
+        const latestJob = resumeData?.experience?.[0]?.title || '';
+        params.query = latestJob || skills || 'software developer';
+        console.log('🔄 Using resume-based query:', params.query);
+      }
+      
+      // Stream jobs one by one with AI scoring
+      await tavilyService.streamJobsWithAIScoring(params, resumeData, onJob);
+      
+      console.log('✅ Job streaming completed');
+    } catch (error) {
+      console.error('❌ Streaming job search failed:', error);
       throw error;
     }
   }

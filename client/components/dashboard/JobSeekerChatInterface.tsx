@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -19,9 +19,9 @@ import {
 import { FileUploadResult } from '@/services/fileUploadService';
 import { aiChatApi, JobResult, ResumeAdvice, AIAnalysis } from '@/services/aiChatApi';
 import { aiChatStreamingService } from '@/services/aiChatStreamingService';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Send, 
-  Bot, 
   User, 
   Briefcase, 
   MapPin, 
@@ -29,7 +29,6 @@ import {
   Clock, 
   Building,
   FileText,
-  Sparkles,
   Search,
   TrendingUp,
   Loader2,
@@ -44,6 +43,7 @@ import {
   MessageSquare,
   History
 } from 'lucide-react';
+import zenAiPilotIcon from '../../assets/zenaipilot.png';
 
 interface Message {
   id: string;
@@ -63,11 +63,11 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { icon: Search, label: 'Find Jobs', query: 'Show me frontend developer jobs in San Francisco', type: 'job_search' },
-  { icon: FileText, label: 'CV Help', query: 'How can I improve my resume for tech jobs?', type: 'resume_analysis' },
+  { icon: Search, label: 'Find Jobs', query: 'Show me more jobs based on my skills and experience', type: 'job_search' },
+  { icon: FileText, label: 'CV Help', query: 'How can I improve my resume for better job matches?', type: 'resume_analysis' },
   { icon: Paperclip, label: 'Upload CV', query: '', type: 'file_upload' },
-  { icon: TrendingUp, label: 'Career Tips', query: 'What skills should I learn to advance my career?', type: 'career_advice' },
-  { icon: Briefcase, label: 'Interview', query: 'Give me tips for technical interviews', type: 'interview_prep' }
+  { icon: TrendingUp, label: 'Career Tips', query: 'What skills should I learn to advance my career based on my current profile?', type: 'career_advice' },
+  { icon: Briefcase, label: 'Interview', query: 'Give me tips for technical interviews in my field', type: 'interview_prep' }
 ];
 
 const EXAMPLE_PROMPTS = [
@@ -127,14 +127,15 @@ Can you provide a comprehensive job search plan?`
 ];
 
 export default function JobSeekerChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: "Hi! I'm your AI career assistant powered by advanced language models. I can help you find jobs, improve your resume, provide career advice, and prepare for interviews. You can also upload your resume for personalized analysis. What would you like to explore today?",
-      timestamp: new Date()
-    }
-  ]);
+  const { user } = useAuth();
+    // Debug user data
+  console.log('JobSeekerChatInterface - User data:', {
+    user,
+    avatar: user?.avatar,
+    profileImage: user?.profileImage,
+    name: user?.name
+  });
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<FileUploadResult | null>(null);
@@ -142,6 +143,10 @@ export default function JobSeekerChatInterface() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [hasMoreHistory, setHasMoreHistory] = useState(true);
   const [oldestMessageId, setOldestMessageId] = useState<number | null>(null);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [userSkills, setUserSkills] = useState<string[]>([]);
+  const [userLocation, setUserLocation] = useState<string>('');
+  const [hasLoadedInitialJobs, setHasLoadedInitialJobs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
@@ -156,19 +161,63 @@ export default function JobSeekerChatInterface() {
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(0);
 
+  // Scroll to bottom when jobs are loaded
   useEffect(() => {
-    scrollToBottom();
+    if (messagesContainerRef.current && messages.length > lastMessageCountRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      lastMessageCountRef.current = messages.length;
+    }
   }, [messages]);
 
-  // Load chat history on mount
+  // Initial scroll to bottom on mount
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    }
+  }, []);
+
+  // Load chat history on mount and fetch user data for automatic job search
   useEffect(() => {
     loadSessions();
     loadChatHistory();
-  }, []);
+    
+    // Only load jobs once on initial mount
+    if (!hasLoadedInitialJobs) {
+      loadUserDataAndJobs();
+    }
+  }, []); // Empty dependency array - only run once on mount
+
+  // Function to auto-submit job search on load
+  const loadUserDataAndJobs = async () => {
+    try {
+      setIsLoadingJobs(true);
+      setHasLoadedInitialJobs(true);
+      
+      console.log('🔍 Auto-submitting job search...');
+      
+      // Auto-submit the "Find Jobs" query using existing flow
+      await generateResponse('Show me more jobs based on my skills and experience', 'job_search');
+      
+    } catch (error) {
+      console.error('❌ Failed to auto-load jobs:', error);
+      // Fallback to default welcome message
+      setMessages([{
+        id: 'welcome-error',
+        type: 'assistant',
+        content: "Hi! I'm your AI career assistant. I can help you find jobs, improve your resume, provide career advice, and prepare for interviews. What would you like to explore today?",
+        timestamp: new Date()
+      }]);
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  };
 
   const loadSessions = async () => {
     try {
@@ -373,15 +422,20 @@ export default function JobSeekerChatInterface() {
         return [...prev, streamingMessage];
       });
       
+      // Include user context for better responses
+      const context = {
+        userProfile: {
+          skills: userSkills,
+          location: userLocation,
+          // Add more context as needed
+        }
+      };
+      
       aiChatStreamingService.streamChat(
         {
           message: userMessage,
           type: type,
-          context: {
-            userProfile: {
-              // Add user context if available
-            }
-          }
+          context: context
         },
         {
           onConnect: () => {
@@ -390,7 +444,6 @@ export default function JobSeekerChatInterface() {
           
           onTyping: (message) => {
             console.log('⌨️ AI is typing:', message);
-            // Update the streaming message to show typing indicator
             // IMPORTANT: Preserve jobResults when updating typing status
             setMessages(prev => prev.map(msg => 
               msg.id === streamingMessageId 
@@ -401,7 +454,6 @@ export default function JobSeekerChatInterface() {
           
           onChunk: (content) => {
             fullResponse += content;
-            // Update the streaming message with new content
             // IMPORTANT: Preserve jobResults when updating content
             setMessages(prev => prev.map(msg => 
               msg.id === streamingMessageId 
@@ -411,12 +463,12 @@ export default function JobSeekerChatInterface() {
           },
           
           onJobs: (jobs) => {
-            console.log('💼 JobSeekerChatInterface onJobs callback triggered!');
-            console.log('💼 Received job results:', {
-              count: jobs.length,
-              jobs: jobs,
-              streamingMessageId: streamingMessageId
-            });
+            // console.log('💼 JobSeekerChatInterface onJobs callback triggered!');
+            // console.log('💼 Received job results:', {
+            //   count: jobs.length,
+            //   jobs: jobs,
+            //   streamingMessageId: streamingMessageId
+            // });
             // Store job results in responseData
             responseData.jobResults = jobs;
             // Update the message with job results immediately
@@ -437,34 +489,46 @@ export default function JobSeekerChatInterface() {
             });
           },
           
+          onJob: (job) => {
+            // console.log('💼 JobSeekerChatInterface onJob callback - single job:', job);
+            // Add job to existing results
+            setMessages(prev => prev.map(msg => {
+              if (msg.id === streamingMessageId) {
+                const currentJobs = msg.jobResults || [];
+                return { ...msg, jobResults: [...currentJobs, job] };
+              }
+              return msg;
+            }));
+          },
+          
           onComplete: (data) => {
             console.log('✅ Stream completed:', data);
             responseData = { ...responseData, ...data };
             
-            // Update the final message with all data
-            const finalMessage: Message = {
+            // IMPORTANT: Preserve existing jobResults from streaming
+            setMessages(prev => prev.map(msg => {
+              if (msg.id === streamingMessageId) {
+                // Keep existing jobResults, don't overwrite
+                return {
+                  ...msg,
+                  content: fullResponse,
+                  suggestions: data.suggestions || msg.suggestions,
+                  actionItems: data.actionItems || msg.actionItems,
+                  analysis: data.analysis || msg.analysis
+                  // jobResults already set by onJob callbacks
+                };
+              }
+              return msg;
+            }));
+            
+            resolve({
               id: streamingMessageId,
               type: 'assistant',
               content: fullResponse,
               timestamp: new Date(),
-              jobResults: responseData.jobResults,
-              resumeAdvice: responseData.resumeAdvice,
-              analysis: responseData.analysis,
-              suggestions: responseData.suggestions,
-              actionItems: responseData.actionItems
-            };
-            
-            console.log('🏁 Final message:', {
-              id: finalMessage.id,
-              hasJobResults: !!finalMessage.jobResults,
-              jobCount: finalMessage.jobResults?.length
-            });
-            
-            setMessages(prev => prev.map(msg => 
-              msg.id === streamingMessageId ? finalMessage : msg
-            ));
-            
-            resolve(finalMessage);
+              suggestions: data.suggestions,
+              actionItems: data.actionItems
+            } as Message);
           },
           
           onError: (error) => {
@@ -625,11 +689,11 @@ export default function JobSeekerChatInterface() {
     console.log('🎴 Rendering JobCard:', { id: job.id, title: job.title, company: job.company });
     
     return (
-    <Card className="mb-2 sm:mb-3 hover:shadow-lg transition-all duration-200 border-l-4 border-l-brand-background">
+    <Card className="mb-2 sm:mb-3 border-l-4 border-l-brand-background">
       <CardHeader className="pb-2 p-3 sm:p-4">
         <div className="flex justify-between items-start gap-2 sm:gap-3">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm sm:text-base font-normal text-brand-main hover:text-brand-main/80 cursor-pointer mb-1 line-clamp-2">
+            <CardTitle className="text-sm sm:text-base font-normal text-brand-main mb-1 line-clamp-2">
               {job.url ? (
                 <a href={job.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                   {job.title}
@@ -693,7 +757,7 @@ export default function JobSeekerChatInterface() {
   );};
 
   const AIAnalysisCard = ({ analysis }: { analysis: AIAnalysis }) => (
-    <Card className="mb-3 sm:mb-4 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+    <Card className="mb-3 sm:mb-4 border-purple-200">
       <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
         <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
           <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
@@ -759,10 +823,12 @@ export default function JobSeekerChatInterface() {
     if (!suggestions?.length && !actionItems?.length) return null;
     
     return (
-      <Card className="mb-3 sm:mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+      <Card className="mb-3 sm:mb-4 border-blue-200">
         <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
           <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+            <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+              <img src={zenAiPilotIcon} alt="AI" className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow-lg relative z-10 brightness-110" />
+            </div>
             AI Recommendations
           </CardTitle>
         </CardHeader>
@@ -805,7 +871,9 @@ export default function JobSeekerChatInterface() {
     <Card className="mb-3 sm:mb-4">
       <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
         <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+          <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+            <img src={zenAiPilotIcon} alt="AI" className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow-lg relative z-10 brightness-110" />
+          </div>
           {advice.title}
         </CardTitle>
       </CardHeader>
@@ -845,82 +913,135 @@ export default function JobSeekerChatInterface() {
       {/* Chat Header with History Dropdown */}
       <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-white shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+              <img src={zenAiPilotIcon} alt="AI" className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow-lg relative z-10 brightness-110" />
+            </div>
+            <span className="font-semibold text-scanner text-sm sm:text-base">
+              AI Assistant
+            </span>
+          </div>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Button variant="outline" size="sm" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm border-brand-main text-brand-main hover:bg-brand-main hover:text-white transition-colors">
                 <History className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Chat History</span>
                 <span className="sm:hidden">History</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72 sm:w-80 max-h-80 sm:max-h-96">
-              <DropdownMenuLabel className="flex items-center justify-between">
-                <span className="text-sm">Recent Sessions</span>
+            <DropdownMenuContent align="start" className="w-80 sm:w-96 max-h-96">
+              <DropdownMenuLabel className="flex items-center justify-between px-4 py-3 border-b">
+                <span className="text-sm font-semibold text-brand-background">Recent Sessions</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleNewChat}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-brand-main hover:text-white rounded-full"
+                  title="New Chat"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-4 h-4" />
                 </Button>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <ScrollArea className="max-h-56 sm:max-h-64">
+              <ScrollArea className="max-h-80">
                 {isLoadingSessions ? (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="flex items-center justify-center p-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-brand-main" />
                     <span className="ml-2 text-sm text-gray-500">Loading sessions...</span>
                   </div>
                 ) : sessions.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
+                  <div className="p-6 text-center text-sm text-gray-500">
                     No chat sessions yet
                   </div>
                 ) : (
-                  sessions.map((session) => (
-                    <DropdownMenuItem
-                      key={session.id}
-                      className={`flex items-center justify-between p-3 cursor-pointer group ${
-                        session.isActive ? 'bg-brand-background/10' : ''
-                      }`}
-                      onClick={() => handleSwitchSession(session.id)}
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <MessageSquare className="w-3 h-3 text-gray-400 shrink-0" />
-                        <span className="text-sm font-medium truncate">
-                          {session.sessionName}
-                        </span>
-                        {session.isActive && (
-                          <Badge variant="secondary" className="text-xs">Active</Badge>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleDeleteSession(session.id, e)}
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                  <div className="py-2 px-2">
+                    {sessions.map((session) => (
+                      <DropdownMenuItem
+                        key={session.id}
+                        className={`flex items-center gap-3 px-3 py-3 my-1 rounded-md cursor-pointer group hover:bg-brand-auxiliary-1 transition-colors ${
+                          session.isActive ? 'bg-brand-auxiliary-1' : ''
+                        }`}
+                        onClick={() => handleSwitchSession(session.id)}
                       >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </DropdownMenuItem>
-                  ))
+                        <MessageSquare className="w-4 h-4 text-brand-main shrink-0" />
+                        <span className="text-sm font-medium text-gray-700 flex-1 pr-4" style={{ maxWidth: 'calc(100% - 120px)' }}>
+                          <span className="block truncate">{session.sessionName}</span>
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {session.isActive && (
+                            <Badge variant="secondary" className="text-xs bg-brand-main text-white">Active</Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleDeleteSession(session.id, e)}
+                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600 rounded-full transition-all"
+                            title="Delete session"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
                 )}
               </ScrollArea>
             </DropdownMenuContent>
           </DropdownMenu>
-          
-          <div className="flex items-center gap-1 sm:gap-2">
-            <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-brand-background" />
-            <span className="font-medium text-gray-900 text-sm sm:text-base">AI Assistant</span>
-          </div>
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Quick Actions - Desktop (inline) */}
+          <div className="hidden lg:flex items-center gap-2">
+            {QUICK_ACTIONS.map((action, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 h-8 px-3 text-xs border-brand-main text-brand-main hover:bg-brand-main hover:text-white transition-colors"
+                onClick={() => handleQuickAction(action.query, action.type)}
+              >
+                <action.icon className="w-3 h-3 shrink-0" />
+                <span>{action.label}</span>
+              </Button>
+            ))}
+          </div>
+          
+          {/* Quick Actions - Mobile (dropdown) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="lg:hidden flex items-center gap-1 text-xs border-brand-main text-brand-main hover:bg-brand-main hover:text-white transition-colors">
+                <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+                  <img src={zenAiPilotIcon} alt="AI" className="w-3 h-3 sm:w-4 sm:h-4 drop-shadow-lg relative z-10 brightness-110" />
+                </div>
+                <span className="text-scanner">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="px-4 py-2 text-sm font-semibold text-brand-background">
+                Quick Actions
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="py-1">
+                {QUICK_ACTIONS.map((action, index) => (
+                  <DropdownMenuItem
+                    key={index}
+                    className="flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-brand-auxiliary-1 transition-colors"
+                    onClick={() => handleQuickAction(action.query, action.type)}
+                  >
+                    <action.icon className="w-4 h-4 text-brand-main shrink-0" />
+                    <span className="text-sm font-medium text-gray-700">{action.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button
             variant="outline"
             size="sm"
             onClick={handleNewChat}
-            className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm bg-brand-main text-white hover:bg-brand-background border-brand-main transition-colors"
           >
             <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">New Chat</span>
@@ -932,45 +1053,30 @@ export default function JobSeekerChatInterface() {
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 min-w-0 relative overflow-hidden">
         
-    <div className="flex flex-col h-full max-w-6xl mx-auto w-full">
-      {/* Quick Actions */}
-      <div className="mb-3 sm:mb-4 px-2 sm:px-0 shrink-0">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-xs sm:text-sm font-medium text-gray-700">Quick Actions</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const randomPrompt = EXAMPLE_PROMPTS[Math.floor(Math.random() * EXAMPLE_PROMPTS.length)];
-              setInputValue(randomPrompt.prompt);
-              inputRef.current?.focus();
-            }}
-            className="text-xs text-blue-600 hover:text-blue-800 h-6 px-2"
-          >
-            Try Example
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          {QUICK_ACTIONS.map((action, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1 sm:gap-2 h-auto py-2 px-2 sm:px-3 text-xs"
-              onClick={() => handleQuickAction(action.query, action.type)}
-            >
-              <action.icon className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">{action.label}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
-
+    <div className="flex flex-col h-full w-full">
       {/* Chat Messages */}
-      <ScrollArea className="flex-1 border rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 bg-gradient-to-b from-white to-gray-50 min-h-0">
+      <div ref={messagesContainerRef} className="flex-1 border rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 bg-white min-h-0 overflow-y-auto max-h-[60vh]">
         <div className="space-y-3 sm:space-y-4 pb-4">
+          {/* Initial loading state for jobs */}
+          {isLoadingJobs && messages.length === 0 && (
+            <div className="flex gap-2 sm:gap-3 justify-start">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0 relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+                <img src={zenAiPilotIcon} alt="AI" className="w-full h-full object-contain drop-shadow-lg relative z-20 brightness-110" />
+              </div>
+              <div className="border border-gray-200 rounded-lg p-2 sm:p-3 max-w-[85%] sm:max-w-[80%]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin text-blue-600" />
+                  <span className="text-xs sm:text-sm text-gray-600">Analyzing your profile and finding relevant jobs...</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  This may take a few moments while I search through job listings.
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Load More Button */}
-          {hasMoreHistory && !isLoadingHistory && (
+          {hasMoreHistory && !isLoadingHistory && messages.length > 0 && (
             <div className="flex justify-center mb-4">
               <Button
                 variant="outline"
@@ -999,45 +1105,36 @@ export default function JobSeekerChatInterface() {
               className={`flex gap-2 sm:gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {message.type === 'assistant' && (
-                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0">
-                  <AvatarFallback className="bg-blue-100">
-                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                  </AvatarFallback>
-                </Avatar>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0 relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+                  <img src={zenAiPilotIcon} alt="AI" className="w-full h-full object-contain drop-shadow-lg relative z-20 brightness-110" />
+                </div>
               )}
               
               <div className={`${message.jobResults ? 'w-full' : 'max-w-[85%] sm:max-w-[80%]'} ${message.type === 'user' ? 'order-first' : ''}`}>
                 <div
                   className={`rounded-lg p-2 sm:p-3 ${
                     message.type === 'user'
-                      ? 'bg-blue-600 text-white ml-auto'
-                      : 'bg-gray-100 text-gray-900'
+                      ? 'border-l-4 border-l-brand-background border-gray-200 ml-auto'
+                      : 'text-gray-900'
                   }`}
                 >
-                  <div className="text-xs sm:text-sm leading-relaxed prose prose-sm max-w-none">
-                    {message.type === 'assistant' ? (
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => <p className="mb-1 sm:mb-2 last:mb-0 text-xs sm:text-sm">{children}</p>,
-                          ul: ({ children }) => <ul className="list-disc pl-4 sm:pl-5 mb-2 sm:mb-3 space-y-1">{children}</ul>,
-                          ol: ({ children }) => <ol className="list-decimal pl-4 sm:pl-5 mb-2 sm:mb-3 space-y-1">{children}</ol>,
-                          li: ({ children }) => <li className="text-xs sm:text-sm leading-relaxed">{children}</li>,
-                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                          em: ({ children }) => <em className="italic">{children}</em>,
-                          h1: ({ children }) => <h1 className="text-sm sm:text-lg font-bold mb-1 sm:mb-2 mt-2 sm:mt-4 first:mt-0">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-sm sm:text-base font-bold mb-1 sm:mb-2 mt-2 sm:mt-3 first:mt-0">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-xs sm:text-sm font-semibold mb-1 mt-1 sm:mt-2 first:mt-0">{children}</h3>,
-                          code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs">{children}</code>,
-                          pre: ({ children }) => <pre className="bg-gray-200 p-2 rounded text-xs overflow-x-auto mb-2">{children}</pre>,
-                          blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 pl-3 italic my-2">{children}</blockquote>,
-                        }}
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                    ) : (
-                      <div className="whitespace-pre-wrap text-xs sm:text-sm">{message.content}</div>
-                    )}
-                  </div>
+                  {/* Job Results - Show first for job search */}
+                  {message.jobResults && message.jobResults.length > 0 && (
+                    <div className="mb-2 sm:mb-3">
+                      <div className="space-y-2 w-full">
+                        {message.jobResults.map((job) => (
+                          <JobCard key={job.id} job={job} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Text content - Show after jobs */}
+                  {message.content && (
+                    <div className="text-xs sm:text-sm leading-relaxed prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-p:my-2 prose-p:text-gray-900 prose-ul:my-2 prose-ul:list-disc prose-ul:pl-4 prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-4 prose-li:my-1 prose-li:text-gray-900 prose-strong:text-gray-900 prose-strong:font-semibold">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  )}
                   
                   {/* Show attached file info */}
                   {message.attachedFile && (
@@ -1059,34 +1156,9 @@ export default function JobSeekerChatInterface() {
                 )}
                 
                 {/* AI Suggestions and Action Items */}
-                {(message.suggestions || message.actionItems) && (
+                {(message.suggestions || message.actionItems) && message.jobResults && message.jobResults.length > 0 && (
                   <div className="mt-2 sm:mt-3">
                     <SuggestionsCard suggestions={message.suggestions} actionItems={message.actionItems} />
-                  </div>
-                )}
-                
-                {/* Job Results */}
-                {message.jobResults && message.jobResults.length > 0 && (
-                  <div className="mt-2 sm:mt-3">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3 mb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                          <span className="font-semibold text-blue-900 text-xs sm:text-sm">
-                            Found {message.jobResults.length} Job{message.jobResults.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                          <span className="hidden sm:inline">Scroll to view all</span>
-                          <span className="sm:hidden">View all</span>
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="space-y-2 w-full">
-                      {message.jobResults.map((job) => (
-                        <JobCard key={job.id} job={job} />
-                      ))}
-                    </div>
                   </div>
                 )}
                 
@@ -1097,15 +1169,19 @@ export default function JobSeekerChatInterface() {
                   </div>
                 )}
                 
-                <div className="text-xs text-gray-500 mt-1">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
+                {message.type === 'assistant' && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
               </div>
               
               {message.type === 'user' && (
+                
                 <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0">
-                  <AvatarFallback className="bg-gray-200">
-                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
+                  <AvatarImage src={user?.avatar || user?.profileImage} alt={user?.name || 'User'} />
+                  <AvatarFallback className="bg-gray-200 text-gray-600 font-medium">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
               )}
@@ -1114,12 +1190,10 @@ export default function JobSeekerChatInterface() {
           
           {isLoading && (
             <div className="flex gap-2 sm:gap-3 justify-start">
-              <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1">
-                <AvatarFallback className="bg-blue-100">
-                  <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="bg-gray-100 rounded-lg p-2 sm:p-3">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0 relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+                <img src={zenAiPilotIcon} alt="AI" className="w-full h-full object-contain drop-shadow-lg relative z-20 brightness-110" />
+              </div>
+              <div className="border border-gray-200 rounded-lg p-2 sm:p-3">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin text-blue-600" />
                   <span className="text-xs sm:text-sm text-gray-600">Thinking...</span>
@@ -1130,7 +1204,7 @@ export default function JobSeekerChatInterface() {
           
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input Area */}
       <div className="border-t border-gray-200 bg-white p-2 sm:p-3 shadow-lg shrink-0">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Briefcase, Calendar, MapPin, Building2 } from 'lucide-react';
 import { Resume } from '@shared/api';
 import { formatDateRange } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
 import './ExperienceCarousel.css';
 
 interface ExperienceCarouselProps {
@@ -84,7 +85,23 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
           )}
           
           {exp.description && (
-            <p className="experience-description">{exp.description}</p>
+            <div className="experience-description">
+              <ReactMarkdown>{exp.description}</ReactMarkdown>
+            </div>
+          )}
+
+          {/* Skills Section */}
+          {exp.skills && exp.skills.length > 0 && (
+            <div className="experience-skills">
+              <h4 className="skills-title">Technologies & Skills</h4>
+              <div className="skills-tags">
+                {exp.skills.map((skill, skillIndex) => (
+                  <span key={skillIndex} className="skill-tag">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -175,7 +192,23 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
             )}
             
             {currentExp.description && (
-              <p className="experience-description">{currentExp.description}</p>
+              <div className="experience-description">
+                <ReactMarkdown>{currentExp.description}</ReactMarkdown>
+              </div>
+            )}
+
+            {/* Skills Section */}
+            {currentExp.skills && currentExp.skills.length > 0 && (
+              <div className="experience-skills">
+                <h4 className="skills-title">Technologies & Skills</h4>
+                <div className="skills-tags">
+                  {currentExp.skills.map((skill, skillIndex) => (
+                    <span key={skillIndex} className="skill-tag">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Next Arrow - Inside Card */}

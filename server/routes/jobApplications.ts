@@ -229,7 +229,7 @@ router.post('/', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response
   }
 });
 
-// GET /api/job-applications/my-applications - Get user's applications
+  // GET /api/job-applications/my-applications - Get user's applications
 router.get('/my-applications', unifiedAuth.requireAuth, async (req: AuthRequest, res: Response) => {
   const { initializeDatabase, closeDatabase } = await import('../database/connection.js');
   let db;
@@ -248,6 +248,7 @@ router.get('/my-applications', unifiedAuth.requireAuth, async (req: AuthRequest,
         jp.department,
         jp.salary_range,
         jp.experience_level,
+        jp.slug as job_slug,
         jp.created_at as job_posted_at
        FROM job_applications ja
        JOIN job_postings jp ON ja.job_id = jp.id

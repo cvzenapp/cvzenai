@@ -144,9 +144,49 @@ router.post("/add", async (req: Request, res: Response) => {
           ON CONFLICT (recruiter_id, user_id, resume_id) 
           DO UPDATE SET status = 'shortlisted', message = $4, updated_at = CURRENT_TIMESTAMP
           RETURNING id
-        `, [recruiterId, resumeOwnerId, resumeId, notes || 'Added to shortlist']);
+        `, [recruiterId, resumeOwnerId, parseInt(resumeId), notes || 'Added to shortlist']);
         
         console.log('✅ Added recruiter response for shortlist, ID:', insertResult.rows[0]?.id);
+        
+        // Send email notification to the candidate
+        try {
+          // Get candidate and recruiter details for email
+          const candidateResult = await db.query(`
+            SELECT u.email, u.first_name, u.last_name, r.title as resume_title
+            FROM users u
+            JOIN resumes r ON u.id = r.user_id
+            WHERE r.id = $1
+          `, [parseInt(resumeId)]);
+          
+          const recruiterResult = await db.query(`
+            SELECT u.first_name, u.last_name, u.email, rp.company_name
+            FROM users u
+            LEFT JOIN recruiter_profiles rp ON u.id = rp.user_id
+            WHERE u.id = $1
+          `, [recruiterId]);
+          
+          if (candidateResult.rows.length > 0 && recruiterResult.rows.length > 0) {
+            const candidate = candidateResult.rows[0];
+            const recruiter = recruiterResult.rows[0];
+            
+            const { emailService } = await import('../services/emailService.js');
+            
+            await emailService.sendShortlistedNotification({
+              candidateEmail: candidate.email,
+              candidateName: `${candidate.first_name} ${candidate.last_name}`.trim(),
+              recruiterName: `${recruiter.first_name} ${recruiter.last_name}`.trim(),
+              companyName: recruiter.company_name || 'Company',
+              resumeTitle: candidate.resume_title || 'Your Resume',
+              message: notes || 'You have been shortlisted for a position.',
+              dashboardUrl: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/dashboard`
+            });
+            
+            console.log('✅ Shortlist notification email sent to candidate');
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send shortlist notification email:', emailError);
+          // Don't fail the shortlist operation if email fails
+        }
         
         // Also update any existing job applications to "shortlisted" status
         // This prevents redundancy and keeps application status in sync

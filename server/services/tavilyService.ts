@@ -272,7 +272,7 @@ class TavilyService {
       const crawlResults = await this.crawlMultipleJobPostings(topUrls);
       
       // Combine search and crawl results
-      const enrichedJobs = searchResults.map((searchResult, index) => {
+      const enrichedJobs = await Promise.all(searchResults.map(async (searchResult, index) => {
         const crawlResult = crawlResults.find(c => c.url === searchResult.url);
         
         if (crawlResult) {
@@ -284,7 +284,7 @@ class TavilyService {
             location: parsedDetails.location || 'Not specified',
             salary: parsedDetails.salary,
             type: parsedDetails.type || 'Full-time',
-            description: parsedDetails.description || searchResult.content,
+            description: await this.cleanJobDescription(parsedDetails.description || searchResult.content),
             requirements: parsedDetails.requirements || [],
             url: searchResult.url,
             matchScore: Math.round(searchResult.score * 100),
@@ -300,20 +300,132 @@ class TavilyService {
           company: this.extractCompanyFromUrl(searchResult.url),
           location: 'Not specified',
           type: 'Full-time',
-          description: searchResult.content,
+          description: await this.cleanJobDescription(searchResult.content),
           requirements: [],
           url: searchResult.url,
           matchScore: Math.round(searchResult.score * 100),
           postedDate: searchResult.publishedDate || 'Recently',
           source: 'tavily'
         };
-      });
+      }));
       
       return enrichedJobs;
       
     } catch (error) {
       console.error("Search and crawl error:", error);
       throw error;
+    }
+  }
+
+  async calculateJobMatchScore(jobContent: string, resumeData: any): Promise<number> {
+    try {
+      const { groqService } = await import('./groqService.js');
+      
+      const resumeSkills = resumeData?.skills?.join(', ') || '';
+      const resumeExperience = resumeData?.experience?.map((e: any) => e.title).join(', ') || '';
+      
+      const prompt = `Rate job match 0-100 based on resume fit:
+
+Job: ${jobContent.substring(0, 300)}
+Resume Skills: ${resumeSkills}
+Resume Experience: ${resumeExperience}
+
+Return ONLY a number 0-100, nothing else.`;
+
+      const result = await groqService.generateResponse(
+        'You are a job matching system. Return only a number.',
+        prompt,
+        { temperature: 0.3, maxTokens: 10 }
+      );
+      
+      const score = parseInt(result.response.trim());
+      return isNaN(score) ? 50 : Math.min(100, Math.max(0, score));
+    } catch (error) {
+      console.error('Match score calculation failed:', error);
+      return 50;
+    }
+  }
+
+  /**
+   * Stream jobs one by one with AI-based match scoring
+   */
+  async streamJobsWithAIScoring(
+    params: JobSearchParams,
+    resumeData: any,
+    onJob: (job: any) => void
+  ): Promise<void> {
+    try {
+      console.log('🔍 Starting streaming job search');
+      
+      // Search for jobs
+      const searchResults = await this.searchJobs(params);
+      console.log(`📦 Found ${searchResults.length} job results`);
+      
+      // Process each job one by one
+      for (let i = 0; i < searchResults.length; i++) {
+        const searchResult = searchResults[i];
+        console.log(`🔄 Processing job ${i + 1}/${searchResults.length}: ${searchResult.title}`);
+        
+        try {
+          // Clean description
+          const cleanedDescription = await this.cleanJobDescription(searchResult.content);
+          
+          // Calculate AI match score
+          const matchScore = await this.calculateJobMatchScore(searchResult.content, resumeData);
+          console.log(`✅ Match score for "${searchResult.title}": ${matchScore}%`);
+          
+          // Create job object
+          const job = {
+            id: `job-${i}`,
+            title: searchResult.title,
+            company: this.extractCompanyFromUrl(searchResult.url),
+            location: params.location || 'Not specified',
+            type: 'Full-time',
+            description: cleanedDescription,
+            requirements: [],
+            url: searchResult.url,
+            matchScore: matchScore,
+            postedDate: searchResult.publishedDate || 'Recently',
+            source: 'tavily'
+          };
+          
+          // Stream this job immediately
+          onJob(job);
+          
+        } catch (jobError) {
+          console.error(`❌ Error processing job ${i + 1}:`, jobError);
+          // Continue with next job
+        }
+      }
+      
+      console.log('✅ Finished streaming all jobs');
+      
+    } catch (error) {
+      console.error('Streaming job search error:', error);
+      throw error;
+    }
+  }
+
+  private async cleanJobDescription(content: string): Promise<string> {
+    if (!content) return '';
+    
+    // Use Groq to semantically clean and format the description
+    try {
+      const { groqService } = await import('./groqService.js');
+      const formatted = await groqService.formatJobDescription(content);
+      return formatted;
+    } catch (error) {
+      console.error('Groq formatting failed, using regex cleanup:', error);
+      
+      // Fallback to regex cleanup
+      content = content.replace(/!\[Image \d+:.*?\]\(.*?\)/g, '');
+      content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+      content = content.replace(/https?:\/\/[^\s)]+/g, '');
+      content = content.replace(/={3,}/g, '');
+      content = content.replace(/\*{2,}/g, '');
+      content = content.replace(/blob:[^\s)]+/g, '');
+      content = content.replace(/\s+/g, ' ');
+      return content.trim().substring(0, 250);
     }
   }
 

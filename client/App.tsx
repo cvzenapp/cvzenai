@@ -22,6 +22,7 @@ import { InterviewJoinPage } from "./pages/InterviewJoinPage";
 import { MockTestSessionPage } from "./pages/MockTestSession";
 import { MockTestResultsPage } from "./pages/MockTestResults";
 import StreamingChatDemo from "./pages/StreamingChatDemo";
+import InterviewConfirmation from "./pages/InterviewConfirmation";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -48,6 +49,7 @@ import RecruiterRefundPolicy from "./pages/recruiter/RecruiterRefundPolicy";
 import RecruiterLanding from "./pages/recruiter/RecruiterLanding";
 import SetupPassword from "./pages/SetupPassword";
 import { JobSearch } from "./pages/JobSearch";
+import JobSeekerApplications from "./pages/JobSeekerApplications";
 import FakeJobDetectorPublic from "./pages/FakeJobDetectorPublic";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
@@ -74,6 +76,8 @@ const App = () => {
               <Route path="/builder" element={<ResumeBuilder />} />
               <Route path="/builder/*" element={<ResumeBuilder />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/applications" element={<JobSeekerApplications />} />
+              <Route path="/dashboard/interview/:interviewId/:action" element={<InterviewConfirmation />} />
               <Route path="/profile" element={<Dashboard />} />
               <Route path="/setup-password" element={<SetupPassword />} />
               <Route path="/job-search" element={<JobSearch />} />

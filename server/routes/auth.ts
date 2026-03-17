@@ -663,23 +663,17 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
       );
       
       // Parse resume with AI
-      parsedData = await resumeParsingService.parseResumeWithAI(resumeText);
+      parsedData = await resumeParsingService.parseResumeWithAI(resumeText, {
+        fullName: fullName,
+        email: email.toLowerCase(),
+        phone: req.body.phone,
+        location: req.body.location,
+        linkedin: req.body.linkedin,
+        github: req.body.github,
+        website: req.body.website
+      });
       
-      // Merge user-provided personal info with parsed data (user input takes precedence)
-      if (parsedData && parsedData.personalInfo) {
-        parsedData.personalInfo.fullName = fullName; // Use fullName from signup form
-        parsedData.personalInfo.email = email.toLowerCase(); // Use email from signup form
-        
-        // Extract additional info from form data if available
-        const { phone, location, linkedin, github, website } = req.body;
-        if (phone) parsedData.personalInfo.phone = phone;
-        if (location) parsedData.personalInfo.location = location;
-        if (linkedin) parsedData.personalInfo.linkedin = linkedin;
-        if (github) parsedData.personalInfo.github = github;
-        if (website) parsedData.personalInfo.website = website;
-      }
-      
-      console.log('✅ Personal info merged with user-provided data:', {
+      console.log('✅ Resume parsed with user-provided personal info:', {
         fullName: parsedData?.personalInfo?.fullName,
         email: parsedData?.personalInfo?.email,
         phone: parsedData?.personalInfo?.phone,

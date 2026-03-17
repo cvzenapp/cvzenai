@@ -1,7 +1,6 @@
 import mammoth from 'mammoth';
 import fs from 'fs/promises';
 import path from 'path';
-import { groqService } from './groqService.js';
 import { jsonrepair } from 'jsonrepair';
 import { resumeParser } from './dspy/resumeParser.js';
 import { skillsExtractor } from './dspy/skillsExtractor.js';
@@ -33,13 +32,17 @@ export interface ParsedResumeData {
   };
   experience: Array<{
     company: string;
-    position: string;
+    position?: string;
+    title?: string;
     location?: string;
     startDate: string;
     endDate: string;
     current: boolean;
     description: string;
-    achievements: string[];
+    skills?:string[];
+    responsibilities?:string[];
+    achievements?: string[];
+    others: string[];
   }>;
   education: Array<{
     institution: string;
@@ -222,8 +225,8 @@ class ResumeParsingService {
         'technologies', 'solutions', 'systems', 'services', 'consulting'
       ];
       
-      // Look for name in first 10 lines (increased from 5)
-      for (let i = 0; i < Math.min(10, lines.length); i++) {
+      // Look for name in first 15 lines (increased from 10)
+      for (let i = 0; i < Math.min(15, lines.length); i++) {
         const line = lines[i].trim();
         const lineLower = line.toLowerCase();
         
@@ -242,10 +245,15 @@ class ResumeParsingService {
           continue;
         }
         
+        // Skip very short or very long lines
+        if (line.length < 4 || line.length > 60) {
+          continue;
+        }
+        
         // Name heuristics: 2-4 words, each capitalized, reasonable length
         const words = line.split(/\s+/).filter(w => w.length > 0);
         
-        // Must be 2-4 words
+        // Must be 2-4 words for full name
         if (words.length < 2 || words.length > 4) {
           continue;
         }
@@ -258,21 +266,64 @@ class ResumeParsingService {
             return /^[A-Z]\.?$/.test(word);
           }
           // Regular name words: capital letter followed by lowercase
-          return /^[A-Z][a-z]+$/.test(word) && word.length >= 2 && word.length <= 20;
+          return /^[A-Z][a-z]+$/.test(word) && word.length >= 2 && word.length <= 25;
         });
         
-        // Additional checks: line should not be too long and should look like a proper name
-        if (isLikelyName && line.length <= 50 && line.length >= 4) {
+        // Additional validation: ensure it's not common non-name patterns
+        const hasCommonNonNameWords = words.some(word => {
+          const wordLower = word.toLowerCase();
+          return ['resume', 'cv', 'curriculum', 'vitae', 'profile', 'contact', 'information', 'personal', 'details'].includes(wordLower);
+        });
+        
+        if (isLikelyName && !hasCommonNonNameWords) {
           personalInfo.fullName = line;
-          console.log('✅ Name extracted locally:', line);
+          console.log('✅ Name extracted locally from resume text:', line);
           break;
         }
       }
     }
 
-    // FALLBACK: If name not found, try to extract from email
+    // ENHANCED FALLBACK: Try alternative name extraction patterns if still not found
+    if (!personalInfo.fullName) {
+      console.log('⚠️ Primary name extraction failed, trying alternative patterns...');
+      
+      // Try to find name patterns anywhere in the first 20 lines
+      const firstLines = resumeText.split('\n').slice(0, 20);
+      
+      for (const line of firstLines) {
+        const trimmedLine = line.trim();
+        
+        // Skip lines with email, phone, URLs, or numbers
+        if (emailRegex.test(trimmedLine) || phoneRegex.test(trimmedLine) || 
+            trimmedLine.includes('http') || trimmedLine.includes('@') || /\d/.test(trimmedLine)) {
+          continue;
+        }
+        
+        // Look for "Name:" or "Full Name:" patterns
+        const namePatternMatch = trimmedLine.match(/(?:name|full\s*name)\s*:?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]*\.?){1,3})/i);
+        if (namePatternMatch && namePatternMatch[1]) {
+          personalInfo.fullName = namePatternMatch[1].trim();
+          console.log('✅ Name extracted using pattern matching:', personalInfo.fullName);
+          break;
+        }
+        
+        // Look for standalone capitalized words that could be names (more flexible)
+        const flexibleNameMatch = trimmedLine.match(/^([A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]*\.?){0,2})$/);
+        if (flexibleNameMatch && flexibleNameMatch[1] && trimmedLine.length <= 50) {
+          const candidateName = flexibleNameMatch[1].trim();
+          // Additional validation - ensure it doesn't contain common non-name words
+          if (!/(resume|cv|profile|contact|objective|summary|experience|education|skills)/i.test(candidateName)) {
+            personalInfo.fullName = candidateName;
+            console.log('✅ Name extracted using flexible pattern:', personalInfo.fullName);
+            break;
+          }
+        }
+      }
+    }
+
+    // LAST RESORT: Extract from email only if absolutely no name found in resume
     if (!personalInfo.fullName && personalInfo.email) {
-      console.log('⚠️ Name not found in resume, attempting to extract from email...');
+      console.log('⚠️ No name found in resume text, using email as last resort...');
       const emailLocalPart = personalInfo.email.split('@')[0];
       
       // Remove common separators and numbers
@@ -288,10 +339,10 @@ class ResumeParsingService {
           .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
           .join(' ');
         
-        // Only use if it looks reasonable (2-50 chars, at least 2 words ideally)
-        if (capitalizedName.length >= 2 && capitalizedName.length <= 50) {
+        // Only use if it looks reasonable (4-50 chars, preferably 2+ words)
+        if (capitalizedName.length >= 4 && capitalizedName.length <= 50) {
           personalInfo.fullName = capitalizedName;
-          console.log('✅ Name extracted from email:', capitalizedName);
+          console.log('✅ Name extracted from email as fallback:', capitalizedName);
         }
       }
     }
@@ -415,15 +466,30 @@ class ResumeParsingService {
         mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       ) {
         // Extract from DOCX
-        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        const result = await mammoth.convertToHtml({ buffer: fileBuffer });
         
         // Clean up extracted text
-        let cleanText = result.value
-          .replace(/\r\n/g, '\n')
-          .replace(/\r/g, '\n')
-          .replace(/\n{3,}/g, '\n\n')
-          .replace(/\s{2,}/g, ' ')
-          .trim();
+        // let cleanText = result.value
+        //   .replace(/\r\n/g, '\n')
+        //   .replace(/\r/g, '\n')
+        //   .replace(/\n{3,}/g, '\n\n')
+        //   .replace(/\s{2,}/g, ' ')
+        //   .trim();
+        
+        const cleanText = result.value
+  .replace(/style="[^"]*"/gi, '')
+  .replace(/class="[^"]*"/gi, '')
+  .replace(/<span[^>]*>/gi, '')
+  .replace(/<\/span>/gi, '')
+  .replace(/<div[^>]*>/gi, '\n')
+  .replace(/<\/div>/gi, '')
+  .replace(/<p[^>]*>/gi, '\n')
+  .replace(/<\/p>/gi, '')
+  .replace(/<[^>]+>/g, match => 
+    /^<(h[1-6]|strong|li|ul|ol|\/h[1-6]|\/strong|\/li|\/ul|\/ol)/i.test(match) ? match : '')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim();
+
         
         console.log('✅ DOCX text extracted:', {
           originalLength: result.value.length,
@@ -459,8 +525,25 @@ class ResumeParsingService {
    * Parse resume text using Groq AI with DSPy-trained patterns (4.1M+ records)
    * PRIVACY-FIRST: Extracts personal info locally, redacts before sending to AI
    */
-  async parseResumeWithAI(resumeText: string): Promise<ParsedResumeData> {
+  async parseResumeWithAI(resumeText: string, userProvidedInfo?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    linkedin?: string;
+    github?: string;
+    website?: string;
+  }): Promise<ParsedResumeData> {
     console.log('🤖 Parsing resume with DSPy-trained parser (4.1M+ records)...');
+    
+    if (userProvidedInfo) {
+      console.log('👤 User-provided personal info will take precedence:', {
+        fullName: userProvidedInfo.fullName,
+        email: userProvidedInfo.email,
+        phone: userProvidedInfo.phone,
+        location: userProvidedInfo.location
+      });
+    }
     
     try {
       // Step 1: Extract personal info locally (no AI involved)
@@ -492,28 +575,20 @@ class ResumeParsingService {
       // Step 6: Convert to ParsedResumeData format and merge with local personal info
       const result: ParsedResumeData = {
         personalInfo: {
-          fullName: localPersonalInfo.fullName || parsedData.personalInfo?.name || '',
-          email: localPersonalInfo.email || parsedData.personalInfo?.email || '',
-          phone: localPersonalInfo.phone || parsedData.personalInfo?.phone || '',
-          location: parsedData.personalInfo?.location || '',
-          linkedin: localPersonalInfo.linkedin || parsedData.personalInfo?.linkedin || '',
-          github: localPersonalInfo.github || '',
-          website: localPersonalInfo.website || ''
+          // User-provided info takes highest precedence, then local extraction, then parsed data
+          fullName: userProvidedInfo?.fullName || localPersonalInfo.fullName || parsedData.personalInfo?.name || '',
+          email: userProvidedInfo?.email || localPersonalInfo.email || parsedData.personalInfo?.email || '',
+          phone: userProvidedInfo?.phone || localPersonalInfo.phone || parsedData.personalInfo?.phone || '',
+          location: userProvidedInfo?.location || parsedData.personalInfo?.location || '',
+          linkedin: userProvidedInfo?.linkedin || localPersonalInfo.linkedin || parsedData.personalInfo?.linkedin || '',
+          github: userProvidedInfo?.github || localPersonalInfo.github || '',
+          website: userProvidedInfo?.website || localPersonalInfo.website || ''
         },
         summary: parsedData.summary || '',
         objective: parsedData.objective || '',
         skills: processedSkills, // Use processed skills with core detection
         skillCategories: parsedData.skillCategories || {},
-        experience: (parsedData.experience || []).map(exp => ({
-          company: exp.company || '',
-          position: exp.title || '',
-          location: exp.location || '',
-          startDate: exp.startDate || '',
-          endDate: exp.endDate || '',
-          current: exp.endDate?.toLowerCase() === 'present',
-          description: exp.description || '',
-          achievements: exp.responsibilities || []
-        })),
+        experience: parsedData.experience || [],
         education: (parsedData.education || []).map(edu => ({
           institution: edu.institution || '',
           degree: edu.degree || '',
@@ -521,7 +596,7 @@ class ResumeParsingService {
           location: edu.location || '',
           startDate: edu.startDate || edu.year || '',
           endDate: edu.endDate || edu.year || '',
-          gpa: '',
+          gpa: edu.gpa || '',
           achievements: []
         })),
         projects: (parsedData.projects || []).map(proj => ({
@@ -651,6 +726,75 @@ class ResumeParsingService {
       valid: errors.length === 0,
       errors
     };
+  }
+
+  /**
+   * Server-side GitHub repository fetching
+   */
+  private async fetchGitHubRepositories(githubProfileUrl: string): Promise<any[]> {
+    try {
+      // Extract username from GitHub URL
+      const username = this.extractGitHubUsername(githubProfileUrl);
+      if (!username) {
+        console.warn('Invalid GitHub profile URL:', githubProfileUrl);
+        return [];
+      }
+
+      const apiUrl = `https://api.github.com/users/${username}/repos?sort=updated&per_page=10`;
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'CVZen-Resume-Builder',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`GitHub user not found: ${username}`);
+          return [];
+        }
+        if (response.status === 403) {
+          console.warn('GitHub API rate limit exceeded');
+          return [];
+        }
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return data
+        .filter((repo: any) => !repo.fork) // Exclude forked repositories
+        .slice(0, 10) // Limit to 10 repositories
+        .map((repo: any) => ({
+          name: repo.name,
+          description: repo.description || `${repo.name} - GitHub repository`,
+          technologies: repo.language ? [repo.language] : [],
+          link: repo.html_url,
+          stars: repo.stargazers_count,
+          isGitHubProject: true
+        }));
+    } catch (error) {
+      console.error('Error fetching GitHub repositories:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Extract GitHub username from profile URL
+   */
+  private extractGitHubUsername(url: string): string | null {
+    try {
+      const cleanUrl = url.replace(/\/$/, ''); // Remove trailing slash
+      const match = cleanUrl.match(/github\.com\/([^/]+)\/?$/);
+      if (match) {
+        return match[1];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error extracting GitHub username:', error);
+      return null;
+    }
   }
 
   /**
