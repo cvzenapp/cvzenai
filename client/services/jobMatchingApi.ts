@@ -1,10 +1,7 @@
 import { BaseApiClient } from './baseApiClient';
 
 export interface JobMatchingRequest {
-  jobId: string;
-  jobDescription: string;
-  jobTitle: string;
-  jobRequirements?: string[];
+  jobId: string; // Only jobId is required - job details are fetched from database
 }
 
 export interface JobMatchingResponse {
@@ -13,6 +10,14 @@ export interface JobMatchingResponse {
     score: number;
     reasons: string[];
     missing: string[];
+    jobDetails: {
+      title: string;
+      company: string;
+      location: string;
+      experienceLevel: string;
+      jobType: string;
+      salaryRange: string;
+    };
   };
   error?: string;
   message?: string;

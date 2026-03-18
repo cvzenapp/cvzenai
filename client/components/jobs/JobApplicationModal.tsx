@@ -91,14 +91,11 @@ export function JobApplicationModal({
   };
 
   const calculateOriginalScore = async () => {
-    if (!jobDescription) return;
+    if (!jobId) return;
     
     try {
       const response = await jobMatchingApi.calculateMatchScore({
-        jobId,
-        jobDescription,
-        jobTitle,
-        jobRequirements: []
+        jobId: jobId
       });
       
       if (response.success) {
@@ -121,38 +118,43 @@ export function JobApplicationModal({
     setError('');
 
     try {
-      const response = await resumeOptimizationApi.optimizeResume({
-        resumeId: selectedResumeId.toString(),
+      // Use streaming API for real-time progress
+      const { resumeOptimizationStreamService } = await import('../../services/resumeOptimizationStreamApi');
+      
+      await resumeOptimizationStreamService.optimizeResumeWithProgress(
+        selectedResumeId.toString(),
         jobTitle,
         jobDescription,
-        jobRequirements: [],
-        companyName: company
-      });
-
-      console.log('✅ Resume optimization response:', response);
-
-      if (response.success) {
-        console.log('✅ Setting resumeOptimized to true');
-        setResumeOptimized(true);
-        
-        // Calculate new score after optimization
-        const newScoreResponse = await jobMatchingApi.calculateMatchScore({
-          jobId,
-          jobDescription,
-          jobTitle,
-          jobRequirements: []
-        });
-        
-        console.log('✅ New score response:', newScoreResponse);
-        
-        if (newScoreResponse.success) {
-          console.log('✅ Setting optimized score to:', newScoreResponse.data.score);
-          setOptimizedScore(newScoreResponse.data.score);
+        [],
+        company,
+        (update) => {
+          // Handle progress updates
+          console.log('Optimization progress:', update);
+        },
+        (result) => {
+          // Handle completion
+          console.log('✅ Resume optimization completed:', result);
+          setResumeOptimized(true);
+          
+          // Calculate new score after optimization
+          jobMatchingApi.calculateMatchScore({
+            jobId: jobId
+          }).then(newScoreResponse => {
+            console.log('✅ New score response:', newScoreResponse);
+            if (newScoreResponse.success) {
+              console.log('✅ Setting optimized score to:', newScoreResponse.data.score);
+              setOptimizedScore(newScoreResponse.data.score);
+            }
+          }).catch(error => {
+            console.error('Failed to calculate new score:', error);
+          });
+        },
+        (error) => {
+          // Handle error
+          console.error('❌ Resume optimization failed:', error);
+          setError(error.message || 'Failed to optimize resume');
         }
-      } else {
-        console.error('❌ Resume optimization failed:', response);
-        setError('Failed to optimize resume');
-      }
+      );
     } catch (error: any) {
       console.error('Resume optimization error:', error);
       setError(error.message || 'Failed to optimize resume');
@@ -180,7 +182,7 @@ export function JobApplicationModal({
       if (response.success) {
         onSuccess();
       } else {
-        setError(response.error || 'Failed to submit application');
+        setError(typeof response.error === 'string' ? response.error : 'Failed to submit application');
       }
     } catch (error: any) {
       console.error('Application submission error:', error);

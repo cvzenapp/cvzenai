@@ -18,10 +18,7 @@ function verifyToken(token: string): any {
 
 // Validation schema for job matching
 const jobMatchingSchema = z.object({
-  jobId: z.string(),
-  jobDescription: z.string(),
-  jobTitle: z.string(),
-  jobRequirements: z.array(z.string()).optional(),
+  jobId: z.string(), // jobId is required to fetch job details from database
 });
 
 // POST /api/job-matching/calculate-score - Calculate ATS match score
@@ -47,8 +44,36 @@ router.post("/calculate-score", async (req: Request, res: Response) => {
   let db;
 
   try {
+    console.log('📝 Request body received:', JSON.stringify(req.body, null, 2));
+    console.log('📝 Request headers:', req.headers['content-type']);
+    
     const validatedData = jobMatchingSchema.parse(req.body);
     db = await initializeDatabase();
+
+    // Get job details from database using jobId
+    const jobQuery = `
+      SELECT 
+        title,
+        description,
+        requirements,
+        company,
+        location,
+        salary_range,
+        job_type,
+        experience_level
+      FROM job_postings 
+      WHERE id = $1 AND status = 'active'
+    `;
+    const jobResult = await db.query(jobQuery, [validatedData.jobId]);
+    
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found or inactive",
+      });
+    }
+
+    const jobData = jobResult.rows[0];
 
     // Get user's latest resume
     const resumeQuery = `
@@ -96,6 +121,18 @@ Projects: ${Array.isArray(resumeData.projects) ?
   resumeData.projects || ''}
     `.trim();
 
+    // Parse job requirements if it's a JSON string
+    let jobRequirements = [];
+    if (jobData.requirements) {
+      try {
+        jobRequirements = typeof jobData.requirements === 'string' ? 
+          JSON.parse(jobData.requirements) : jobData.requirements;
+      } catch (e) {
+        // If not JSON, treat as plain text and split by lines or commas
+        jobRequirements = jobData.requirements.split(/[,\n]/).map((req: string) => req.trim()).filter(Boolean);
+      }
+    }
+
     // Generate ATS score using Groq AI
     const systemPrompt = `You are an ATS (Applicant Tracking System) analyzer. Calculate a match score between a resume and job description.
 
@@ -114,12 +151,17 @@ Return ONLY a JSON object with this exact format:
 
 Score should be 0-100. Be realistic and fair in scoring.`;
 
-    const userPrompt = `Job Title: ${validatedData.jobTitle}
+    const userPrompt = `Job Title: ${jobData.title}
+Company: ${jobData.company_name}
+Location: ${jobData.location}
+Experience Level: ${jobData.experience_level}
+Job Type: ${jobData.job_type}
+Salary Range: ${jobData.salary_range}
 
 Job Description:
-${validatedData.jobDescription}
+${jobData.description}
 
-${validatedData.jobRequirements ? `Job Requirements: ${validatedData.jobRequirements.join(', ')}` : ''}
+${jobRequirements.length > 0 ? `Job Requirements: ${jobRequirements.join(', ')}` : ''}
 
 Resume:
 ${resumeText}
@@ -162,22 +204,27 @@ Calculate the ATS match score and provide analysis.`;
         console.log('✅ JSON successfully repaired and parsed');
       } catch (repairError) {
         console.error('❌ JSON repair also failed:', repairError);
-        
-        // Fallback if JSON parsing fails
-        matchData = {
-          score: 75,
-          reasons: ["Analysis completed"],
-          missing: []
-        };
+        return res.status(500).json({
+          success: false,
+          message: "Failed to parse AI response",
+        });
       }
     }
 
     return res.json({
       success: true,
       data: {
-        score: Math.min(100, Math.max(0, matchData.score || 75)),
+        score: Math.min(100, Math.max(0, matchData.score || 0)),
         reasons: matchData.reasons || [],
-        missing: matchData.missing || []
+        missing: matchData.missing || [],
+        jobDetails: {
+          title: jobData.title,
+          company: jobData.company_name,
+          location: jobData.location,
+          experienceLevel: jobData.experience_level,
+          jobType: jobData.job_type,
+          salaryRange: jobData.salary_range
+        }
       },
     });
 

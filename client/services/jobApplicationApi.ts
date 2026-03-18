@@ -1,29 +1,25 @@
-import { BaseApiClient } from './baseApiClient';
+import { BaseApiClient, ApiResponse } from './baseApiClient';
 import type { 
-  JobApplication, 
   CreateJobApplicationRequest, 
   JobApplicationResponse,
   UserResume 
 } from '@shared/jobApplication';
 
 class JobApplicationApi extends BaseApiClient {
-  async submitApplication(data: CreateJobApplicationRequest): Promise<JobApplicationResponse> {
+  async submitApplication(data: CreateJobApplicationRequest): Promise<ApiResponse<JobApplicationResponse>> {
     return this.post<JobApplicationResponse>('/job-applications', data);
   }
 
-  async getMyApplications(): Promise<{ success: boolean; data: any[] }> {
-    return this.get('/job-applications/my-applications');
+  async getMyApplications(): Promise<ApiResponse<any[]>> {
+    return this.get<any[]>('/job-applications/my-applications');
   }
 
-  async checkApplicationStatus(jobId: number): Promise<{ 
-    success: boolean; 
-    data: { hasApplied: boolean; application: any | null } 
-  }> {
-    return this.get(`/job-applications/check/${jobId}`);
+  async checkApplicationStatus(jobId: string): Promise<ApiResponse<{ hasApplied: boolean; application: any | null }>> {
+    return this.get<{ hasApplied: boolean; application: any | null }>(`/job-applications/check/${jobId}`);
   }
 
-  async getUserResumes(): Promise<{ success: boolean; data: UserResume[] }> {
-    return this.get('/resumes');
+  async getUserResumes(): Promise<ApiResponse<UserResume[]>> {
+    return this.get<UserResume[]>('/resumes');
   }
 }
 

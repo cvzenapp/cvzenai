@@ -322,8 +322,8 @@ export function createServer() {
   // - jobsRouter: handles /search endpoint (job discovery with filters)
   // - jobRecommendationsRouter: handles /recommendations, /analytics, /save, /applications
   // Both mount on /api/jobs but handle different endpoints (no conflicts)
-  app.use("/api/jobs", jobsRouter);
   app.use("/api/jobs", jobRecommendationsRouter);
+  app.use("/api/jobs", jobsRouter);
   
   // Job applications routes
   app.use("/api/job-applications", jobApplicationsRouter);

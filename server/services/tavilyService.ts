@@ -321,8 +321,8 @@ class TavilyService {
     try {
       const { groqService } = await import('./groqService.js');
       
-      const resumeSkills = resumeData?.skills?.join(', ') || '';
-      const resumeExperience = resumeData?.experience?.map((e: any) => e.title).join(', ') || '';
+      const resumeSkills = Array.isArray(resumeData?.skills) ? resumeData.skills.join(', ') : (resumeData?.skills || '');
+      const resumeExperience = Array.isArray(resumeData?.experience) ? resumeData.experience.map((e: any) => e.title).join(', ') : (resumeData?.experience || '');
       
       const prompt = `Rate job match 0-100 based on resume fit:
 

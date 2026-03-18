@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import { X, MapPin, DollarSign, Briefcase, Clock, Building, ChevronRight, Loader2 } from 'lucide-react';
 import { JobApplicationModal } from './JobApplicationModal';
+import { ResumeOptimizationModal } from './ResumeOptimizationModal';
 import { jobApplicationApi } from '../../services/jobApplicationApi';
 import { jobMatchingApi } from '../../services/jobMatchingApi';
 import { formatJobContent } from '../../lib/jobContentFormatter';
 
 interface JobDetailsPanelProps {
-  jobId: number;
+  jobId: string;
   onClose: () => void;
 }
 
 export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
@@ -20,6 +22,8 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
   const [matchReasons, setMatchReasons] = useState<string[]>([]);
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
   const [loadingMatchScore, setLoadingMatchScore] = useState(false);
+  const [optimizingResume, setOptimizingResume] = useState(false);
+  const [showOptimizationModal, setShowOptimizationModal] = useState(false);
 
   useEffect(() => {
     fetchJobDetails();
@@ -34,33 +38,15 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
 
   const fetchJobDetails = async () => {
     try {
-      // For now, create a mock job object since we don't have a job details API
-      // In a real app, you'd fetch from an API like: await jobApi.getJobById(jobId)
-      const mockJob = {
-        id: jobId,
-        title: 'Senior Backend Developer',
-        company: 'Bilva Media Tech',
-        location: 'Remote',
-        type: 'Full-time',
-        experienceLevel: 'Senior',
-        description: 'We are looking for a Senior Backend Developer to join our team...',
-        requirements: [
-          '5+ years of backend development experience',
-          'Strong knowledge of Node.js and TypeScript',
-          'Experience with databases (PostgreSQL, MongoDB)',
-          'Knowledge of cloud platforms (AWS, GCP)',
-          'Experience with microservices architecture'
-        ],
-        salaryRange: {
-          min: 80000,
-          max: 120000,
-          currency: '$'
-        },
-        applicationCount: 15
-      };
-      setJob(mockJob);
+      const response = await jobApplicationApi.get(`/jobs/${jobId}`);
+      if (response.success && response.data) {
+        setJob(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch job details');
+      }
     } catch (error) {
       console.error('Failed to fetch job details:', error);
+      setError('Failed to load job details');
     } finally {
       setLoading(false);
     }
@@ -68,12 +54,10 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
 
   const checkApplicationStatus = async () => {
     try {
-      // Temporarily disable API call to avoid errors
-      // const response = await jobApplicationApi.checkApplicationStatus(jobId);
-      // if (response.success) {
-      //   setHasApplied(response.data.hasApplied);
-      // }
-      setHasApplied(false); // Default to not applied
+      const response = await jobApplicationApi.checkApplicationStatus(jobId);
+      if (response.success) {
+        setHasApplied(response.data.hasApplied);
+      }
     } catch (error) {
       console.error('Failed to check application status:', error);
       setHasApplied(false);
@@ -83,33 +67,35 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
   };
 
   const calculateMatchScore = async () => {
+    if (!jobId) {
+      console.error('jobId is undefined in calculateMatchScore');
+      return;
+    }
+    
     setLoadingMatchScore(true);
     try {
-      // Temporarily disable API call to avoid errors
-      // const response = await jobMatchingApi.calculateMatchScore({
-      //   jobId: jobId,
-      //   jobDescription: job.description || '',
-      //   jobTitle: job.title,
-      //   jobRequirements: job.requirements || []
-      // });
+      const response = await jobMatchingApi.calculateMatchScore({
+        jobId: jobId
+      });
       
-      // Use fallback static data
-      setMatchScore(85);
-      setMatchReasons([
-        'Strong match for backend development skills',
-        'Experience with TypeScript and Node.js',
-        'Remote work preference aligns'
-      ]);
-      setMissingSkills(['Docker', 'Kubernetes']);
+      if (response.success) {
+        setMatchScore(response.data.score);
+        setMatchReasons(response.data.reasons || []);
+        setMissingSkills(response.data.missing || []);
+      } else {
+        console.error('Failed to get match score from API');
+        return;
+      }
     } catch (error) {
       console.error('Failed to calculate match score:', error);
-      // Fallback to static score if API fails
-      setMatchScore(75);
-      setMatchReasons(['Good technical fit']);
-      setMissingSkills([]);
+      return;
     } finally {
       setLoadingMatchScore(false);
     }
+  };
+
+  const optimizeResume = async () => {
+    setShowOptimizationModal(true);
   };
 
   // Function to get color based on score
@@ -135,7 +121,7 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
     );
   }
 
-  if (!job) {
+  if (!job || error) {
     return (
       <>
         <div 
@@ -144,7 +130,7 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
         />
         <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-gray-500">Job not found</p>
+            <p className="text-gray-500">{error || 'Job not found'}</p>
             <button onClick={onClose} className="mt-2 text-[#1891db] hover:underline">
               Close
             </button>
@@ -320,13 +306,25 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
               Application Submitted
             </div>
           ) : (
-            <button
-              onClick={() => setShowApplicationModal(true)}
-              disabled={checkingStatus}
-              className="w-full h-10 bg-brand-main text-white rounded-lg hover:bg-brand-background font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-            >
-              {checkingStatus ? 'Loading...' : 'Apply for this Position'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={optimizeResume}
+                disabled={checkingStatus}
+                className="flex-1 h-10 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Optimize CV
+              </button>
+              <button
+                onClick={() => setShowApplicationModal(true)}
+                disabled={checkingStatus}
+                className="flex-1 h-10 bg-brand-main text-white rounded-lg hover:bg-brand-background font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
+              >
+                {checkingStatus ? 'Loading...' : 'Apply for this Position'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -345,6 +343,21 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
           onSuccess={() => {
             setHasApplied(true);
             setShowApplicationModal(false);
+          }}
+        />
+      )}
+
+      {/* Resume Optimization Modal */}
+      {showOptimizationModal && (
+        <ResumeOptimizationModal
+          jobId={job.id}
+          jobTitle={job.title}
+          jobDescription={job.description}
+          company={job.company}
+          onClose={() => {
+            setShowOptimizationModal(false);
+            // Recalculate match score after closing optimization modal
+            calculateMatchScore();
           }}
         />
       )}

@@ -210,6 +210,7 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
   const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
     queryKey: ['job-recommendations', userId],
     queryFn: async () => {
+      console.log('🔍 Fetching recruiter jobs for activeTab:', activeTab);
       const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/jobs/recommendations?limit=20`, {
         headers: {
@@ -233,7 +234,7 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
       console.log('✅ JobMatchingDashboard - Returning data:', responseData);
       return responseData;
     },
-    enabled: true,
+    enabled: activeTab === 'search',
     retry: false,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -715,7 +716,7 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
 
       {selectedJob && (
         <JobDetailsPanel
-          job={selectedJob}
+          jobId={selectedJob.id}
           onClose={() => setSelectedJob(null)}
         />
       )}

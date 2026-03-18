@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { initializeDatabase } from "../database/connection.js";
 import { atsImprover } from "../services/dspy/atsImprover.js";
 import { atsScorer } from "../services/dspy/atsScorer.js";
-import { groqService } from "../services/groqService.js";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -24,9 +23,10 @@ const resumeOptimizationSchema = z.object({
   jobDescription: z.string(),
   jobRequirements: z.array(z.string()).optional(),
   companyName: z.string(),
+  sectionName: z.string().optional(), // Optional: specific section to optimize
 });
 
-// POST /api/resume-optimization/optimize - Optimize resume for specific job
+// POST /api/resume-optimization/optimize - Optimize resume with real-time progress and incremental database updates
 router.post("/optimize", async (req: Request, res: Response) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
 
@@ -52,6 +52,18 @@ router.post("/optimize", async (req: Request, res: Response) => {
     const validatedData = resumeOptimizationSchema.parse(req.body);
     db = await initializeDatabase();
 
+    // Set up Server-Sent Events
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Connected to optimization stream' })}\n\n`);
+
     // Get current resume data
     const resumeQuery = `
       SELECT *
@@ -61,10 +73,9 @@ router.post("/optimize", async (req: Request, res: Response) => {
     const resumeResult = await db.query(resumeQuery, [validatedData.resumeId, userId]);
     
     if (resumeResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Resume not found",
-      });
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Resume not found' })}\n\n`);
+      res.end();
+      return;
     }
 
     const currentResume = resumeResult.rows[0];
@@ -89,68 +100,82 @@ router.post("/optimize", async (req: Request, res: Response) => {
       languages: currentResume.languages || []
     };
 
-    console.log('📊 Current resume data structure:', {
-      skillsCount: Array.isArray(resumeData.skills) ? resumeData.skills.length : 'not array',
-      experienceCount: Array.isArray(resumeData.experience) ? resumeData.experience.length : 'not array',
-      projectsCount: Array.isArray(resumeData.projects) ? resumeData.projects.length : 'not array'
-    });
+    // Send progress update
+    res.write(`data: ${JSON.stringify({ type: 'progress', message: 'Calculating current ATS score...', stage: 'scoring' })}\n\n`);
 
     // Calculate current ATS score
-    console.log('🔍 About to calculate ATS score...');
     const currentATSScore = await atsScorer.calculateScore(resumeData);
-    console.log('📈 Current ATS Score:', currentATSScore.overallScore);
+    
+    // Send score calculated update
+    res.write(`data: ${JSON.stringify({ 
+      type: 'score_calculated', 
+      message: `Current ATS score: ${currentATSScore.overallScore}/100`,
+      currentScore: currentATSScore.overallScore,
+      stage: 'score_calculated'
+    })}\n\n`);
 
-    // Use atsImprover for optimization with data preservation
-    console.log('🔍 About to improve resume...');
-    const improvementResult = await atsImprover.improveResume(resumeData, currentATSScore);
+    // Progress callback function
+    const progressCallback = (update: any) => {
+      res.write(`data: ${JSON.stringify(update)}\n\n`);
+    };
+
+    // Database update callback function for incremental updates
+    const updateCallback = async (sectionName: string, sectionData: any) => {
+      const sectionUpdateQuery = `
+        UPDATE resumes SET
+          ${sectionName} = $1,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND user_id = $3
+      `;
+      
+      const sectionValue = typeof sectionData === 'object' ? JSON.stringify(sectionData) : sectionData;
+      await db.query(sectionUpdateQuery, [sectionValue, validatedData.resumeId, userId]);
+    };
+
+    // Check if specific section optimization is requested
+    let improvementResult;
+    if (validatedData.sectionName) {
+      // Single section optimization
+      console.log(`🎯 Optimizing single section: ${validatedData.sectionName}`);
+      
+      // Send progress update for single section
+      res.write(`data: ${JSON.stringify({ 
+        type: 'progress', 
+        message: `Optimizing ${validatedData.sectionName} section...`,
+        stage: 'single_section',
+        sectionName: validatedData.sectionName
+      })}\n\n`);
+
+      improvementResult = await atsImprover.improveSingleSectionPublic(
+        validatedData.sectionName,
+        resumeData,
+        currentATSScore,
+        progressCallback,
+        updateCallback
+      );
+    } else {
+      // Full resume optimization (all sections)
+      improvementResult = await atsImprover.improveSectionBySection(
+        resumeData, 
+        currentATSScore, 
+        progressCallback,
+        updateCallback
+      );
+    }
     const optimizedResumeData = improvementResult.improvedData;
 
-    console.log('✅ Resume optimization completed:', {
-      originalSkillsCount: Array.isArray(resumeData.skills) ? resumeData.skills.length : 'not array',
-      optimizedSkillsCount: Array.isArray(optimizedResumeData.skills) ? optimizedResumeData.skills.length : 'not array',
-      originalExperienceCount: Array.isArray(resumeData.experience) ? resumeData.experience.length : 'not array',
-      optimizedExperienceCount: Array.isArray(optimizedResumeData.experience) ? optimizedResumeData.experience.length : 'not array',
-      originalProjectsCount: Array.isArray(resumeData.projects) ? resumeData.projects.length : 'not array',
-      optimizedProjectsCount: Array.isArray(optimizedResumeData.projects) ? optimizedResumeData.projects.length : 'not array',
-      estimatedNewScore: improvementResult.estimatedNewScore
-    });
-
-    // Update the resume in database with preserved data structure
-    console.log('🔍 About to update database...');
-    const updateQuery = `
-      UPDATE resumes SET
-        personal_info = $1,
-        summary = $2,
-        objective = $3,
-        skills = $4,
-        experience = $5,
-        education = $6,
-        projects = $7,
-        certifications = $8,
-        languages = $9,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10 AND user_id = $11
-      RETURNING *
+    // Get final updated resume from database (since sections were updated incrementally)
+    const finalResumeQuery = `
+      SELECT *
+      FROM resumes 
+      WHERE id = $1 AND user_id = $2
     `;
+    const finalResumeResult = await db.query(finalResumeQuery, [validatedData.resumeId, userId]);
+    const updatedResume = finalResumeResult.rows[0];
 
-    const updateValues = [
-      JSON.stringify(optimizedResumeData.personalInfo || currentResume.personal_info),
-      optimizedResumeData.summary || currentResume.summary,
-      optimizedResumeData.objective || currentResume.objective,
-      JSON.stringify(optimizedResumeData.skills || currentResume.skills),
-      JSON.stringify(optimizedResumeData.experience || currentResume.experience),
-      JSON.stringify(optimizedResumeData.education || currentResume.education),
-      JSON.stringify(optimizedResumeData.projects || currentResume.projects),
-      JSON.stringify(optimizedResumeData.certifications || currentResume.certifications),
-      JSON.stringify(optimizedResumeData.languages || currentResume.languages),
-      validatedData.resumeId,
-      userId
-    ];
-
-    const updateResult = await db.query(updateQuery, updateValues);
-    const updatedResume = updateResult.rows[0];
-
-    return res.json({
+    // Send final result
+    res.write(`data: ${JSON.stringify({
+      type: 'final_result',
       success: true,
       data: {
         optimizedResume: {
@@ -171,31 +196,21 @@ router.post("/optimize", async (req: Request, res: Response) => {
         changesApplied: improvementResult.changesApplied,
         estimatedNewScore: improvementResult.estimatedNewScore,
         message: "Resume optimized successfully with data preservation"
-      },
-    });
+      }
+    })}\n\n`);
+
+    res.end();
 
   } catch (error) {
     console.error("❌ Resume optimization error:", error);
-
-    if (error instanceof z.ZodError) {
-      const errors: Record<string, string> = {};
-      error.errors.forEach((err) => {
-        if (err.path.length > 0) {
-          errors[err.path.join('.')] = err.message;
-        }
-      });
-
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors,
-      });
-    }
-
-    return res.status(500).json({
+    
+    res.write(`data: ${JSON.stringify({
+      type: 'error',
       success: false,
-      message: "Failed to optimize resume",
-    });
+      message: error.message || "Failed to optimize resume"
+    })}\n\n`);
+    
+    res.end();
   }
 });
 
