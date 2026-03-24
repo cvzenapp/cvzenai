@@ -36,7 +36,8 @@ export function SkillsEditModal({
     name: "",
     level: 70,
     category: "Technical Skills",
-    isCore: false
+    isCore: false,
+    yearsOfExperience: 0
   });
 
   const categories = [
@@ -59,7 +60,8 @@ export function SkillsEditModal({
       name: skill.name,
       level: skill.level || 70,
       category: skill.category || "Technical Skills",
-      isCore: skill.isCore || false
+      isCore: skill.isCore || false,
+      yearsOfExperience: skill.yearsOfExperience || 0
     });
     setIsAddingNew(false);
   };
@@ -71,37 +73,44 @@ export function SkillsEditModal({
       name: "",
       level: 70,
       category: "Technical Skills",
-      isCore: false
+      isCore: false,
+      yearsOfExperience: 0
     });
   };
 
   const handleSaveSkill = () => {
+    if (!formData.name.trim()) return;
+    
     const skillData: Skill = {
       id: isAddingNew ? `skill-${Date.now()}` : skills[selectedSkillIndex!].id,
       name: formData.name,
       level: formData.level,
       category: formData.category,
       proficiency: formData.level,
-      isCore: formData.isCore
+      isCore: formData.isCore,
+      yearsOfExperience: formData.yearsOfExperience
     };
 
+    let updatedSkills;
     if (isAddingNew) {
-      setSkills([...skills, skillData]);
+      updatedSkills = [...skills, skillData];
+      setIsAddingNew(false);
+      setSelectedSkillIndex(null);
+      setFormData({
+        name: "",
+        level: 70,
+        category: "Technical Skills",
+        isCore: false,
+        yearsOfExperience: 0
+      });
     } else if (selectedSkillIndex !== null) {
-      const updatedSkills = [...skills];
+      updatedSkills = [...skills];
       updatedSkills[selectedSkillIndex] = skillData;
+    }
+    
+    if (updatedSkills) {
       setSkills(updatedSkills);
     }
-
-    // Reset form
-    setIsAddingNew(false);
-    setSelectedSkillIndex(null);
-    setFormData({
-      name: "",
-      level: 70,
-      category: "Technical Skills",
-      isCore: false
-    });
   };
 
   const handleRemoveSkill = (index: number) => {
@@ -211,7 +220,7 @@ export function SkillsEditModal({
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {skill.category} • {skill.level}%
+                        {skill.category} • {skill.level}% • {skill.yearsOfExperience || 0} years
                       </div>
                     </div>
                     <Button
@@ -251,7 +260,10 @@ export function SkillsEditModal({
                   <Input
                     id="skillName"
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    onChange={(e) => {
+                      setFormData({...formData, name: e.target.value});
+                      if (selectedSkillIndex !== null) handleSaveSkill();
+                    }}
                     placeholder="Enter skill name"
                   />
                 </div>
@@ -260,7 +272,10 @@ export function SkillsEditModal({
                   <Label htmlFor="category">Category</Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(value) => setFormData({...formData, category: value})}
+                    onValueChange={(value) => {
+                      setFormData({...formData, category: value});
+                      if (selectedSkillIndex !== null) handleSaveSkill();
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -285,7 +300,10 @@ export function SkillsEditModal({
                     max={100}
                     step={5}
                     value={[formData.level]}
-                    onValueChange={(value) => setFormData({...formData, level: value[0]})}
+                    onValueChange={(value) => {
+                      setFormData({...formData, level: value[0]});
+                      if (selectedSkillIndex !== null) handleSaveSkill();
+                    }}
                     className="w-full"
                   />
                   <div className="flex justify-between text-xs text-gray-500">
@@ -296,25 +314,63 @@ export function SkillsEditModal({
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                  <Input
+                    id="yearsOfExperience"
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={formData.yearsOfExperience}
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value) || 0;
+                      const updatedFormData = {...formData, yearsOfExperience: newValue};
+                      setFormData(updatedFormData);
+                      
+                      if (selectedSkillIndex !== null) {
+                        const skillData: Skill = {
+                          id: skills[selectedSkillIndex].id,
+                          name: updatedFormData.name,
+                          level: updatedFormData.level,
+                          category: updatedFormData.category,
+                          proficiency: updatedFormData.level,
+                          isCore: updatedFormData.isCore,
+                          yearsOfExperience: updatedFormData.yearsOfExperience
+                        };
+                        
+                        const updatedSkills = [...skills];
+                        updatedSkills[selectedSkillIndex] = skillData;
+                        setSkills(updatedSkills);
+                      }
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="isCore"
                     checked={formData.isCore}
-                    onCheckedChange={(checked) => setFormData({...formData, isCore: !!checked})}
+                    onCheckedChange={(checked) => {
+                      setFormData({...formData, isCore: !!checked});
+                      if (selectedSkillIndex !== null) handleSaveSkill();
+                    }}
                   />
                   <Label htmlFor="isCore" className="text-sm">
                     Mark as core skill (will be highlighted)
                   </Label>
                 </div>
 
-                <Button
-                  onClick={handleSaveSkill}
-                  disabled={!canSaveSkill}
-                  className="w-full"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isAddingNew ? 'Add Skill' : 'Update Skill'}
-                </Button>
+                {isAddingNew && (
+                  <Button
+                    onClick={handleSaveSkill}
+                    disabled={!formData.name.trim()}
+                    className="w-full"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Add Skill
+                  </Button>
+                )}
               </div>
             )}
 

@@ -1,0 +1,29 @@
+        } else if (sectionName.startsWith('projects-')) {
+          const projectIndex = parseInt(sectionName.split('-')[1]);
+          const projects = resumeData.projects || [];
+          
+          if (projectIndex >= 0 && projectIndex < projects.length) {
+            const project = projects[projectIndex];
+            const projectOptimizer = new ProjectOptimizer(abstractedAiService);
+            const projectResult = await projectOptimizer.improveProjectItem(project, currentATSScore, resumeData);
+            
+            if (projectResult.improved) {
+              improvedData.projects[projectIndex] = projectResult.data;
+              improvements.push(...projectResult.improvements);
+              changesApplied.push(`Improved project: ${project.name || project.title}`);
+              
+              if (updateCallback) {
+                await updateCallback('projects', improvedData.projects);
+              }
+              
+              if (progressCallback) {
+                progressCallback({
+                  type: 'section_completed',
+                  stage: 'single_project_completed',
+                  message: `Project "${project.name || project.title}" optimized and saved`,
+                  sectionName: sectionName,
+                  improvements: projectResult.improvements
+                });
+              }
+            }
+          }

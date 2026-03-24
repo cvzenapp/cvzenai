@@ -3,6 +3,7 @@ import { SubscriptionService } from '../services/subscriptionService';
 import { requireAuth } from '../middleware/unifiedAuth';
 import { requireSubscription, requirePlan, checkUsageLimit, requireFeature } from '../middleware/subscriptionMiddleware';
 import { getDatabase } from '../database/connection';
+import { PaymentService } from '../services/payment/PaymentService';
 
 const router = Router();
 
@@ -248,8 +249,15 @@ router.post('/company', async (req: Request, res: Response) => {
     
     const db = await getDatabase();
     
-    // Get plan details
-    const planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    // Get plan details - check if planId is UUID or plan name
+    let planResult;
+    if (planId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      // It's a UUID
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    } else {
+      // It's a plan name
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE name = $1', [planId]);
+    }
     if (!planResult.rows[0]) {
       return res.status(404).json({
         success: false,
@@ -264,7 +272,6 @@ router.post('/company', async (req: Request, res: Response) => {
     
     // If paid plan, initiate payment
     if (amount > 0) {
-      const { PaymentService } = require('../services/payment/PaymentService');
       
       const paymentRequest = {
         planId: plan.id,
@@ -444,8 +451,15 @@ router.post('/user', async (req: Request, res: Response) => {
     
     const db = await getDatabase();
     
-    // Get plan details
-    const planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    // Get plan details - check if planId is UUID or plan name
+    let planResult;
+    if (planId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      // It's a UUID
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    } else {
+      // It's a plan name
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE name = $1', [planId]);
+    }
     if (!planResult.rows[0]) {
       return res.status(404).json({
         success: false,
@@ -460,7 +474,6 @@ router.post('/user', async (req: Request, res: Response) => {
     
     // If paid plan, initiate payment
     if (amount > 0) {
-      const { PaymentService } = require('../services/payment/PaymentService');
       
       const paymentRequest = {
         planId: plan.id,

@@ -691,7 +691,7 @@ router.post("/quick-signup", async (req: Request, res: Response) => {
         // Generate shareToken automatically using slug
         const { getDatabase } = await import('../database/connection.js');
         const db = await getDatabase();
-        const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || fullName || 'resume';
+        const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || 'resume';
         
         // Generate unique slug for shareToken using proper slug generator
         const { generateUniqueSlug } = await import('../lib/slugGenerator.js');

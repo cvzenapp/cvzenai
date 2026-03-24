@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Brain, 
   Clock, 
@@ -11,11 +10,12 @@ import {
   Play,
   RotateCcw,
   Calendar,
-  User,
   Building
 } from 'lucide-react';
 import { mockTestApi, MockTestLevel, ExistingTest } from '../../services/mockTestApi';
 import { interviewApi } from '../../services/interviewApi';
+import { MockTestSession } from '../mocktest/MockTestSession';
+import { MockTestResults } from '../mocktest/MockTestResults';
 
 interface Interview {
   id: number;
@@ -29,7 +29,8 @@ interface Interview {
 }
 
 export const MockTestDashboard: React.FC = () => {
-  const navigate = useNavigate();
+  const [currentView, setCurrentView] = useState<'dashboard' | 'session' | 'results'>('dashboard');
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
@@ -104,8 +105,9 @@ export const MockTestDashboard: React.FC = () => {
       const response = await mockTestApi.generateTest(selectedInterview.id, testLevel);
       
       if (response.success) {
-        // Navigate to the test session
-        navigate(`/mock-test/session/${response.session.id}`);
+        // Navigate to the test session within the dashboard
+        setCurrentSessionId(response.session.id);
+        setCurrentView('session');
       } else {
         setError('Failed to generate mock test');
       }
@@ -118,11 +120,33 @@ export const MockTestDashboard: React.FC = () => {
   };
 
   const continueMockTest = (testId: number) => {
-    navigate(`/mock-test/session/${testId}`);
+    setCurrentSessionId(testId);
+    setCurrentView('session');
   };
 
   const viewResults = (testId: number) => {
-    navigate(`/mock-test/results/${testId}`);
+    setCurrentSessionId(testId);
+    setCurrentView('results');
+  };
+
+  const handleTestComplete = (sessionId: number) => {
+    setCurrentSessionId(sessionId);
+    setCurrentView('results');
+    // Reload test levels to update progress
+    loadTestLevels();
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    setCurrentSessionId(null);
+    // Reload test levels to update progress
+    if (selectedInterview) {
+      loadTestLevels();
+    }
+  };
+
+  const handleRetakeTest = (testLevel: string) => {
+    generateMockTest(testLevel);
   };
 
   const getLevelIcon = (level: string) => {
@@ -180,15 +204,32 @@ export const MockTestDashboard: React.FC = () => {
         <p className="text-slate-600 font-jakarta mb-4">
           You need to have accepted interviews to access mock tests.
         </p>
-        <button
-          onClick={() => navigate('/interviews')}
-          className="bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors"
-        >
-          View Interviews
-        </button>
       </div>
     );
   }
+
+  // Render different views based on current state
+  if (currentView === 'session' && currentSessionId) {
+    return (
+      <MockTestSession
+        sessionId={currentSessionId}
+        onComplete={handleTestComplete}
+        onBack={handleBackToDashboard}
+      />
+    );
+  }
+
+  if (currentView === 'results' && currentSessionId) {
+    return (
+      <MockTestResults
+        sessionId={currentSessionId}
+        onBack={handleBackToDashboard}
+        onRetake={handleRetakeTest}
+      />
+    );
+  }
+
+  // Default dashboard view
 
   return (
     <div className="space-y-6">
@@ -272,65 +313,6 @@ export const MockTestDashboard: React.FC = () => {
       {/* Test Levels */}
       {selectedInterview && (
         <>
-          {/* Progress Overview */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 font-jakarta mb-4">
-              Your Progress
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {levels.map((level) => {
-                const Icon = getLevelIcon(level.level);
-                const existingTest = existingTests.find(t => t.testLevel === level.level);
-                
-                return (
-                  <div
-                    key={level.level}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      level.completed 
-                        ? 'border-green-200 bg-green-50' 
-                        : level.available 
-                          ? 'border-slate-200 bg-white hover:border-brand-main/30' 
-                          : 'border-slate-100 bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${getLevelColor(level.level)} flex items-center justify-center`}>
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 font-jakarta capitalize">
-                          {level.level}
-                        </h3>
-                        {level.completed && existingTest?.percentageScore && (
-                          <p className="text-sm text-green-600 font-jakarta">
-                            {existingTest.percentageScore.toFixed(1)}% Score
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-3">
-                      {level.completed ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : level.available ? (
-                        <Clock className="w-4 h-4 text-slate-400" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-slate-300" />
-                      )}
-                      <span className="text-sm text-slate-600 font-jakarta">
-                        {level.completed 
-                          ? 'Completed' 
-                          : level.available 
-                            ? 'Available' 
-                            : 'Locked'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Test Levels Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {levels.map((level) => {

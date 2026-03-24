@@ -34,6 +34,7 @@ export interface Experience {
   endDate: string | null;
   current: boolean | false;
   description: string;
+  responsibilities?: string[];
   technologies?: string[];
   companyLogo?: string;
   companyUrl?: string;
@@ -50,6 +51,12 @@ export interface Experience {
     value: string;
     description?: string;
   }[];
+  // Optimization fields
+  is_optimized?: boolean;
+  description_optimized?: string;
+  responsibilities_optimized?: string[];
+  achievements_optimized?: string[];
+  skills?:[];
 }
 
 export interface Education {
@@ -82,6 +89,12 @@ export interface Project {
   images?: string[];
   status?: string;
   achievements?: string[];
+  features?: string[];
+  // Optimization fields
+  is_optimized?: boolean;
+  description_optimized?: string;
+  achievements_optimized?: string[];
+  features_optimized?: string[];
 }
 
 export interface Skill {
@@ -125,8 +138,8 @@ export interface ATSScore {
 export interface Resume {
   id: string;
   personalInfo: PersonalInfo;
-  summary: string;
-  objective: string;
+  summary: string | { content: string; content_optimized?: string; is_optimized?: boolean };
+  objective: string | { content: string; content_optimized?: string; is_optimized?: boolean };
   skills: Skill[];
   experiences: Experience[];
   education: Education[];

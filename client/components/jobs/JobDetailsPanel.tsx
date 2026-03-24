@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, MapPin, DollarSign, Briefcase, Clock, Building, ChevronRight, Loader2 } from 'lucide-react';
 import { JobApplicationModal } from './JobApplicationModal';
+import { JobDetailsExtractModal } from './JobDetailsExtractModal';
 import { ResumeOptimizationModal } from './ResumeOptimizationModal';
 import { jobApplicationApi } from '../../services/jobApplicationApi';
 import { jobMatchingApi } from '../../services/jobMatchingApi';
@@ -16,6 +17,8 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showExtractModal, setShowExtractModal] = useState(false);
+  const [extractedJobDetails, setExtractedJobDetails] = useState<any>(null);
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [matchScore, setMatchScore] = useState<number | null>(null);
@@ -318,7 +321,7 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
                 Optimize CV
               </button>
               <button
-                onClick={() => setShowApplicationModal(true)}
+                onClick={() => setShowExtractModal(true)}
                 disabled={checkingStatus}
                 className="flex-1 h-10 bg-brand-main text-white rounded-lg hover:bg-brand-background font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
@@ -329,13 +332,28 @@ export function JobDetailsPanel({ jobId, onClose }: JobDetailsPanelProps) {
         </div>
       </div>
 
+      {/* Job Details Extract Modal */}
+      {showExtractModal && job && (
+        <JobDetailsExtractModal
+          jobUrl={job.url}
+          jobTitle={job.title}
+          company={job.company}
+          onClose={() => setShowExtractModal(false)}
+          onApply={(extractedDetails) => {
+            setExtractedJobDetails(extractedDetails);
+            setShowExtractModal(false);
+            setShowApplicationModal(true);
+          }}
+        />
+      )}
+
       {/* Application Modal */}
       {showApplicationModal && (
         <JobApplicationModal
           jobId={job.id}
           jobTitle={job.title}
           company={job.company}
-          jobDescription={job.description}
+          jobDescription={extractedJobDetails?.description || job.description}
           matchScore={matchScore}
           matchReasons={matchReasons}
           missingSkills={missingSkills}

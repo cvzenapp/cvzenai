@@ -61,6 +61,19 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  // Function to check if interview is completed (time + duration has passed)
+  const isInterviewCompleted = (interview: InterviewInvitation): boolean => {
+    if (!interview.proposedDatetime || !interview.durationMinutes) {
+      return false;
+    }
+    
+    const interviewStart = new Date(interview.proposedDatetime);
+    const interviewEnd = new Date(interviewStart.getTime() + (interview.durationMinutes * 60 * 1000));
+    const now = new Date();
+    
+    return now >= interviewEnd;
+  };
+
   // Debug: Check what userType we received and what tokens exist
   useEffect(() => {
     try {
@@ -539,7 +552,12 @@ export const InterviewsDashboard: React.FC<InterviewsDashboardProps> = ({ userTy
                             {userType === 'recruiter' && (
                               <button
                                 onClick={() => setCompletionInterview(interview)}
-                                className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-xs sm:text-sm font-jakarta font-medium"
+                                disabled={!isInterviewCompleted(interview)}
+                                className={`px-3 py-2 rounded-lg transition-colors text-xs sm:text-sm font-jakarta font-medium ${
+                                  isInterviewCompleted(interview)
+                                    ? 'bg-slate-600 text-white hover:bg-slate-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
                               >
                                 <span className="hidden sm:inline">Mark Completed</span>
                                 <span className="sm:hidden">Complete</span>

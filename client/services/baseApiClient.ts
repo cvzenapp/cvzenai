@@ -115,7 +115,7 @@ export class BaseApiClient {
   /**
    * Check if token is expired or will expire soon
    */
-  private isTokenExpired(): boolean {
+  protected isTokenExpired(): boolean {
     try {
       // Try both job seeker and recruiter tokens
       const token = localStorage.getItem("authToken") || localStorage.getItem("recruiter_token");

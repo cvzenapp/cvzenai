@@ -63,7 +63,7 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { icon: Search, label: 'Find Jobs', query: 'Show me more jobs based on my skills and experience', type: 'job_search' },
+  { icon: Search, label: 'Find Jobs', query: 'Find jobs based on my resume and skills', type: 'job_search' },
   { icon: FileText, label: 'CV Help', query: 'How can I improve my resume for better job matches?', type: 'resume_analysis' },
   { icon: Paperclip, label: 'Upload CV', query: '', type: 'file_upload' },
   { icon: TrendingUp, label: 'Career Tips', query: 'What skills should I learn to advance my career based on my current profile?', type: 'career_advice' },
@@ -129,12 +129,7 @@ Can you provide a comprehensive job search plan?`
 export default function JobSeekerChatInterface() {
   const { user } = useAuth();
     // Debug user data
-  console.log('JobSeekerChatInterface - User data:', {
-    user,
-    avatar: user?.avatar,
-    profileImage: user?.profileImage,
-    name: user?.name
-  });
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -147,6 +142,7 @@ export default function JobSeekerChatInterface() {
   const [userSkills, setUserSkills] = useState<string[]>([]);
   const [userLocation, setUserLocation] = useState<string>('');
   const [hasLoadedInitialJobs, setHasLoadedInitialJobs] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<JobResult | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
@@ -202,8 +198,8 @@ export default function JobSeekerChatInterface() {
       
       console.log('🔍 Auto-submitting job search...');
       
-      // Auto-submit the "Find Jobs" query using existing flow
-      await generateResponse('Show me more jobs based on my skills and experience', 'job_search');
+      // Auto-submit resume-based job search query
+      await generateResponse('Find jobs based on my resume and skills', 'job_search');
       
     } catch (error) {
       console.error('❌ Failed to auto-load jobs:', error);
@@ -685,6 +681,8 @@ export default function JobSeekerChatInterface() {
     // Shift+Enter allows new line
   };
 
+
+
   const JobCard = ({ job }: { job: JobResult }) => {
     console.log('🎴 Rendering JobCard:', { id: job.id, title: job.title, company: job.company });
     
@@ -731,22 +729,24 @@ export default function JobSeekerChatInterface() {
         </div>
         <p className="text-gray-700 text-xs sm:text-sm mb-2 line-clamp-2">{job.description}</p>
         <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
-          {job.requirements.slice(0, 3).map((req, index) => (
+          {(job.requirements || []).slice(0, 3).map((req, index) => (
             <Badge key={index} variant="outline" className="text-xs py-0 px-1.5 sm:px-2">
               {req}
             </Badge>
           ))}
-          {job.requirements.length > 3 && (
+          {(job.requirements || []).length > 3 && (
             <Badge variant="outline" className="text-xs py-0 px-1.5 sm:px-2 bg-gray-100">
-              +{job.requirements.length - 3} more
+              +{(job.requirements || []).length - 3} more
             </Badge>
           )}
         </div>
         <div className="flex gap-2">
-          <Button size="sm" className="h-7 sm:h-8 text-xs bg-brand-background hover:bg-brand-background/90 text-white flex-1 sm:flex-none" asChild>
-            <a href={job.url || '#'} target="_blank" rel="noopener noreferrer">
-              Apply Job
-            </a>
+          <Button 
+            size="sm" 
+            className="h-7 sm:h-8 text-xs bg-brand-background hover:bg-brand-background/90 text-white flex-1 sm:flex-none"
+            onClick={() => window.open(job.url, '_blank')}
+          >
+            Apply Job
           </Button>
           <Button size="sm" variant="outline" className="h-7 sm:h-8 text-xs border-brand-background text-brand-background hover:bg-brand-background hover:text-white">
             Save
@@ -1052,11 +1052,10 @@ export default function JobSeekerChatInterface() {
 
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 min-w-0 relative overflow-hidden">
-        
-    <div className="flex flex-col h-full w-full">
-      {/* Chat Messages */}
-      <div ref={messagesContainerRef} className="flex-1 border rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 bg-white min-h-0 overflow-y-auto max-h-[60vh]">
-        <div className="space-y-3 sm:space-y-4 pb-4">
+        <div className="flex flex-col h-full w-full">
+          {/* Chat Messages */}
+          <div ref={messagesContainerRef} className="flex-1 border rounded-lg p-2 sm:p-4 mb-3 sm:mb-4 bg-white min-h-0 overflow-y-auto max-h-[60vh]">
+            <div className="space-y-3 sm:space-y-4 pb-4">
           {/* Initial loading state for jobs */}
           {isLoadingJobs && messages.length === 0 && (
             <div className="flex gap-2 sm:gap-3 justify-start">
@@ -1179,7 +1178,7 @@ export default function JobSeekerChatInterface() {
               {message.type === 'user' && (
                 
                 <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mt-1 shrink-0">
-                  <AvatarImage src={user?.avatar || user?.profileImage} alt={user?.name || 'User'} />
+                  <AvatarImage src={user?.avatar} alt={user?.name || 'User'} />
                   <AvatarFallback className="bg-gray-200 text-gray-600 font-medium">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
                   </AvatarFallback>
@@ -1317,8 +1316,8 @@ export default function JobSeekerChatInterface() {
             <span className="sm:hidden">💡 Be specific</span>
           </div>
         </div>
-      </div>
-    </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -92,20 +92,33 @@ class AIMemoryService {
     let db = null;
     try {
       db = await getDatabase();
+      if (!db) {
+        throw new Error('Database connection is null');
+      }
       return await operation(db);
     } catch (error) {
+      console.error('❌ Database operation failed:', error);
+      
       // If it's a connection error, try to reconnect once
-      if (error.message?.includes('Client was closed') || error.message?.includes('Connection terminated')) {
+      if (error.message?.includes('Client was closed') || 
+          error.message?.includes('Connection terminated') ||
+          error.message?.includes('Database connection is null') ||
+          error.message?.includes('Cannot read properties of null')) {
         console.warn('⚠️ Database connection lost, attempting to reconnect...');
         try {
           if (db) {
             await closeDatabase(db);
           }
+          // Force a fresh connection
           db = await getDatabase();
+          if (!db) {
+            throw new Error('Database reconnection returned null');
+          }
+          console.log('✅ Database reconnection successful');
           return await operation(db);
         } catch (retryError) {
           console.error('❌ Database reconnection failed:', retryError.message);
-          throw retryError;
+          throw new Error(`Database unavailable: ${retryError.message}`);
         }
       }
       throw error;
@@ -113,7 +126,11 @@ class AIMemoryService {
       // Only close in serverless environments
       if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
         if (db) {
-          await closeDatabase(db);
+          try {
+            await closeDatabase(db);
+          } catch (closeError) {
+            console.warn('⚠️ Error closing database connection:', closeError.message);
+          }
         }
       }
     }

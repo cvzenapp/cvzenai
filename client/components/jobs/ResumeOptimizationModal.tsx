@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Zap, Loader2, CheckCircle, AlertCircle, Eye } from 'lucide-react';
 import { jobApplicationApi } from '../../services/jobApplicationApi';
+import zenAiPilotIcon from '../../assets/zenaipilot.png';
 
 interface ResumeOptimizationModalProps {
   jobId: string;
@@ -48,9 +49,7 @@ export function ResumeOptimizationModal({
   
   const [sectionStates, setSectionStates] = useState<Record<string, SectionOptimization>>({
     summary: { isOptimizing: false, isOptimized: false },
-    skills: { isOptimizing: false, isOptimized: false },
     experience: { isOptimizing: false, isOptimized: false },
-    education: { isOptimizing: false, isOptimized: false },
     projects: { isOptimizing: false, isOptimized: false }
   });
 
@@ -58,6 +57,31 @@ export function ResumeOptimizationModal({
 
   useEffect(() => {
     loadResume();
+  }, []);
+
+  // Add CVZen AI Pilot icon animation styles
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .cvzen-optimizing-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        backdrop-filter: blur(1px);
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   const loadResume = async () => {
@@ -87,6 +111,23 @@ export function ResumeOptimizationModal({
 
   const optimizeSection = async (sectionName: string) => {
     if (!resume) return;
+
+    // Check if the section is already optimized in the actual data
+    if (sectionName.startsWith('experience-')) {
+      const experienceIndex = parseInt(sectionName.split('-')[1]);
+      const experience = resume.experiences?.[experienceIndex];
+      if (experience?.is_optimized) {
+        console.log(`ℹ️ Experience ${experienceIndex} is already optimized`);
+        return;
+      }
+    } else if (sectionName.startsWith('projects-')) {
+      const projectIndex = parseInt(sectionName.split('-')[1]);
+      const project = resume.projects?.[projectIndex];
+      if (project?.is_optimized) {
+        console.log(`ℹ️ Project ${projectIndex} is already optimized`);
+        return;
+      }
+    }
 
     setSectionStates(prev => ({
       ...prev,
@@ -190,71 +231,313 @@ export function ResumeOptimizationModal({
     switch (sectionKey) {
       case 'summary':
       case 'objective':
+        // Handle JSONB format: {content: "text", content_optimized: null, is_optimized: false}
+        if (typeof content === 'object' && content.content) {
+          const displayContent = content.is_optimized && content.content_optimized 
+            ? content.content_optimized 
+            : content.content;
+          return (
+            <div>
+              <p className="whitespace-pre-wrap">{displayContent}</p>
+              {content.is_optimized && (
+                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  Optimized content
+                </div>
+              )}
+            </div>
+          );
+        }
         return <p className="whitespace-pre-wrap">{content}</p>;
-      
-      case 'skills':
-        return Array.isArray(content) ? (
-          <div className="flex flex-wrap gap-2">
-            {content.map((skill, index) => (
-              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                {typeof skill === 'string' ? skill : skill.name || JSON.stringify(skill)}
-              </span>
-            ))}
-          </div>
-        ) : <p className="text-gray-500 italic">No skills listed</p>;
       
       case 'experience':
         if (!Array.isArray(content)) {
           return <p className="text-gray-500 italic">No experience listed</p>;
         }
         return content.length > 0 ? (
-          <div className="space-y-3">
-            {content.map((exp, index) => (
-              <div key={index} className="border-l-2 border-blue-200 pl-3">
-                <h4 className="font-medium">{exp.position || exp.title || exp.jobTitle || 'Position'}</h4>
-                <p className="text-sm text-gray-600">
-                  {exp.company || exp.companyName || 'Company'} • {exp.duration || exp.period || `${exp.startDate || exp.start} - ${exp.endDate || exp.end || 'Present'}`}
-                </p>
-                {(exp.description || exp.responsibilities) && (
-                  <p className="text-sm mt-1">{exp.description || exp.responsibilities}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-gray-500 italic">No experience listed</p>;
-      
-      case 'education':
-        return Array.isArray(content) ? (
-          <div className="space-y-2">
-            {content.map((edu, index) => (
-              <div key={index}>
-                <h4 className="font-medium">{edu.degree || edu.qualification}</h4>
-                <p className="text-sm text-gray-600">{edu.institution} • {edu.year || edu.duration}</p>
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-gray-500 italic">No education listed</p>;
-      
-      case 'projects':
-        return Array.isArray(content) ? (
-          <div className="space-y-3">
-            {content.map((project, index) => (
-              <div key={index}>
-                <h4 className="font-medium">{project.name || project.title}</h4>
-                {project.description && <p className="text-sm text-gray-600 mt-1">{project.description}</p>}
-                {project.technologies && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {project.technologies.map((tech: string, techIndex: number) => (
-                      <span key={techIndex} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
-                        {tech}
-                      </span>
-                    ))}
+          <div className="space-y-4">
+            {content.map((exp, index) => {
+              const expState = sectionStates[`experience-${index}`] || { isOptimizing: false, isOptimized: false };
+              const isActuallyOptimized = exp.is_optimized || expState.isOptimized;
+              
+              return (
+                <div key={index} className={`border border-gray-100 rounded-lg p-3 bg-gray-50 relative ${expState.isOptimizing ? 'overflow-hidden' : ''}`}>
+                  {/* CVZen AI Pilot icon overlay when optimizing */}
+                  {expState.isOptimizing && (
+                    <div className="cvzen-optimizing-overlay">
+                      <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+                        <img 
+                          src={zenAiPilotIcon} 
+                          alt="AI Assistant" 
+                          className="w-12 h-12 drop-shadow-lg relative z-10 brightness-110"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{exp.title || exp.position}</h4>
+                      <p className="text-sm text-gray-600">{exp.company} • {exp.startDate} - {exp.endDate || 'Present'}</p>
+                      {exp.location && <p className="text-sm text-gray-500">{exp.location}</p>}
+                    </div>
+                    <button
+                      onClick={() => optimizeSection(`experience-${index}`)}
+                      disabled={expState.isOptimizing || isActuallyOptimized}
+                      className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded text-xs hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all ml-2"
+                    >
+                      {expState.isOptimizing ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Optimizing...
+                        </>
+                      ) : isActuallyOptimized ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Optimized
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3" />
+                          Optimize
+                        </>
+                      )}
+                    </button>
                   </div>
-                )}
-              </div>
-            ))}
+                  
+                  {expState.error && (
+                    <div className="flex items-center gap-2 mb-2 p-2 bg-red-50 text-red-700 rounded text-xs">
+                      <AlertCircle className="w-3 h-3" />
+                      {expState.error}
+                    </div>
+                  )}
+                  
+                  <div className={`text-sm text-gray-700 ${expState.isOptimizing ? 'relative opacity-70' : ''}`}>
+                    {/* Description */}
+                    {exp.description && (
+                      <div className="mb-2">
+                        <p className="font-medium text-xs text-gray-500 mb-1">Description:</p>
+                        <p className={`whitespace-pre-wrap ${expState.isOptimizing ? 'opacity-70' : ''}`}>
+                          {exp.is_optimized && exp.description_optimized ? exp.description_optimized : exp.description}
+                        </p>
+                        {exp.is_optimized && exp.description_optimized && (
+                          <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Optimized description
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Responsibilities */}
+                    {exp.responsibilities && exp.responsibilities.length > 0 && (
+                      <div className="mb-2">
+                        <p className="font-medium text-xs text-gray-500 mb-1">Responsibilities:</p>
+                        <ul className={`list-disc list-inside space-y-1 ${expState.isOptimizing ? 'opacity-50' : ''}`}>
+                          {(exp.is_optimized && exp.responsibilities_optimized ? exp.responsibilities_optimized : exp.responsibilities).map((resp: string, idx: number) => (
+                            <li key={idx} className="text-sm">{resp}</li>
+                          ))}
+                        </ul>
+                        {exp.is_optimized && exp.responsibilities_optimized && (
+                          <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Optimized responsibilities
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Achievements */}
+                    {exp.achievements && exp.achievements.length > 0 && (
+                      <div className="mb-2">
+                        <p className="font-medium text-xs text-gray-500 mb-1">Achievements:</p>
+                        <ul className={`list-disc list-inside space-y-1 ${expState.isOptimizing ? 'opacity-50' : ''}`}>
+                          {(exp.is_optimized && exp.achievements_optimized ? exp.achievements_optimized : exp.achievements).map((achievement: string, idx: number) => (
+                            <li key={idx} className="text-sm">{achievement}</li>
+                          ))}
+                        </ul>
+                        {exp.is_optimized && exp.achievements_optimized && (
+                          <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Optimized achievements
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Skills */}
+                    {exp.skills && exp.skills.length > 0 && (
+                      <div>
+                        <p className="font-medium text-xs text-gray-500 mb-1">Skills:</p>
+                        <div className={`flex flex-wrap gap-1 ${expState.isOptimizing ? 'opacity-50' : ''}`}>
+                          {exp.skills.map((skill: string, idx: number) => (
+                            <span key={idx} className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ) : <p className="text-gray-500 italic">No projects listed</p>;
+        ) : (
+          <p className="text-gray-500 italic">No experience listed</p>
+        );
+
+      case 'projects':
+        if (!Array.isArray(content)) {
+          return <p className="text-gray-500 italic">No projects listed</p>;
+        }
+        return content.length > 0 ? (
+          <div className="space-y-4">
+            {content.map((project, index) => {
+              const projectState = sectionStates[`projects-${index}`] || { isOptimizing: false, isOptimized: false };
+              const isActuallyOptimized = project.is_optimized || projectState.isOptimized;
+              
+              return (
+                <div key={index} className={`border border-gray-100 rounded-lg p-3 bg-gray-50 relative ${projectState.isOptimizing ? 'overflow-hidden' : ''}`}>
+                  {/* CVZen AI Pilot icon overlay when optimizing */}
+                  {projectState.isOptimizing && (
+                    <div className="cvzen-optimizing-overlay">
+                      <div className="relative p-0.5 shadow-lg shadow-blue-500/50 premium-border-animation overflow-visible">
+                        <img 
+                          src={zenAiPilotIcon} 
+                          alt="AI Assistant" 
+                          className="w-12 h-12 drop-shadow-lg relative z-10 brightness-110"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{project.name || project.title}</h4>
+                      {project.url && (
+                        <a href={project.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                          View Project
+                        </a>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => optimizeSection(`projects-${index}`)}
+                      disabled={projectState.isOptimizing || isActuallyOptimized}
+                      className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded text-xs hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all ml-2"
+                    >
+                      {projectState.isOptimizing ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Optimizing...
+                        </>
+                      ) : isActuallyOptimized ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Optimized
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3" />
+                          Optimize
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {projectState.error && (
+                    <div className="flex items-center gap-2 mb-2 p-2 bg-red-50 text-red-700 rounded text-xs">
+                      <AlertCircle className="w-3 h-3" />
+                      {projectState.error}
+                    </div>
+                  )}
+                  
+                  <div className={`text-sm text-gray-700 ${projectState.isOptimizing ? 'relative opacity-70' : ''}`}>
+                    {/* Description */}
+                    {project.description && (
+                      <div className="mb-2">
+                        <p className="font-medium text-xs text-gray-500 mb-1">Description:</p>
+                        <p className={`whitespace-pre-wrap ${projectState.isOptimizing ? 'opacity-50' : ''}`}>
+                          {project.is_optimized && project.description_optimized ? project.description_optimized : project.description}
+                        </p>
+                        {project.is_optimized && project.description_optimized && (
+                          <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Optimized description
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Technologies */}
+                    {project.technologies && project.technologies.length > 0 && (
+                      <div className={`mb-2 ${projectState.isOptimizing ? 'opacity-50' : ''}`}>
+                        <p className="font-medium text-xs text-gray-500 mb-1">Technologies:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {project.technologies.map((tech: string, techIndex: number) => (
+                            <span key={techIndex} className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                              {tech}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Achievements */}
+                    {project.achievements && project.achievements.length > 0 && (
+                      <div className={`mb-2 ${projectState.isOptimizing ? 'opacity-50' : ''}`}>
+                        <p className="font-medium text-xs text-gray-500 mb-1">Achievements:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {(project.is_optimized && project.achievements_optimized ? project.achievements_optimized : project.achievements).map((achievement: string, idx: number) => (
+                            <li key={idx} className="text-sm">{achievement}</li>
+                          ))}
+                        </ul>
+                        {project.is_optimized && project.achievements_optimized && (
+                          <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Optimized achievements
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Features */}
+                    {project.features && project.features.length > 0 && (
+                      <div className={`mb-2 ${projectState.isOptimizing ? 'opacity-50' : ''}`}>
+                        <p className="font-medium text-xs text-gray-500 mb-1">Key Features:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {(project.is_optimized && project.features_optimized ? project.features_optimized : project.features).map((feature: string, idx: number) => (
+                            <li key={idx} className="text-sm">{feature}</li>
+                          ))}
+                        </ul>
+                        {project.is_optimized && project.features_optimized && (
+                          <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                            Optimized features
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Achievements (if different from features) */}
+                    {project.achievements && project.achievements.length > 0 && (
+                      <div>
+                        <p className="font-medium text-xs text-gray-500 mb-1">Achievements:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          {project.achievements.map((achievement: string, idx: number) => (
+                            <li key={idx} className="text-sm">{achievement}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-gray-500 italic">No projects listed</p>
+        );
       
       default:
         return <p>{JSON.stringify(content)}</p>;
@@ -339,17 +622,25 @@ export function ResumeOptimizationModal({
               {/* Objective */}
               {resume.objective && renderSection('Career Objective', resume.objective, 'objective')}
               
-              {/* Skills */}
-              {renderSection('Skills', resume.skills, 'skills')}
+              {/* Experience - Custom rendering without section-level optimize button */}
+              {resume.experiences && resume.experiences.length > 0 && (
+                <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Work Experience</h3>
+                  <div className="text-gray-700">
+                    {renderSectionContent(resume.experiences, 'experience')}
+                  </div>
+                </div>
+              )}
               
-              {/* Experience */}
-              {renderSection('Work Experience', resume.experiences || [], 'experience')}
-              
-              {/* Education */}
-              {renderSection('Education', resume.education, 'education')}
-              
-              {/* Projects */}
-              {resume.projects && resume.projects.length > 0 && renderSection('Projects', resume.projects, 'projects')}
+              {/* Projects - Custom rendering without section-level optimize button */}
+              {resume.projects && resume.projects.length > 0 && (
+                <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Projects</h3>
+                  <div className="text-gray-700">
+                    {renderSectionContent(resume.projects, 'projects')}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           

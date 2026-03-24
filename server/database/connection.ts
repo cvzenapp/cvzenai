@@ -88,7 +88,12 @@ export async function initializeDatabase(): Promise<Client> {
 }
 
 export async function getDatabase(): Promise<Client> {
-  return await initializeDatabase();
+  try {
+    return await initializeDatabase();
+  } catch (error) {
+    console.error('❌ Failed to get database connection:', error);
+    throw new Error(`Database connection failed: ${error.message}`);
+  }
 }
 
 export async function closeDatabase(client?: Client): Promise<void> {

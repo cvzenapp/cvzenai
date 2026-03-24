@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 import { initializeDatabase } from "../database/connection.js";
-import { groqService } from "../services/groqService.js";
+import { abstractedAiService } from "../services/abstractedAiService.js";
 import { jsonrepair } from 'jsonrepair';
 
 const router = Router();
@@ -168,17 +168,30 @@ ${resumeText}
 
 Calculate the ATS match score and provide analysis.`;
 
-    const response = await groqService.generateResponse(systemPrompt, userPrompt, {
-      temperature: 0.3,
-      maxTokens: 500
+    const response = await abstractedAiService.generateResponse({
+      systemPrompt,
+      userPrompt,
+      options: {
+        temperature: 0.3,
+        maxTokens: 500,
+        auditContext: {
+          serviceName: 'job_matching',
+          operationType: 'ats_score',
+          userContext: { userId, jobId: validatedData.jobId }
+        }
+      }
     });
 
     console.log('✅ Job match score response:', response);
 
-    // Parse the JSON response
+    // Parse the JSON response from abstractedAiService
     let matchData;
     try {
-      const responseText = typeof response === 'string' ? response : response.response;
+      const responseText = response.success ? response.response : '';
+      if (!responseText) {
+        throw new Error('Empty response from AI service');
+      }
+      
       // Strip markdown code blocks if present
       const cleanedText = responseText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
       
@@ -197,7 +210,7 @@ Calculate the ATS match score and provide analysis.`;
       
       // Try jsonrepair
       try {
-        const responseText = typeof response === 'string' ? response : response.response;
+        const responseText = response.success ? response.response : '';
         const cleanedText = responseText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
         const repairedJson = jsonrepair(cleanedText);
         matchData = JSON.parse(repairedJson);

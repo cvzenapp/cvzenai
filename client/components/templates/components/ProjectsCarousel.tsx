@@ -4,23 +4,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Resume } from '@shared/api';
 
-interface Project {
-  name: string;
-  title?: string;
-  description: string;
-  technologies?: string[];
-  link?: string;
-  github?: string;
-  url?: string;
-  startDate?: string;
-  endDate?: string;
-  status?: string;
-  images?: string[];
-}
+// interface Project {
+//   name: string;
+//   title?: string;
+//   description: string;
+//   technologies?: string[];
+//   link?: string;
+//   github?: string;
+//   url?: string;
+//   startDate?: string;
+//   endDate?: string;
+//   status?: string;
+//   images?: string[];
+// }
 
 interface ProjectsCarouselProps {
-  projects: Project[];
+  projects: Resume['projects']
   primaryColor?: string;
   accentColor?: string;
   fontFamily?: string;
@@ -179,8 +180,57 @@ export function ProjectsCarousel({
               {/* Project Description */}
               <div className="flex-1 mb-3">
                 <p className="leading-relaxed text-sm" style={{ color: 'var(--template-text-muted, #6b7280)' }}>
-                  {currentProject.description}
+                  {currentProject.is_optimized && currentProject.description_optimized 
+                    ? currentProject.description_optimized 
+                    : currentProject.description}
                 </p>
+                
+                {/* Achievements Section */}
+                {((currentProject.is_optimized && currentProject.achievements_optimized && currentProject.achievements_optimized.length > 0) || 
+                  (currentProject.achievements && currentProject.achievements.length > 0)) && (
+                  <div className="mt-3">
+                    <h5 className="text-sm font-semibold mb-2" style={{ color: 'var(--template-primary-color)' }}>
+                      Key Achievements:
+                    </h5>
+                    <ul className="list-disc list-inside space-y-1">
+                      {(currentProject.is_optimized && currentProject.achievements_optimized 
+                        ? currentProject.achievements_optimized 
+                        : currentProject.achievements)?.map((achievement, index) => (
+                        <li key={index} className="text-sm" style={{ color: 'var(--template-text-muted, #6b7280)' }}>
+                          {achievement}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Features Section */}
+                {((currentProject.is_optimized && currentProject.features_optimized && currentProject.features_optimized.length > 0) || 
+                  (currentProject.features && currentProject.features.length > 0)) && (
+                  <div className="mt-3">
+                    <h5 className="text-sm font-semibold mb-2" style={{ color: 'var(--template-primary-color)' }}>
+                      Key Features:
+                    </h5>
+                    <ul className="list-disc list-inside space-y-1">
+                      {(currentProject.is_optimized && currentProject.features_optimized 
+                        ? currentProject.features_optimized 
+                        : currentProject.features)?.map((feature, index) => (
+                        <li key={index} className="text-sm" style={{ color: 'var(--template-text-muted, #6b7280)' }}>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Optimization Status */}
+                {currentProject.is_optimized && (
+                  <div className="mt-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-md">
+                      ✨ Optimized Content
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Bottom Row: Date, Links, Images */}
@@ -355,7 +405,7 @@ export function ProjectsCarousel({
       {projects.length > 1 && (
         <div className="text-center mt-4 text-xs" style={{ color: 'var(--template-text-muted, #9ca3af)' }}>
           Use arrow buttons or dots to navigate between projects
-        </div>
+        </div> 
       )}
 
       {/* Image Modal with Slider */}

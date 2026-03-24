@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 import { initializeDatabase } from "../database/connection.js";
-import { groqService } from "../services/groqService.js";
+import { abstractedAiService } from "../services/abstractedAiService.js";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -158,25 +158,26 @@ Summary: ${resumeForAI.summary}
 
 Write a personalized cover letter that connects this candidate's specific background to the job requirements. End with "Sincerely," followed by the candidate's name: ${candidateName}.`;
 
-    const coverLetterResponse = await groqService.generateResponse(systemPrompt, userPrompt, {
-      temperature: 0.7,
-      maxTokens: 800
+    const coverLetterResponse = await abstractedAiService.generateResponse({
+      systemPrompt,
+      userPrompt,
+      options: {
+        temperature: 0.7,
+        maxTokens: 800,
+        auditContext: {
+          serviceName: 'cover_letter_generation',
+          operationType: 'cover_letter',
+          userContext: { userId, jobId: validatedData.jobId, resumeId: validatedData.resumeId }
+        }
+      }
     });
 
     console.log('✅ Cover letter raw response:', JSON.stringify(coverLetterResponse, null, 2));
 
-    // Extract the actual text response - handle all possible formats
-    let coverLetterText = '';
-    
-    if (typeof coverLetterResponse === 'string') {
-      coverLetterText = coverLetterResponse;
-    } else if (coverLetterResponse && typeof coverLetterResponse === 'object') {
-      if (coverLetterResponse.response) {
-        coverLetterText = coverLetterResponse.response;
-      } else {
-        coverLetterText = JSON.stringify(coverLetterResponse);
-      }
-    }
+    // Extract the actual text response from abstractedAiService
+    const coverLetterText = coverLetterResponse.success 
+      ? coverLetterResponse.response 
+      : 'Unable to generate cover letter';
 
     console.log('✅ Final cover letter text:', coverLetterText);
 
@@ -306,31 +307,32 @@ Summary: ${resumeForAI.summary}
 
 Write a personalized cover letter that connects this candidate's specific background to the job requirements. End with "Sincerely," followed by the candidate's name: ${candidateName || 'Candidate'}.`;
 
-    const coverLetterResponse = await groqService.generateResponse(systemPrompt, userPrompt, {
-      temperature: 0.7,
-      maxTokens: 800
+    const coverLetterResponse = await abstractedAiService.generateResponse({
+      systemPrompt,
+      userPrompt,
+      options: {
+        temperature: 0.7,
+        maxTokens: 800,
+        auditContext: {
+          serviceName: 'cover_letter_generation',
+          operationType: 'cover_letter_guest',
+          userContext: { jobId, candidateName }
+        }
+      }
     });
 
     console.log('✅ Guest cover letter raw response:', JSON.stringify(coverLetterResponse, null, 2));
 
-    // Extract the actual text response - handle all possible formats
-    let coverLetterText = '';
-    
-    if (typeof coverLetterResponse === 'string') {
-      coverLetterText = coverLetterResponse;
-    } else if (coverLetterResponse && typeof coverLetterResponse === 'object') {
-      if (coverLetterResponse.response) {
-        coverLetterText = coverLetterResponse.response;
-      } else {
-        coverLetterText = JSON.stringify(coverLetterResponse);
-      }
-    }
+    // Extract the actual text response from abstractedAiService
+    const coverLetterText = coverLetterResponse.success 
+      ? coverLetterResponse.response 
+      : 'Unable to generate cover letter';
 
     console.log('✅ Final guest cover letter text:', coverLetterText);
 
     res.json({
       success: true,
-      coverLetter: coverLetterText || 'Unable to generate cover letter',
+      coverLetter: coverLetterText,
     });
 
   } catch (error) {

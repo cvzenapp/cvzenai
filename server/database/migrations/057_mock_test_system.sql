@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS mock_test_sessions (
   job_description TEXT NOT NULL,
   candidate_resume TEXT NOT NULL,
   candidate_skills TEXT[] NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 60, -- Test duration in minutes
   
   -- Test metadata
   total_questions INTEGER NOT NULL DEFAULT 0,

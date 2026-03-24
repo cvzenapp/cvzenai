@@ -1,5 +1,5 @@
 import { getDatabase } from '../database/connection';
-import { groqService } from './groqService';
+import { abstractedAiService } from './abstractedAiService';
 
 export interface MockTestSession {
   id: number;
@@ -19,6 +19,7 @@ export interface MockTestSession {
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  durationMinutes: number;
 }
 
 export interface MockTestQuestion {
@@ -225,26 +226,17 @@ export class MockTestService {
         return this.mapSessionFromDb(existingTest.rows[0]);
       }
 
-      // Generate questions using AI
-      const generatedTest = await this.generateQuestionsWithAI(
-        interview.job_description || interview.description,
-        interview.job_title || interview.title,
-        resumeContent,
-        candidateSkills,
-        jobRequirements,
-        testLevel
-      );
-
-      // Create mock test session
+      // Create mock test session (no questions generated upfront)
+      const duration = testLevel === 'basic' ? 30 : testLevel === 'moderate' ? 45 : 60;
+      const totalQuestions = testLevel === 'basic' ? 5 : testLevel === 'moderate' ? 8 : 12;
+      
       const sessionQuery = `
         INSERT INTO mock_test_sessions (
           candidate_id, interview_id, test_level, job_description, 
-          candidate_resume, candidate_skills, total_questions, total_score
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          candidate_resume, candidate_skills, total_questions, total_score, duration_minutes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `;
-      
-      const totalScore = generatedTest.questions.reduce((sum, q) => sum + q.points, 0);
       
       const sessionResult = await db.query(sessionQuery, [
         candidateId,
@@ -253,39 +245,13 @@ export class MockTestService {
         interview.job_description || interview.description,
         resumeContent,
         candidateSkills,
-        generatedTest.questions.length,
-        totalScore
+        totalQuestions,
+        totalQuestions * 10, // 10 points per question
+        duration
       ]);
 
-      const session = sessionResult.rows[0];
-
-      // Insert questions
-      for (let i = 0; i < generatedTest.questions.length; i++) {
-        const question = generatedTest.questions[i];
-        
-        const questionQuery = `
-          INSERT INTO mock_test_questions (
-            session_id, question_text, question_type, question_category,
-            difficulty_level, options, correct_answer, explanation, points, question_order
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        `;
-        
-        await db.query(questionQuery, [
-          session.id,
-          question.questionText,
-          question.questionType,
-          question.questionCategory,
-          testLevel,
-          question.options ? JSON.stringify(question.options) : null,
-          question.correctAnswer,
-          question.explanation,
-          question.points,
-          i + 1
-        ]);
-      }
-
       await db.query('COMMIT');
-      return this.mapSessionFromDb(session);
+      return this.mapSessionFromDb(sessionResult.rows[0]);
       
     } catch (error) {
       await db.query('ROLLBACK');
@@ -359,8 +325,8 @@ IMPORTANT:
 - Make questions challenging but fair for the ${testLevel} level`;
 
     try {
-      const response = await groqService.generateResponse(
-        `Generate a mock test for ${jobTitle} position.
+      const response = await abstractedAiService.generateResponse({
+        systemPrompt: `Generate a mock test for ${jobTitle} position.
 
 CANDIDATE SKILLS: ${candidateSkills.slice(0, 5).join(', ')}
 JOB REQUIREMENTS: ${jobRequirements.slice(0, 3).join(', ')}
@@ -389,8 +355,8 @@ JSON format:
 For MCQ: include options array, correctAnswer = option ID
 For objective: no options, correctAnswer = full answer
 Return valid JSON only.`,
-        prompt,
-        {
+        userPrompt: prompt,
+        options: {
           temperature: 0.7,
           maxTokens: 2000, // Reduced to prevent truncation
           auditContext: {
@@ -404,7 +370,7 @@ Return valid JSON only.`,
             }
           }
         }
-      );
+      });
 
       if (!response.success || !response.response) {
         throw new Error('Failed to generate mock test questions');
@@ -692,6 +658,180 @@ Return valid JSON only.`,
     return this.mapSessionFromDb(result.rows[0]);
   }
 
+  async getNextQuestion(sessionId: number, candidateId: string): Promise<{
+    question: MockTestQuestion;
+    questionNumber: number;
+    totalQuestions: number;
+    isLastQuestion: boolean;
+  }> {
+    const db = await getDatabase();
+    
+    // Get session details
+    const session = await this.getMockTestSession(sessionId, candidateId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Count existing questions
+    const questionCountQuery = `
+      SELECT COUNT(*) as count FROM mock_test_questions WHERE session_id = $1
+    `;
+    const countResult = await db.query(questionCountQuery, [sessionId]);
+    const currentQuestionCount = parseInt(countResult.rows[0].count);
+    
+    // Check if we've reached the total questions limit
+    if (currentQuestionCount >= session.totalQuestions) {
+      throw new Error('All questions have been generated for this session');
+    }
+
+    // Get previous questions and answers for context
+    const previousQuestionsQuery = `
+      SELECT 
+        q.question_text,
+        q.question_type,
+        r.candidate_answer,
+        r.is_correct,
+        r.ai_feedback
+      FROM mock_test_questions q
+      LEFT JOIN mock_test_responses r ON q.id = r.question_id
+      WHERE q.session_id = $1
+      ORDER BY q.question_order ASC
+    `;
+    const previousResult = await db.query(previousQuestionsQuery, [sessionId]);
+    const previousQuestions = previousResult.rows;
+
+    // Generate next question using AI
+    const nextQuestion = await this.generateNextQuestionWithAI(
+      session,
+      previousQuestions,
+      currentQuestionCount + 1
+    );
+
+    // Insert the generated question
+    const insertQuery = `
+      INSERT INTO mock_test_questions (
+        session_id, question_text, question_type, question_category,
+        difficulty_level, options, correct_answer, explanation, points, question_order
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *
+    `;
+    
+    const result = await db.query(insertQuery, [
+      sessionId,
+      nextQuestion.questionText,
+      nextQuestion.questionType,
+      nextQuestion.questionCategory,
+      session.testLevel,
+      nextQuestion.options ? JSON.stringify(nextQuestion.options) : null,
+      '', // No predefined correct answer
+      '', // No predefined explanation
+      10, // Standard points per question
+      currentQuestionCount + 1
+    ]);
+
+    const questionRow = result.rows[0];
+    const question: MockTestQuestion = {
+      id: questionRow.id,
+      sessionId: questionRow.session_id,
+      questionText: questionRow.question_text,
+      questionType: questionRow.question_type,
+      questionCategory: questionRow.question_category,
+      difficultyLevel: questionRow.difficulty_level,
+      options: questionRow.options ? this.safeJsonParse(questionRow.options, 'options') : undefined,
+      correctAnswer: questionRow.correct_answer,
+      explanation: questionRow.explanation,
+      points: questionRow.points,
+      questionOrder: questionRow.question_order,
+      createdAt:  questionRow.created_at
+    };
+
+    return {
+      question,
+      questionNumber: currentQuestionCount + 1,
+      totalQuestions: session.totalQuestions,
+      isLastQuestion: (currentQuestionCount + 1) >= session.totalQuestions
+    };
+  }
+
+  private async generateNextQuestionWithAI(
+    session: MockTestSession,
+    previousQuestions: any[],
+    questionNumber: number
+  ): Promise<{
+    questionText: string;
+    questionType: 'mcq' | 'single_selection' | 'objective' | 'coding';
+    questionCategory: string;
+    options?: Array<{ id: string; text: string; }>;
+  }> {
+    const contextSummary = previousQuestions.length > 0 
+      ? previousQuestions.map((pq, idx) => 
+          `Q${idx + 1}: ${pq.question_text}\nAnswer: ${pq.candidate_answer || 'Not answered'}\nCorrect: ${pq.is_correct ? 'Yes' : 'No'}`
+        ).join('\n\n')
+      : 'This is the first question.';
+
+    const prompt = `
+You are an expert technical interviewer creating a personalized mock test question.
+
+CONTEXT:
+- Job Description: ${session.jobDescription}
+- Candidate Skills: ${session.candidateSkills.join(', ')}
+- Test Level: ${session.testLevel}
+- Question Number: ${questionNumber} of ${session.totalQuestions}
+
+PREVIOUS QUESTIONS & PERFORMANCE:
+${contextSummary}
+
+INSTRUCTIONS:
+1. Generate a ${session.testLevel} level question appropriate for this candidate
+2. Make it relevant to the job requirements and candidate's background
+3. Consider previous questions to avoid repetition and build complexity
+4. Choose appropriate question type based on the topic
+
+QUESTION TYPES:
+- mcq: Multiple choice with 4 options (for knowledge/concepts)
+- single_selection: Single choice with 4 options (for specific facts)
+- objective: Open-ended short answer (for explanations/reasoning)
+- coding: Code writing/problem solving (for technical skills)
+
+Respond with JSON only:
+{
+  "questionText": "Clear, specific question text",
+  "questionType": "mcq|single_selection|objective|coding",
+  "questionCategory": "technical|behavioral|domain_specific|problem_solving",
+  "options": [
+    {"id": "A", "text": "Option A text"},
+    {"id": "B", "text": "Option B text"},
+    {"id": "C", "text": "Option C text"},
+    {"id": "D", "text": "Option D text"}
+  ]
+}
+
+Note: Only include "options" for mcq and single_selection types.`;
+
+    try {
+      const aiResponse = await abstractedAiService.generateResponse({
+        systemPrompt: 'You are an expert technical interviewer who creates personalized, contextual questions.',
+        userPrompt: prompt,
+        options: {
+          temperature: 0.7,
+          maxTokens: 800
+        }
+      });
+
+      const questionData = JSON.parse(aiResponse.response);
+      return questionData;
+      
+    } catch (error) {
+      console.error('AI question generation failed:', error);
+      // Fallback question
+      return {
+        questionText: `What is your experience with ${session.candidateSkills[0] || 'the main technologies'} mentioned in your resume?`,
+        questionType: 'objective',
+        questionCategory: 'technical'
+      };
+    }
+  }
+
   async getMockTestQuestions(sessionId: number): Promise<MockTestQuestion[]> {
     const db = await getDatabase();
     const query = `
@@ -751,21 +891,22 @@ Return valid JSON only.`,
 
       const question = questionQuery.rows[0];
       
-      // Evaluate answer
-      const { isCorrect, pointsEarned } = this.evaluateAnswer(question, answer);
+      // Evaluate answer using AI (no predefined correct answer)
+      const { isCorrect, pointsEarned, feedback } = await this.evaluateAnswerWithAI(question, answer);
       
       // Insert or update response
       const responseQuery = `
         INSERT INTO mock_test_responses (
           session_id, question_id, candidate_answer, selected_options, 
-          is_correct, points_earned
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          is_correct, points_earned, ai_feedback
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (session_id, question_id) 
         DO UPDATE SET 
           candidate_answer = EXCLUDED.candidate_answer,
           selected_options = EXCLUDED.selected_options,
           is_correct = EXCLUDED.is_correct,
           points_earned = EXCLUDED.points_earned,
+          ai_feedback = EXCLUDED.ai_feedback,
           answered_at = NOW()
         RETURNING *
       `;
@@ -779,7 +920,8 @@ Return valid JSON only.`,
         candidateAnswer,
         selectedOptions ? JSON.stringify(selectedOptions) : null,
         isCorrect,
-        pointsEarned
+        pointsEarned,
+        feedback || null
       ]);
 
       // Update session if in_progress
@@ -808,6 +950,124 @@ Return valid JSON only.`,
     } catch (error) {
       await db.query('ROLLBACK');
       throw error;
+    }
+  }
+
+  private async evaluateAnswerWithAI(question: any, answer: string | string[]): Promise<{ isCorrect: boolean; pointsEarned: number; feedback?: string }> {
+    try {
+      const answerText = Array.isArray(answer) ? answer.join(' ') : answer;
+      
+      if (!answerText || answerText.trim().length === 0) {
+        return { isCorrect: false, pointsEarned: 0, feedback: 'No answer provided' };
+      }
+
+      const questionType = question.question_type;
+      const points = question.points;
+
+      let prompt = '';
+      
+      if (questionType === 'mcq' || questionType === 'single_selection') {
+        // For multiple choice, evaluate the selected option
+        const options = question.options ? this.safeJsonParse(question.options, 'options') : [];
+        const selectedOption = options.find((opt: any) => opt.id === answerText);
+        const selectedText = selectedOption ? selectedOption.text : answerText;
+
+        prompt = `
+Evaluate this multiple choice answer:
+
+Question: ${question.question_text}
+Available Options: ${options.map((opt: any) => `${opt.id}: ${opt.text}`).join('\n')}
+Selected Answer: ${answerText} - ${selectedText}
+
+Evaluate if the selected answer is correct for this question. Consider:
+1. Technical accuracy of the selected option
+2. Relevance to the question asked
+3. Completeness of the answer
+
+Respond with JSON only:
+{
+  "isCorrect": boolean,
+  "score": number (0-1),
+  "feedback": "brief explanation of why this answer is correct/incorrect"
+}`;
+      } else if (questionType === 'coding') {
+        prompt = `
+Evaluate this coding solution:
+
+Question: ${question.question_text}
+Candidate Code:
+\`\`\`
+${answerText}
+\`\`\`
+
+Evaluate the code based on:
+1. CORRECTNESS: Does it solve the problem?
+2. LOGIC: Is the approach sound?
+3. SYNTAX: Is it syntactically correct?
+4. EFFICIENCY: Is it reasonably efficient?
+5. BEST PRACTICES: Does it follow good coding practices?
+
+Respond with JSON only:
+{
+  "isCorrect": boolean,
+  "score": number (0-1, where 0.6+ is passing),
+  "feedback": "detailed feedback on the code quality and correctness"
+}`;
+      } else {
+        // For objective questions
+        prompt = `
+Evaluate this open-ended answer:
+
+Question: ${question.question_text}
+Candidate Answer: ${answerText}
+
+Evaluate the answer based on:
+1. ACCURACY: Is the information technically correct?
+2. COMPLETENESS: Does it adequately address the question?
+3. CLARITY: Is the explanation clear and well-structured?
+4. DEPTH: Does it show good understanding of the topic?
+
+Respond with JSON only:
+{
+  "isCorrect": boolean,
+  "score": number (0-1, where 0.7+ is considered correct),
+  "feedback": "constructive feedback on the answer quality"
+}`;
+      }
+
+      const aiResponse = await abstractedAiService.generateResponse({
+        systemPrompt: 'You are a fair and experienced technical evaluator. Focus on understanding and correctness rather than perfect wording.',
+        userPrompt: prompt,
+        options: {
+          temperature: 0.2,
+          maxTokens: 400
+        }
+      });
+      
+      const evaluation = JSON.parse(aiResponse.response);
+      
+      // Determine correctness based on question type
+      const threshold = questionType === 'coding' ? 0.6 : 0.7;
+      const isCorrect = evaluation.score >= threshold;
+      const pointsEarned = Math.round(evaluation.score * points);
+      
+      return {
+        isCorrect,
+        pointsEarned,
+        feedback: evaluation.feedback
+      };
+      
+    } catch (error) {
+      console.error('AI evaluation failed:', error);
+      // Fallback evaluation
+      const answerText = Array.isArray(answer) ? answer.join(' ') : answer;
+      const hasSubstantialAnswer = answerText && answerText.trim().length > 5;
+      
+      return { 
+        isCorrect: hasSubstantialAnswer, 
+        pointsEarned: hasSubstantialAnswer ? Math.floor(question.points * 0.6) : 0,
+        feedback: 'AI evaluation unavailable, partial credit given for substantial answer'
+      };
     }
   }
 
@@ -876,11 +1136,32 @@ Return valid JSON only.`,
     session: MockTestSession;
     questions: MockTestQuestion[];
     responses: MockTestResponse[];
+    results: {
+      sessionId: number;
+      testLevel: string;
+      totalQuestions: number;
+      correctAnswers: number;
+      incorrectAnswers: number;
+      percentageScore: number;
+      timeTaken: number;
+      feedback?: string;
+      questionResults?: Array<{
+        question: string;
+        userAnswer: string;
+        correctAnswer: string;
+        isCorrect: boolean;
+        explanation?: string;
+      }>;
+    };
   }> {
     // Get session
     const session = await this.getMockTestSession(sessionId, candidateId);
     if (!session) {
       throw new Error('Session not found');
+    }
+
+    if (session.status !== 'completed') {
+      throw new Error('Test must be completed to view results');
     }
 
     // Get questions
@@ -908,7 +1189,41 @@ Return valid JSON only.`,
       answeredAt: row.answered_at
     }));
 
-    return { session, questions, responses };
+    // Calculate results summary
+    const correctAnswers = responses.filter(r => r.isCorrect).length;
+    const incorrectAnswers = responses.length - correctAnswers;
+    const percentageScore = session.percentageScore || 0;
+    
+    // Calculate time taken (in seconds)
+    const timeTaken = session.startedAt && session.completedAt 
+      ? Math.floor((new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()) / 1000)
+      : 0;
+
+    // Build question results
+    const questionResults = questions.map(question => {
+      const response = responses.find(r => r.questionId === question.id);
+      return {
+        question: question.questionText,
+        userAnswer: response?.candidateAnswer || 'No answer',
+        correctAnswer: question.correctAnswer,
+        isCorrect: response?.isCorrect || false,
+        explanation: question.explanation
+      };
+    });
+
+    const results = {
+      sessionId: session.id,
+      testLevel: session.testLevel,
+      totalQuestions: session.totalQuestions,
+      correctAnswers,
+      incorrectAnswers,
+      percentageScore,
+      timeTaken,
+      feedback: 'Test completed successfully',
+      questionResults
+    };
+
+    return { session, questions, responses, results };
   }
 
   async getCandidateMockTests(candidateId: string, interviewId?: number): Promise<MockTestSession[]> {
@@ -931,7 +1246,7 @@ Return valid JSON only.`,
     return result.rows.map(row => this.mapSessionFromDb(row));
   }
 
-  private evaluateAnswer(question: any, answer: string | string[]): { isCorrect: boolean; pointsEarned: number } {
+  private async evaluateAnswer(question: any, answer: string | string[]): Promise<{ isCorrect: boolean; pointsEarned: number; feedback?: string }> {
     const questionType = question.question_type;
     const correctAnswer = question.correct_answer;
     const points = question.points;
@@ -954,15 +1269,202 @@ Return valid JSON only.`,
         return { isCorrect, pointsEarned: isCorrect ? points : 0 };
 
       case 'objective':
+        // Use AI for semantic evaluation of objective questions
+        return await this.evaluateWithAI(question, answer, points);
+
       case 'coding':
-        // For objective and coding questions, we'll need AI evaluation
-        // For now, we'll mark as partially correct and let AI provide feedback later
-        const answerText = Array.isArray(answer) ? answer.join(' ') : answer;
-        const hasAnswer = answerText && answerText.trim().length > 0;
-        return { isCorrect: hasAnswer, pointsEarned: hasAnswer ? Math.floor(points * 0.5) : 0 };
+        // Use AI for code evaluation
+        return await this.evaluateCodeWithAI(question, answer, points);
 
       default:
         return { isCorrect: false, pointsEarned: 0 };
+    }
+  }
+
+  private async evaluateWithAI(question: any, answer: string | string[], points: number): Promise<{ isCorrect: boolean; pointsEarned: number; feedback?: string }> {
+    try {
+      const answerText = Array.isArray(answer) ? answer.join(' ') : answer;
+      
+      if (!answerText || answerText.trim().length === 0) {
+        return { isCorrect: false, pointsEarned: 0, feedback: 'No answer provided' };
+      }
+
+      // Get the full correct answer text, not just the option letter
+      let correctAnswerText = question.correct_answer;
+      
+      // If the correct answer is just a letter (A, B, C, D), try to get the full text from options
+      if (question.options && /^[A-D]$/i.test(correctAnswerText)) {
+        const options = this.safeJsonParse(question.options, 'question_options');
+        const correctOption = options.find((opt: any) => opt.id === correctAnswerText || opt.isCorrect);
+        if (correctOption) {
+          correctAnswerText = correctOption.text;
+        }
+      }
+
+      const prompt = `
+You are an expert evaluator for technical assessments. Evaluate this answer semantically and provide a fair score.
+
+Question: ${question.question_text}
+Expected Answer: ${correctAnswerText}
+Candidate Answer: ${answerText}
+
+Evaluation Criteria:
+1. SEMANTIC CORRECTNESS: Does the candidate's answer convey the same meaning as the expected answer?
+2. CORE CONCEPTS: Are the key technical concepts correctly identified?
+3. COMPLETENESS: Does the answer cover the main points?
+4. TECHNICAL ACCURACY: Is the information technically correct?
+
+IMPORTANT: 
+- Give credit for semantically equivalent answers even if worded differently
+- Focus on meaning and understanding, not exact wording
+- A shorter but accurate answer should get full credit
+- Consider partial credit for answers that are partially correct
+
+Respond with JSON only:
+{
+  "isCorrect": boolean,
+  "score": number (0-1, where 0.7+ should be considered correct),
+  "feedback": "brief explanation of the evaluation"
+}`;
+
+      const aiResponse = await abstractedAiService.generateResponse({
+        systemPrompt: 'You are a fair and understanding technical evaluator. Focus on semantic meaning rather than exact word matching.',
+        userPrompt: prompt,
+        options: {
+          temperature: 0.2, // Lower temperature for more consistent evaluation
+          maxTokens: 300
+        }
+      });
+      
+      const evaluation = JSON.parse(aiResponse.response);
+      
+      // Consider scores of 0.7 and above as correct
+      const isCorrect = evaluation.score >= 0.7;
+      const pointsEarned = Math.round(evaluation.score * points);
+      
+      return {
+        isCorrect,
+        pointsEarned,
+        feedback: evaluation.feedback
+      };
+      
+    } catch (error) {
+      console.error('AI evaluation failed:', error);
+      // Improved fallback evaluation
+      const answerText = Array.isArray(answer) ? answer.join(' ') : answer;
+      const hasSubstantialAnswer = answerText && answerText.trim().length > 10;
+      
+      // Check for key terms from the correct answer
+      const correctAnswerLower = question.correct_answer.toLowerCase();
+      const answerLower = answerText.toLowerCase();
+      const hasKeyTerms = correctAnswerLower.split(' ').some((term: string) => 
+        term.length > 3 && answerLower.includes(term)
+      );
+      
+      const fallbackScore = hasSubstantialAnswer && hasKeyTerms ? 0.7 : hasSubstantialAnswer ? 0.5 : 0;
+      
+      return { 
+        isCorrect: fallbackScore >= 0.7, 
+        pointsEarned: Math.round(fallbackScore * points),
+        feedback: 'AI evaluation unavailable, scored based on content analysis'
+      };
+    }
+  }
+
+  private async evaluateCodeWithAI(question: any, answer: string | string[], points: number): Promise<{ isCorrect: boolean; pointsEarned: number; feedback?: string }> {
+    try {
+      const codeAnswer = Array.isArray(answer) ? answer.join('\n') : answer;
+      
+      if (!codeAnswer || codeAnswer.trim().length === 0) {
+        return { isCorrect: false, pointsEarned: 0, feedback: 'No code provided' };
+      }
+
+      // Get the full correct answer text, not just option letter
+      let correctAnswerText = question.correct_answer;
+      if (question.options && /^[A-D]$/i.test(correctAnswerText)) {
+        const options = this.safeJsonParse(question.options, 'question_options');
+        const correctOption = options.find((opt: any) => opt.id === correctAnswerText || opt.isCorrect);
+        if (correctOption) {
+          correctAnswerText = correctOption.text;
+        }
+      }
+
+      const prompt = `
+You are an expert code evaluator. Evaluate this code solution fairly and comprehensively.
+
+Question: ${question.question_text}
+Expected Solution Approach: ${correctAnswerText}
+Candidate Code: 
+\`\`\`
+${codeAnswer}
+\`\`\`
+
+Evaluation Criteria:
+1. CORRECTNESS: Does it solve the problem correctly?
+2. LOGIC: Is the approach sound and well-reasoned?
+3. SYNTAX: Is it syntactically correct for the language?
+4. EFFICIENCY: Is it reasonably efficient?
+5. BEST PRACTICES: Does it follow good coding practices?
+6. COMPLETENESS: Does it address all requirements?
+
+IMPORTANT:
+- Give credit for working solutions even if different from expected approach
+- Consider partial credit for solutions with minor issues
+- Focus on problem-solving ability over perfect syntax
+- A working solution should get high marks even if not optimal
+
+Respond with JSON only:
+{
+  "isCorrect": boolean,
+  "score": number (0-1, where 0.6+ should be considered passing),
+  "feedback": "detailed feedback on the code quality and correctness"
+}`;
+
+      const aiResponse = await abstractedAiService.generateResponse({
+        systemPrompt: 'You are a fair and experienced code reviewer. Focus on problem-solving ability and correctness over perfect style.',
+        userPrompt: prompt,
+        options: {
+          temperature: 0.2,
+          maxTokens: 600
+        }
+      });
+      const evaluation = JSON.parse(aiResponse.response);
+      
+      // Consider scores of 0.6 and above as correct for code
+      const isCorrect = evaluation.score >= 0.6;
+      const pointsEarned = Math.round(evaluation.score * points);
+      
+      return {
+        isCorrect,
+        pointsEarned,
+        feedback: evaluation.feedback
+      };
+      
+    } catch (error) {
+      console.error('AI code evaluation failed:', error);
+      // Improved fallback for code evaluation
+      const codeAnswer = Array.isArray(answer) ? answer.join('\n') : answer;
+      const hasCode = codeAnswer && codeAnswer.trim().length > 0;
+      
+      // Basic code quality checks
+      const hasFunction = /function|def|class|=>|\{/.test(codeAnswer);
+      const hasLogic = /if|for|while|return|=/.test(codeAnswer);
+      const isSubstantial = codeAnswer.length > 20;
+      
+      let fallbackScore = 0;
+      if (hasCode && hasFunction && hasLogic && isSubstantial) {
+        fallbackScore = 0.7; // Good attempt
+      } else if (hasCode && (hasFunction || hasLogic)) {
+        fallbackScore = 0.5; // Partial attempt
+      } else if (hasCode) {
+        fallbackScore = 0.3; // Some effort
+      }
+      
+      return { 
+        isCorrect: fallbackScore >= 0.6, 
+        pointsEarned: Math.round(fallbackScore * points),
+        feedback: 'AI evaluation unavailable, scored based on code structure analysis'
+      };
     }
   }
 
@@ -984,7 +1486,8 @@ Return valid JSON only.`,
       completedAt: row.completed_at,
       expiresAt: row.expires_at,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      durationMinutes: row.duration_minutes || 60
     };
   }
 }

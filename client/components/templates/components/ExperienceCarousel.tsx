@@ -86,14 +86,93 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
           
           {exp.description && (
             <div className="experience-description">
-              <ReactMarkdown>{exp.description}</ReactMarkdown>
+              <ReactMarkdown>
+                {exp.is_optimized && exp.description_optimized 
+                  ? exp.description_optimized 
+                  : exp.description}
+              </ReactMarkdown>
+            </div>
+          )}
+
+          {/* Responsibilities Section */}
+          {((exp.is_optimized && exp.responsibilities_optimized && exp.responsibilities_optimized.length > 0) || 
+            (exp.responsibilities && exp.responsibilities.length > 0)) && (
+            <div className="experience-responsibilities">
+              <h4 className="responsibilities-title">Key Responsibilities</h4>
+              <ul className="responsibilities-list">
+                {(exp.is_optimized && exp.responsibilities_optimized 
+                  ? exp.responsibilities_optimized 
+                  : exp.responsibilities)?.map((responsibility, index) => (
+                  <li key={index} className="responsibility-item">
+                    {responsibility}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Achievements Section */}
+          {((exp.is_optimized && exp.achievements_optimized && exp.achievements_optimized.length > 0) || 
+            (exp.achievements && exp.achievements.length > 0)) && (
+            <div className="experience-achievements">
+              <h4 className="achievements-title">Key Achievements</h4>
+              <ul className="achievements-list">
+                {(exp.is_optimized && exp.achievements_optimized 
+                  ? exp.achievements_optimized 
+                  : exp.achievements)?.map((achievement, index) => (
+                  <li key={index} className="achievement-item">
+                    {achievement}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Key Metrics Section */}
+          {exp.keyMetrics && exp.keyMetrics.length > 0 && (
+            <div className="experience-metrics">
+              <h4 className="metrics-title">Key Metrics</h4>
+              <div className="metrics-grid">
+                {exp.keyMetrics.map((metric, index) => (
+                  <div key={index} className="metric-item">
+                    <span className="metric-value">{metric.value}</span>
+                    <span className="metric-label">{metric.metric}</span>
+                    {metric.description && (
+                      <span className="metric-description">{metric.description}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Employment Type */}
+          {exp.employmentType && (
+            <div className="employment-type">
+              <span className="employment-type-badge">
+                {exp.employmentType}
+              </span>
+            </div>
+          )}
+
+          {/* Technologies Section */}
+          {exp.technologies && exp.technologies.length > 0 && (
+            <div className="experience-technologies">
+              <h4 className="technologies-title">Technologies Used</h4>
+              <div className="technologies-tags">
+                {exp.technologies.map((tech, techIndex) => (
+                  <span key={techIndex} className="technology-tag">
+                    {tech}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Skills Section */}
           {exp.skills && exp.skills.length > 0 && (
             <div className="experience-skills">
-              <h4 className="skills-title">Technologies & Skills</h4>
+              <h4 className="skills-title">Skills Applied</h4>
               <div className="skills-tags">
                 {exp.skills.map((skill, skillIndex) => (
                   <span key={skillIndex} className="skill-tag">
@@ -101,6 +180,36 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Company Links */}
+          {(exp.companyUrl || exp.companyLogo) && (
+            <div className="company-info">
+              {exp.companyUrl && (
+                <a 
+                  href={exp.companyUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="company-link"
+                >
+                  Visit Company Website
+                </a>
+              )}
+              {exp.companyLogo && (
+                <img 
+                  src={exp.companyLogo} 
+                  alt={`${exp.company} logo`}
+                  className="company-logo"
+                />
+              )}
+            </div>
+          )}
+
+          {/* Optimization Status */}
+          {exp.is_optimized && (
+            <div className="optimization-status">
+              <span className="optimization-badge">✨ Optimized</span>
             </div>
           )}
         </div>
@@ -193,14 +302,93 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
             
             {currentExp.description && (
               <div className="experience-description">
-                <ReactMarkdown>{currentExp.description}</ReactMarkdown>
+                <ReactMarkdown>
+                  {currentExp.is_optimized && currentExp.description_optimized 
+                    ? currentExp.description_optimized 
+                    : currentExp.description}
+                </ReactMarkdown>
+              </div>
+            )}
+
+            {/* Responsibilities Section */}
+            {((currentExp.is_optimized && currentExp.responsibilities_optimized && currentExp.responsibilities_optimized.length > 0) || 
+              (currentExp.responsibilities && currentExp.responsibilities.length > 0)) && (
+              <div className="experience-responsibilities">
+                <h4 className="responsibilities-title">Key Responsibilities</h4>
+                <ul className="responsibilities-list">
+                  {(currentExp.is_optimized && currentExp.responsibilities_optimized 
+                    ? currentExp.responsibilities_optimized 
+                    : currentExp.responsibilities)?.map((responsibility, index) => (
+                    <li key={index} className="responsibility-item">
+                      {responsibility}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Achievements Section */}
+            {((currentExp.is_optimized && currentExp.achievements_optimized && currentExp.achievements_optimized.length > 0) || 
+              (currentExp.achievements && currentExp.achievements.length > 0)) && (
+              <div className="experience-achievements">
+                <h4 className="achievements-title">Key Achievements</h4>
+                <ul className="achievements-list">
+                  {(currentExp.is_optimized && currentExp.achievements_optimized 
+                    ? currentExp.achievements_optimized 
+                    : currentExp.achievements)?.map((achievement, index) => (
+                    <li key={index} className="achievement-item">
+                      {achievement}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Key Metrics Section */}
+            {currentExp.keyMetrics && currentExp.keyMetrics.length > 0 && (
+              <div className="experience-metrics">
+                <h4 className="metrics-title">Key Metrics</h4>
+                <div className="metrics-grid">
+                  {currentExp.keyMetrics.map((metric, index) => (
+                    <div key={index} className="metric-item">
+                      <span className="metric-value">{metric.value}</span>
+                      <span className="metric-label">{metric.metric}</span>
+                      {metric.description && (
+                        <span className="metric-description">{metric.description}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Employment Type */}
+            {currentExp.employmentType && (
+              <div className="employment-type">
+                <span className="employment-type-badge">
+                  {currentExp.employmentType}
+                </span>
+              </div>
+            )}
+
+            {/* Technologies Section */}
+            {currentExp.technologies && currentExp.technologies.length > 0 && (
+              <div className="experience-technologies">
+                <h4 className="technologies-title">Technologies Used</h4>
+                <div className="technologies-tags">
+                  {currentExp.technologies.map((tech, techIndex) => (
+                    <span key={techIndex} className="technology-tag">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Skills Section */}
             {currentExp.skills && currentExp.skills.length > 0 && (
               <div className="experience-skills">
-                <h4 className="skills-title">Technologies & Skills</h4>
+                <h4 className="skills-title">Skills Applied</h4>
                 <div className="skills-tags">
                   {currentExp.skills.map((skill, skillIndex) => (
                     <span key={skillIndex} className="skill-tag">
@@ -208,6 +396,36 @@ export const ExperienceCarousel: React.FC<ExperienceCarouselProps> = ({
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Company Links */}
+            {(currentExp.companyUrl || currentExp.companyLogo) && (
+              <div className="company-info">
+                {currentExp.companyUrl && (
+                  <a 
+                    href={currentExp.companyUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="company-link"
+                  >
+                    Visit Company Website
+                  </a>
+                )}
+                {currentExp.companyLogo && (
+                  <img 
+                    src={currentExp.companyLogo} 
+                    alt={`${currentExp.company} logo`}
+                    className="company-logo"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Optimization Status */}
+            {currentExp.is_optimized && (
+              <div className="optimization-status">
+                <span className="optimization-badge">✨ Optimized</span>
               </div>
             )}
 

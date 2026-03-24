@@ -584,8 +584,8 @@ class ResumeParsingService {
           github: userProvidedInfo?.github || localPersonalInfo.github || '',
           website: userProvidedInfo?.website || localPersonalInfo.website || ''
         },
-        summary: parsedData.summary || '',
-        objective: parsedData.objective || '',
+        summary: typeof parsedData.summary === 'object' ? parsedData.summary?.content || '' : parsedData.summary || '',
+        objective: typeof parsedData.objective === 'object' ? parsedData.objective?.content || '' : parsedData.objective || '',
         skills: processedSkills, // Use processed skills with core detection
         skillCategories: parsedData.skillCategories || {},
         experience: (parsedData.experience || []).map(exp => ({
@@ -639,20 +639,6 @@ class ResumeParsingService {
           proficiency: ''
         }))
       };
-      
-      // console.log('✅ Resume parsed successfully with DSPy-trained parser (4.1M+ records):', {
-      //   name: result.personalInfo?.fullName || 'N/A',
-      //   email: result.personalInfo?.email || 'N/A',
-      //   phone: result.personalInfo?.phone || 'N/A',
-      //   skills: result.skills?.length || 0,
-      //   coreSkills: processedSkills.filter(s => s.isCore).length || 0,
-      //   experience: result.experience?.length || 0,
-      //   education: result.education?.length || 0,
-      //   projects: result.projects?.length || 0,
-      //   certifications: result.certifications?.length || 0,
-      //   personalInfoSource: 'local_extraction',
-      //   trainingData: '4.1M+ records from 8 datasets'
-      // });
       
       if (result.projects && result.projects.length > 0) {
         console.log(`📋 Project details: ${result.projects.map(p => `"${p.name}" (${(p.technologies || []).join(', ')})`).join(', ')}`);

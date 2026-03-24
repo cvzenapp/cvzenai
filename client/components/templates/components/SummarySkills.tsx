@@ -182,7 +182,11 @@ export const SummarySkills: React.FC<SummarySkillsProps> = ({
                 
                 <div className="prose prose-sm max-w-none">
                   <p className="text-muted-foreground leading-relaxed text-base">
-                    {resume.summary}
+                    {typeof resume.summary === 'object' && resume.summary?.is_optimized && resume.summary?.content_optimized 
+                      ? resume.summary.content_optimized 
+                      : typeof resume.summary === 'object' 
+                        ? resume.summary?.content 
+                        : resume.summary}
                   </p>
                 </div>
               </div>
@@ -229,7 +233,11 @@ export const SummarySkills: React.FC<SummarySkillsProps> = ({
                 
                 <div className="prose prose-sm max-w-none">
                   <p className="text-muted-foreground leading-relaxed text-base">
-                    {resume.objective}
+                    {typeof resume.objective === 'object' && resume.objective?.is_optimized && resume.objective?.content_optimized 
+                      ? resume.objective.content_optimized 
+                      : typeof resume.objective === 'object' 
+                        ? resume.objective?.content 
+                        : resume.objective}
                   </p>
                 </div>
               </div>

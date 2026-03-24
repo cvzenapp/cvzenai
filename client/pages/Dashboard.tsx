@@ -95,7 +95,7 @@ interface SavedResume {
   experience?: any[];
   education?: any[];
   skills?: any[];
-  summary?: string;
+  summary?: string | { content: string; content_optimized?: string; is_optimized?: boolean };
   template?: string;
   lastUpdated: string;
   status: 'draft' | 'active' | 'archived';
@@ -348,9 +348,12 @@ export default function Dashboard() {
   // Load resumes from API on component mount
   useEffect(() => {
     const loadResumes = async () => {
+      console.log('🔍 Dashboard: Starting to load resumes...');
       setIsLoadingResumes(true);
       try {
+        console.log('🔍 Dashboard: Calling resumeApi.getUserResumes()...');
         const response = await resumeApi.getUserResumes();
+        console.log('🔍 Dashboard: API response received:', response);
         
         if (response.success) {
           // Handle different response formats
@@ -377,7 +380,11 @@ export default function Dashboard() {
             experience: resume.experience || [],
             education: resume.education || [],
             skills: resume.skills || [],
-            summary: resume.summary || resume.personalInfo?.summary || '',
+            summary: typeof resume.summary === 'object' && resume.summary 
+              ? (resume.summary.is_optimized && resume.summary.content_optimized 
+                  ? resume.summary.content_optimized 
+                  : resume.summary.content || '')
+              : (resume.summary || resume.personalInfo?.summary || ''),
             template: resume.templateId || 'default',
             lastUpdated: new Date(resume.updatedAt).toLocaleDateString(),
             status: resume.status === 'published' ? 'active' : resume.status as 'draft' | 'active' | 'archived',
@@ -419,7 +426,12 @@ export default function Dashboard() {
             if (resume.skills && resume.skills.length > 0) resumeStrength += 20;
             
             // Summary/Objective (10%)
-            if (resume.summary && resume.summary.trim() !== '') resumeStrength += 10;
+            const summaryContent = typeof resume.summary === 'object' && resume.summary 
+              ? (resume.summary.is_optimized && resume.summary.content_optimized 
+                  ? resume.summary.content_optimized 
+                  : resume.summary.content || '')
+              : (resume.summary || '');
+            if (summaryContent && typeof summaryContent === 'string' && summaryContent.trim() !== '') resumeStrength += 10;
             
             setStats(prev => ({
               ...prev,
@@ -434,11 +446,12 @@ export default function Dashboard() {
             }));
           }
         } else {
+          console.log('🔍 Dashboard: API call failed, falling back to localStorage');
           // Fallback to localStorage if API fails
           loadResumesFromLocalStorage();
         }
       } catch (error) {
-        console.log('🔍 Dashboard - API call failed:', error);
+        console.log('🔍 Dashboard - API call failed with error:', error);
         
         // For now, always fall back to localStorage instead of redirecting
         // This allows us to test the Dashboard functionality even with auth issues
@@ -512,6 +525,14 @@ export default function Dashboard() {
     loadSubscription();
     loadRecentActivity();
   }, []);
+
+  // Load resumes when resumes tab is activated
+  useEffect(() => {
+    if (activeTab === 'resumes') {
+      console.log('🔍 Dashboard: Resumes tab activated, loading resumes...');
+      refreshResumes();
+    }
+  }, [activeTab]);
 
   // Add event listener to refresh when window gains focus (user returns from builder)
   useEffect(() => {
@@ -1216,6 +1237,11 @@ export default function Dashboard() {
               onClick={() => {
                 setActiveTab('resumes');
                 setIsMobileSidebarOpen(false);
+                // Trigger resumes reload when tab is clicked
+                if (activeTab !== 'resumes') {
+                  console.log('🔍 Dashboard: Resumes tab clicked, triggering reload...');
+                  refreshResumes();
+                }
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'resumes'

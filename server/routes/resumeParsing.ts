@@ -121,7 +121,7 @@ router.post('/parse', unifiedAuth.requireAuth, upload.single('resume'), async (r
     
     // Step 4.5: Generate shareToken automatically using slug
     const db = await initializeDatabase();
-    const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || 'resume';
+    const fullName = parsedData.personalInfo.fullName || '';
     
     // Generate unique slug for shareToken using proper slug generator
     const { generateUniqueSlug } = await import('../lib/slugGenerator.js');

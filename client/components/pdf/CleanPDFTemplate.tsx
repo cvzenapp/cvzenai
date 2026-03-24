@@ -18,11 +18,23 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
   header: {
-    textAlign: "center",
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 30,
     paddingBottom: 20,
     borderBottomWidth: 2,
     borderBottomColor: "#2563eb",
+  },
+  profileSection: {
+    flex: 1,
+    textAlign: "center",
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 20,
+    alignSelf: "center",
   },
   name: {
     fontSize: 28,
@@ -171,52 +183,63 @@ export const CleanPDFTemplate: React.FC<{ resume: Resume }> = ({ resume }) => {
       <Page size="A4" style={styles.page} wrap={true}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.name}>
-            {resume.personalInfo?.name || "Professional Resume"}
-          </Text>
-          <Text style={styles.title}>{resume.personalInfo?.title || ""}</Text>
+          {/* Profile Image */}
+          {resume.personalInfo?.avatar && (
+            <Image
+              style={styles.profileImage}
+              src={resume.personalInfo.avatar}
+            />
+          )}
+          
+          {/* Profile Information */}
+          <View style={styles.profileSection}>
+            <Text style={styles.name}>
+              {resume.personalInfo?.name || "Professional Resume"}
+            </Text>
+            <Text style={styles.title}>{resume.personalInfo?.title || ""}</Text>
 
-          {/* Contact Information in a more organized layout */}
-          <View style={styles.contactRow}>
-            {resume.personalInfo?.email && (
-              <Text style={styles.contactItem}>
-                {resume.personalInfo.email}
-              </Text>
-            )}
-            {resume.personalInfo?.phone && (
-              <Text style={styles.contactItem}>
-                {resume.personalInfo.phone}
-              </Text>
-            )}
-            {resume.personalInfo?.location && (
-              <Text style={styles.contactItem}>
-                {resume.personalInfo.location}
-              </Text>
-            )}
-          </View>
-
-          {/* Additional contact links */}
-          {(resume.personalInfo?.website ||
-            resume.personalInfo?.linkedin ||
-            resume.personalInfo?.github) && (
+            {/* Contact Information in a more organized layout */}
             <View style={styles.contactRow}>
-              {resume.personalInfo?.website && (
-                <Text style={styles.linkText}>
-                  {resume.personalInfo.website}
+              {resume.personalInfo?.email && (
+                <Text style={styles.contactItem}>
+                  {resume.personalInfo.email}
                 </Text>
               )}
-              {resume.personalInfo?.linkedin && (
-                <Text style={styles.linkText}>
-                  {resume.personalInfo.linkedin}
+              {resume.personalInfo?.phone && (
+                <Text style={styles.contactItem}>
+                  {resume.personalInfo.phone}
                 </Text>
               )}
-              {resume.personalInfo?.github && (
-                <Text style={styles.linkText}>
-                  {resume.personalInfo.github}
+              {resume.personalInfo?.location && (
+                <Text style={styles.contactItem}>
+                  {resume.personalInfo.location}
                 </Text>
               )}
             </View>
-          )}
+
+            {/* Additional contact links */}
+            {(resume.personalInfo?.website ||
+              resume.personalInfo?.linkedin ||
+              resume.personalInfo?.github) && (
+              <View style={styles.contactRow}>
+                {resume.personalInfo?.website && (
+                  <Text style={styles.linkText}>
+                    {resume.personalInfo.website}
+                  </Text>
+                )}
+                {resume.personalInfo?.linkedin && (
+                  <Text style={styles.linkText}>
+                    {resume.personalInfo.linkedin}
+                  </Text>
+                )}
+                {resume.personalInfo?.github && (
+                  <Text style={styles.linkText}>
+                    {resume.personalInfo.github}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Summary */}

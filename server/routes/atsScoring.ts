@@ -502,6 +502,19 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
       });
     }
     
+    // Prepare summary and objective in JSONB format
+    const summaryJson = improvedData.summary ? JSON.stringify({
+      content: improvedData.summary,
+      content_optimized: null,
+      is_optimized: false
+    }) : null;
+    
+    const objectiveJson = improvedData.objective ? JSON.stringify({
+      content: improvedData.objective,
+      content_optimized: null,
+      is_optimized: false
+    }) : null;
+
     // Score improved - save the changes
     await db.query(
       `UPDATE resumes SET
@@ -518,8 +531,8 @@ router.post('/improve/:resumeId', unifiedAuth.requireAuth, async (req: AuthReque
       WHERE id = $10`,
       [
         JSON.stringify(improvedData.personalInfo),
-        improvedData.summary,
-        improvedData.objective,
+        summaryJson,
+        objectiveJson,
         JSON.stringify(improvedData.skills),
         JSON.stringify(improvedData.experience),
         JSON.stringify(improvedData.education),
@@ -660,9 +673,14 @@ router.post('/improve-section/:resumeId', unifiedAuth.requireAuth, async (req: A
     let updateParams: any[] = [];
 
     if (sectionType === 'summary' || sectionType === 'objective') {
-      // Simple string fields
+      // JSONB fields - need to wrap in proper format
+      const jsonbValue = JSON.stringify({
+        content: improvement.improved,
+        content_optimized: null,
+        is_optimized: false
+      });
       updateQuery = `UPDATE resumes SET ${sectionType} = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3::uuid RETURNING *`;
-      updateParams = [improvement.improved, resumeId, userId];
+      updateParams = [jsonbValue, resumeId, userId];
     } else if (sectionType === 'skills') {
       // Array field
       updateQuery = `UPDATE resumes SET skills = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3::uuid RETURNING *`;

@@ -37,7 +37,9 @@ class ResumeApiService extends BaseApiClient {
   // Get all user resumes
   async getUserResumes(): Promise<ApiResponse<{ data: ResumeData[]; total: number }>> {
     try {
+      console.log('🔍 ResumeApi: Starting getUserResumes call...');
       const response = await this.get<{ data: ResumeData[]; total: number }>("/resumes");
+      console.log('🔍 ResumeApi: Raw response from /api/resumes:', response);
       
       // Handle the response format from the server
       if (response.success && response.data) {
@@ -66,6 +68,7 @@ class ResumeApiService extends BaseApiClient {
         message: response.message || 'Failed to fetch resumes'
       } as any;
     } catch (error) {
+      console.log('🔍 ResumeApi: Error in getUserResumes:', error);
       return {
         success: false,
         data: [],

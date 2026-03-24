@@ -27,6 +27,34 @@ export interface MockTestSession {
   completedAt?: string;
   expiresAt: string;
   createdAt: string;
+  durationMinutes: number;
+}
+
+export interface Question {
+  id: number;
+  question: string;
+  type: 'multiple_choice' | 'short_answer' | 'coding';
+  options?: string[];
+  correctAnswer?: string;
+  explanation?: string;
+}
+
+export interface MockTestResult {
+  sessionId: number;
+  testLevel: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  percentageScore: number;
+  timeTaken: number;
+  feedback?: string;
+  questionResults?: Array<{
+    question: string;
+    userAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+    explanation?: string;
+  }>;
 }
 
 export interface MockTestQuestion {
@@ -141,34 +169,29 @@ class MockTestApi {
 
   async getSession(sessionId: number): Promise<{
     success: boolean;
-    session: MockTestSession;
+    session: MockTestSessionData;
   }> {
     return this.request(`/session/${sessionId}`);
   }
 
   async getQuestions(sessionId: number): Promise<{
     success: boolean;
-    questions: MockTestQuestion[];
+    questions: Question[];
   }> {
     return this.request(`/session/${sessionId}/questions`);
   }
 
-  async submitAnswer(sessionId: number, questionId: number, answer: string | string[]): Promise<{
+  async saveAnswers(sessionId: number, answers: Record<number, string>): Promise<{
     success: boolean;
-    response: MockTestResponse;
   }> {
-    return this.request(`/session/${sessionId}/answer`, {
+    return this.request(`/session/${sessionId}/save`, {
       method: 'POST',
-      body: JSON.stringify({
-        questionId,
-        answer,
-      }),
+      body: JSON.stringify({ answers }),
     });
   }
 
-  async completeTest(sessionId: number): Promise<{
+  async submitTest(sessionId: number, answers: Record<number, string>): Promise<{
     success: boolean;
-    session: MockTestSession;
   }> {
     return this.request(`/session/${sessionId}/complete`, {
       method: 'POST',
@@ -177,7 +200,7 @@ class MockTestApi {
 
   async getResults(sessionId: number): Promise<{
     success: boolean;
-    results: MockTestResults;
+    results: MockTestResult;
   }> {
     return this.request(`/session/${sessionId}/results`);
   }

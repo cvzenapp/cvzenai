@@ -134,10 +134,18 @@ export class SubscriptionService {
   ): Promise<CompanySubscription> {
     const db = await getDatabase();
     
-    // Get plan
-    const planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    // Get plan - check if planId is UUID or plan name
+    let planResult;
+    if (planId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      // It's a UUID
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    } else {
+      // It's a plan name
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE name = $1', [planId]);
+    }
     if (!planResult.rows[0]) throw new Error('Plan not found');
     const plan = this.mapPlanFromDb(planResult.rows[0]);
+    const actualPlanId = plan.id; // Use the actual UUID from the database
     
     // Calculate period end
     const periodEnd = new Date();
@@ -152,10 +160,10 @@ export class SubscriptionService {
        (company_id, plan_id, status, billing_cycle, current_period_end)
        VALUES ($1, $2, 'active', $3, $4)
        RETURNING *`,
-      [companyId, planId, billingCycle, periodEnd]
+      [companyId, actualPlanId, billingCycle, periodEnd]
     );
     
-    await this.logHistory(result.rows[0].id, 'company', 'created', null, planId);
+    await this.logHistory(result.rows[0].id, 'company', 'created', null, actualPlanId);
     
     return {
       ...this.mapSubscriptionFromDb(result.rows[0], 'company'),
@@ -176,10 +184,18 @@ export class SubscriptionService {
     const currentSub = await this.getCompanySubscription(companyId);
     if (!currentSub) throw new Error('No active subscription found');
     
-    // Get new plan
-    const planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    // Get new plan - check if planId is UUID or plan name
+    let planResult;
+    if (planId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      // It's a UUID
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    } else {
+      // It's a plan name
+      planResult = await db.query('SELECT * FROM subscription_plans WHERE name = $1', [planId]);
+    }
     if (!planResult.rows[0]) throw new Error('Plan not found');
     const newPlan = this.mapPlanFromDb(planResult.rows[0]);
+    const actualPlanId = newPlan.id; // Use the actual UUID from the database
     
     // Update subscription
     const result = await db.query(
@@ -187,10 +203,10 @@ export class SubscriptionService {
        SET plan_id = $1, updated_at = NOW()
        WHERE id = $2
        RETURNING *`,
-      [planId, currentSub.id]
+      [actualPlanId, currentSub.id]
     );
     
-    await this.logHistory(currentSub.id, 'company', 'upgraded', currentSub.planId, planId);
+    await this.logHistory(currentSub.id, 'company', 'upgraded', currentSub.planId, actualPlanId);
     
     return {
       ...this.mapSubscriptionFromDb(result.rows[0], 'company'),

@@ -191,14 +191,15 @@ router.get('/applications', async (req: Request, res: Response) => {
         u.email as candidate_email,
         u.first_name as candidate_first_name,
         u.last_name as candidate_last_name,
-        COALESCE(ja.guest_name, CONCAT(u.first_name, ' ', u.last_name)) as candidate_name,
-        COALESCE(ja.guest_email, u.email) as contact_email,
+        r.personal_info,
+        r.personal_info::json->>'name' as resume_name,
         COALESCE(interview_count.count, 0) as interview_count,
         COALESCE(interview_count.max_round, 0) as current_round
       FROM job_applications ja
       JOIN job_postings jp ON ja.job_id = jp.id
       LEFT JOIN companies c ON jp.company_id = c.id
       LEFT JOIN users u ON ja.user_id = u.id
+      LEFT JOIN resumes r ON ja.resume_id = r.id
       LEFT JOIN recruiter_profiles rp ON c.created_by = rp.id
       LEFT JOIN (
         SELECT application_id, COUNT(*) as count, MAX(interview_round) as max_round
@@ -212,28 +213,48 @@ router.get('/applications', async (req: Request, res: Response) => {
 
     const result = await db.query(applicationsQuery, [recruiterId]);
 
-    const applications = result.rows.map(row => ({
-      id: row.id,
-      jobId: row.job_id,
-      jobTitle: row.job_title,
-      companyName: row.company_name,
-      candidateName: row.candidate_name,
-      candidateEmail: row.contact_email,
-      resumeUrl: row.shared_token 
-        ? `${process.env.APP_URL || 'http://localhost:3000'}/shared/resume/${row.shared_token}`
-        : row.resume_file_url,
-      coverLetter: row.cover_letter,
-      status: row.status,
-      appliedAt: row.applied_at,
-      updatedAt: row.updated_at,
-      interviewCount: parseInt(row.interview_count) || 0,
-      currentRound: parseInt(row.current_round) || 0,
-      hasScheduledInterview: parseInt(row.interview_count) > 0
-    }));
+    const applications = result.rows.map(row => {
+      // Parse personal_info JSON to get the name
+      let candidateName = row.candidate_email; // fallback
+      if (row.personal_info) {
+        try {
+          const personalInfo = typeof row.personal_info === 'string' ? JSON.parse(row.personal_info) : row.personal_info;
+          candidateName = personalInfo.name || candidateName;
+        } catch (e) {
+          console.error('Error parsing personal_info:', e);
+        }
+      }
+      
+      return {
+        id: row.id,
+        job_id: row.job_id,
+        user_id: row.user_id,
+        resume_id: row.resume_id,
+        job_title: row.job_title,
+        company_name: row.company_name,
+        applicant_name: candidateName,
+        applicant_email: row.candidate_email,
+        cover_letter: row.cover_letter,
+        status: row.status,
+        applied_at: row.applied_at,
+        updated_at: row.updated_at,
+        shared_token: row.shared_token,
+        resume_file_url: row.resume_file_url,
+        interviewCount: parseInt(row.interview_count) || 0,
+        currentRound: parseInt(row.current_round) || 0,
+        hasScheduledInterview: parseInt(row.interview_count) > 0,
+        ai_score: row.ai_score,
+        ai_recommendation: row.ai_recommendation,
+        ai_reasoning: row.ai_reasoning,
+        ai_strengths: row.ai_strengths ? JSON.parse(row.ai_strengths) : null,
+        ai_concerns: row.ai_concerns ? JSON.parse(row.ai_concerns) : null,
+        ai_screened_at: row.ai_screened_at
+      };
+    });
 
     res.json({
       success: true,
-      applications,
+      data: applications,
     });
 
   } catch (error) {

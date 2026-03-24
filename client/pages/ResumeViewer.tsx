@@ -47,6 +47,27 @@ export default function ResumeViewer() {
   const [isShortlisted, setIsShortlisted] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Helper function to safely extract content from JSONB summary/objective
+  const getSummaryContent = (summary: any): string => {
+    if (typeof summary === 'object' && summary) {
+      // Return optimized content if available, otherwise return original content
+      return summary.is_optimized && summary.content_optimized 
+        ? summary.content_optimized 
+        : summary.content || '';
+    }
+    return summary || '';
+  };
+
+  const getObjectiveContent = (objective: any): string => {
+    if (typeof objective === 'object' && objective) {
+      // Return optimized content if available, otherwise return original content
+      return objective.is_optimized && objective.content_optimized 
+        ? objective.content_optimized 
+        : objective.content || '';
+    }
+    return objective || '';
+  };
+
 
 
   // Content caching for performance
@@ -203,7 +224,7 @@ export default function ResumeViewer() {
                 const userResumeData = {
                   id: sharedResume.id,
                   personalInfo: {
-                    name: sharedResume.personalInfo?.name || `${sharedResume.personalInfo?.firstName || ''} ${sharedResume.personalInfo?.lastName || ''}`.trim(),
+                    name: sharedResume.personalInfo?.name || sharedResume.title?.replace("'s Resume", "") || `${sharedResume.personalInfo?.firstName || ''} ${sharedResume.personalInfo?.lastName || ''}`.trim(),
                     title: sharedResume.personalInfo?.title || "Professional",
                     email: sharedResume.personalInfo?.email || '',
                     phone: sharedResume.personalInfo?.phone || '',
@@ -213,8 +234,8 @@ export default function ResumeViewer() {
                     github: sharedResume.personalInfo?.githubUrl || sharedResume.personalInfo?.github || '',
                     avatar: sharedResume.personalInfo?.avatar || ''
                   },
-                  summary: sharedResume.summary || sharedResume.personalInfo?.summary || "",
-                  objective: sharedResume.objective || "",
+                  summary: getSummaryContent(sharedResume.summary) || sharedResume.personalInfo?.summary || "",
+                  objective: getObjectiveContent(sharedResume.objective),
                   skills: sharedResume.skills || [],
                   experiences: sharedResume.experiences || sharedResume.experience || [],
                   education: sharedResume.education || [],
@@ -353,10 +374,10 @@ export default function ResumeViewer() {
                   userResumeData = {
                     id: targetResume.id,
                     personalInfo: {
-                      name: targetResume.personalInfo?.name || `${targetResume.personalInfo?.firstName || ''} ${targetResume.personalInfo?.lastName || ''}`.trim(),
+                      name: targetResume.personalInfo?.name || targetResume.title?.replace("'s Resume", "") || `${targetResume.personalInfo?.firstName || ''} ${targetResume.personalInfo?.lastName || ''}`.trim(),
                       title: targetResume.personalInfo?.title || (() => {
                         // Extract title from summary if it starts with "Updated:" or similar patterns
-                        const summary = targetResume.summary || targetResume.personalInfo?.summary || "";
+                        const summary = getSummaryContent(targetResume.summary) || targetResume.personalInfo?.summary || "";
                         if (summary) {
                           // Handle "Updated: Title" format
                           if (summary.startsWith("Updated:")) {
@@ -383,8 +404,8 @@ export default function ResumeViewer() {
                       github: targetResume.personalInfo?.githubUrl || targetResume.personalInfo?.github || '',
                       avatar: targetResume.personalInfo?.avatar || ''
                     },
-                    summary: targetResume.summary || targetResume.personalInfo?.summary || "",
-                    objective: targetResume.objective || "",
+                    summary: getSummaryContent(targetResume.summary) || targetResume.personalInfo?.summary || "",
+                    objective: getObjectiveContent(targetResume.objective),
                     skills: targetResume.skills || [],
                     experiences: targetResume.experiences || targetResume.experience || [],
                     education: targetResume.education || [],
@@ -430,7 +451,7 @@ export default function ResumeViewer() {
                       userResumeData = {
                         id: targetResume.id,
                         personalInfo: {
-                          name: targetResume.personalInfo?.name || `${targetResume.personalInfo?.firstName || ''} ${targetResume.personalInfo?.lastName || ''}`.trim(),
+                          name: targetResume.personalInfo?.name || targetResume.title?.replace("'s Resume", "") || `${targetResume.personalInfo?.firstName || ''} ${targetResume.personalInfo?.lastName || ''}`.trim(),
                           title: targetResume.personalInfo?.title || "Professional",
                           email: targetResume.personalInfo?.email || '',
                           phone: targetResume.personalInfo?.phone || '',
@@ -440,8 +461,8 @@ export default function ResumeViewer() {
                           github: targetResume.personalInfo?.githubUrl || targetResume.personalInfo?.github || '',
                           avatar: targetResume.personalInfo?.avatar || ''
                         },
-                        summary: targetResume.summary || targetResume.personalInfo?.summary || "",
-                        objective: targetResume.objective || "",
+                        summary: getSummaryContent(targetResume.summary) || targetResume.personalInfo?.summary || "",
+                        objective: getObjectiveContent(targetResume.objective),
                         skills: targetResume.skills || [],
                         experiences: targetResume.experiences || targetResume.experience || [],
                         education: targetResume.education || [],
@@ -473,7 +494,7 @@ export default function ResumeViewer() {
                     userResumeData = {
                       id: targetResume.id,
                       personalInfo: {
-                        name: targetResume.personalInfo?.name || `${targetResume.personalInfo?.firstName || ''} ${targetResume.personalInfo?.lastName || ''}`.trim(),
+                        name: targetResume.personalInfo?.name || targetResume.title?.replace("'s Resume", "") || `${targetResume.personalInfo?.firstName || ''} ${targetResume.personalInfo?.lastName || ''}`.trim(),
                         title: targetResume.personalInfo?.title || "Professional",
                         email: targetResume.personalInfo?.email || '',
                         phone: targetResume.personalInfo?.phone || '',
@@ -483,8 +504,8 @@ export default function ResumeViewer() {
                         github: targetResume.personalInfo?.githubUrl || targetResume.personalInfo?.github || '',
                         avatar: targetResume.personalInfo?.avatar || ''
                       },
-                      summary: targetResume.summary || targetResume.personalInfo?.summary || "",
-                      objective: targetResume.objective || "",
+                      summary: getSummaryContent(targetResume.summary) || targetResume.personalInfo?.summary || "",
+                      objective: getObjectiveContent(targetResume.objective),
                       skills: targetResume.skills || [],
                       experiences: targetResume.experiences || targetResume.experience || [],
                       education: targetResume.education || [],
@@ -634,8 +655,8 @@ export default function ResumeViewer() {
           const resumeFromStorage: Resume = {
             id: localStorageData.id || id,
             personalInfo: localStorageData.personalInfo,
-            summary: localStorageData.summary || "",
-            objective: localStorageData.objective || "",
+            summary: getSummaryContent(localStorageData.summary),
+            objective: getObjectiveContent(localStorageData.objective),
             skills: localStorageData.skills || [],
             experiences: localStorageData.experiences || [],
             education: localStorageData.education || [],
@@ -1524,7 +1545,7 @@ export default function ResumeViewer() {
           <ProfessionalSummaryEditModal
             isOpen={isEditingSummary}
             onClose={() => setIsEditingSummary(false)}
-            currentSummary={resume?.summary || ''}
+            currentSummary={getSummaryContent(resume?.summary)}
             onSave={handleSummaryUpdate}
             resumeData={resume}
           />
@@ -1540,7 +1561,7 @@ export default function ResumeViewer() {
           <CareerObjectiveEditModal
             isOpen={isEditingObjective}
             onClose={() => setIsEditingObjective(false)}
-            currentObjective={resume?.objective || ''}
+            currentObjective={getObjectiveContent(resume?.objective)}
             onSave={handleObjectiveUpdate}
             resumeData={resume}
           />
@@ -1634,7 +1655,7 @@ export default function ResumeViewer() {
           <ProfessionalSummaryEditModal
             isOpen={isEditingSummary}
             onClose={() => setIsEditingSummary(false)}
-            currentSummary={resume?.summary || ''}
+            currentSummary={getSummaryContent(resume?.summary)}
             onSave={handleSummaryUpdate}
             resumeData={resume}
           />
@@ -1650,7 +1671,7 @@ export default function ResumeViewer() {
           <CareerObjectiveEditModal
             isOpen={isEditingObjective}
             onClose={() => setIsEditingObjective(false)}
-            currentObjective={resume?.objective || ''}
+            currentObjective={getObjectiveContent(resume?.objective)}
             onSave={handleObjectiveUpdate}
             resumeData={resume}
           />

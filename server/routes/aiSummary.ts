@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth } from '../middleware/unifiedAuth';
-import { groqService } from '../services/groqService';
+import { abstractedAiService } from '../services/abstractedAiService.js';
 
 const router = express.Router();
 
@@ -49,10 +49,10 @@ Requirements:
 Return only the career objective text, no additional formatting or explanations.`;
 
     console.log('🤖 Calling AI service...');
-    const aiResponse = await groqService.generateResponse(
-      'You are a career counselor writing career objectives for resumes.',
-      prompt,
-      {
+    const aiResponse = await abstractedAiService.generateResponse({
+      systemPrompt: 'You are a career counselor writing career objectives for resumes.',
+      userPrompt: prompt,
+      options: {
         temperature: 0.7,
         maxTokens: 150,
         auditContext: {
@@ -60,9 +60,9 @@ Return only the career objective text, no additional formatting or explanations.
           operationType: 'career_objective_generation'
         }
       }
-    );
+    });
     
-    if (!aiResponse?.response) {
+    if (!aiResponse?.success || !aiResponse?.response) {
       console.log('❌ No AI response');
       return res.status(500).json({
         success: false,
@@ -129,16 +129,20 @@ Requirements:
 
 Return only the professional summary text, no additional formatting or explanations.`;
 
-    const aiResponse = await groqService.generateResponse(
-      'You are a professional resume writer. Create compelling professional summaries.',
-      prompt,
-      {
+    const aiResponse = await abstractedAiService.generateResponse({
+      systemPrompt: 'You are a professional resume writer. Create compelling professional summaries.',
+      userPrompt: prompt,
+      options: {
         temperature: 0.7,
-        maxTokens: 200
+        maxTokens: 200,
+        auditContext: {
+          serviceName: 'ai_summary_generation',
+          operationType: 'professional_summary'
+        }
       }
-    );
+    });
     
-    if (!aiResponse?.response) {
+    if (!aiResponse?.success || !aiResponse?.response) {
       return res.status(500).json({
         success: false,
         error: 'Failed to generate AI summary'
@@ -199,16 +203,20 @@ Requirements:
 
 Return only a JSON array in this format: [{"name": "Skill Name"}, {"name": "Another Skill"}]`;
 
-    const aiResponse = await groqService.generateResponse(
-      'You are a career advisor. Suggest relevant skills based on experience and education.',
-      prompt,
-      {
+    const aiResponse = await abstractedAiService.generateResponse({
+      systemPrompt: 'You are a career advisor. Suggest relevant skills based on experience and education.',
+      userPrompt: prompt,
+      options: {
         temperature: 0.5,
-        maxTokens: 300
+        maxTokens: 300,
+        auditContext: {
+          serviceName: 'ai_skills_generation',
+          operationType: 'skills_suggestion'
+        }
       }
-    );
+    });
     
-    if (!aiResponse?.response) {
+    if (!aiResponse?.success || !aiResponse?.response) {
       return res.status(500).json({
         success: false,
         error: 'Failed to generate AI skills'
@@ -313,16 +321,20 @@ Return only the career objective text, no additional formatting.`;
         });
     }
 
-    const aiResponse = await groqService.generateResponse(
-      systemMessage,
-      prompt,
-      {
+    const aiResponse = await abstractedAiService.generateResponse({
+      systemPrompt: systemMessage,
+      userPrompt: prompt,
+      options: {
         temperature: 0.7,
-        maxTokens: 150
+        maxTokens: 150,
+        auditContext: {
+          serviceName: 'ai_content_generation',
+          operationType: type
+        }
       }
-    );
+    });
     
-    if (!aiResponse?.response) {
+    if (!aiResponse?.success || !aiResponse?.response) {
       return res.status(500).json({
         success: false,
         error: 'Failed to generate AI content'

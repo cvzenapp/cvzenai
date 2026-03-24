@@ -76,6 +76,8 @@ import resumeOptimizationRouter from "./routes/resumeOptimization.js";
 import aiSummaryRouter from "./routes/aiSummary.js";
 import jobPreferencesRouter from "./routes/jobPreferences.js";
 import locationSearchRouter from "./routes/locationSearch.js";
+import jobExtractionRouter from "./routes/jobExtraction.js";
+import cachedJobSearchRouter from "./routes/cachedJobSearch.js";
 import recruiterActionsRouter from "./routes/recruiterActions";
 import emailTestRouter from "./routes/emailTest";
 import { createMockTestRoutes } from "./routes/mockTests";
@@ -194,6 +196,9 @@ export function createServer() {
       });
     }
   });
+
+  // Job extraction routes (Tavily-based) - MOVED TO TOP
+  app.use("/api/job-extraction", jobExtractionRouter);
 
   // Resume API endpoints
   app.get("/api/resumes", requireAuth, getUserResumes);
@@ -383,6 +388,9 @@ export function createServer() {
 
   // Job preferences routes
   app.use("/api/job-preferences", jobPreferencesRouter);
+
+  // Cached job search routes (Tavily caching)
+  app.use("/api/cached-jobs", cachedJobSearchRouter);
 
   // Mock test routes
   app.use("/api/mock-tests", createMockTestRoutes());

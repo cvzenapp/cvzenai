@@ -203,6 +203,7 @@ class ResumeStorageService {
   /**
    * Store parsed resume data in database
    */
+
   async storeResumeData(userId: string | number, parsedData: ParsedResumeData, title?: string): Promise<StoredResumeResult> {
     console.log('💾 Storing resume data for user:', userId);
     
@@ -225,61 +226,65 @@ class ResumeStorageService {
       
       // Process and categorize skills
       const processedSkills = processSkills(parsedData.skills || []);
-      console.log('💾 Processed skills:', JSON.stringify(processedSkills, null, 2));
       
-      // Store both flat skills array and categorized skills
+      // Store both flat skills array and categorized skills with optimization tracking
       const skillsData = {
         skills: processedSkills,
-        categories: parsedData.skillCategories || {}
+        categories: parsedData.skillCategories || {},
+        skills_optimized: null,
+        is_optimized: false
       };
       const skillsJson = JSON.stringify(skillsData);
       
-      // This is not required since as it is raw json will store
-      // const experienceJson = JSON.stringify(
-      //   (parsedData.experience || []).map(exp => ({
-      //     company: exp.company,
-      //     position: exp.title || exp.position, // Map title to position
-      //     location: exp.location || '',
-      //     startDate: exp.startDate,
-      //     endDate: exp.endDate,
-      //     current: exp.current || false,
-      //     description: exp.description || '',
-      //     skills: exp.skills || '',
-      //     achievements: exp.responsibilities || [] // Map responsibilities to achievements
-      //   }))
-      // );
       
-      const educationJson = JSON.stringify(
-        (parsedData.education || []).map(edu => ({
-          institution: edu.institution,
-          degree: edu.degree,
-          field: edu.field,
-          location: edu.location || '',
-          startDate: edu.startDate,
-          endDate: edu.endDate,
-          gpa: edu.gpa || '',
-          achievements: edu.achievements || []
-        }))
-      );
-      
-      // const projectsJson = JSON.stringify(
-      //   (parsedData.projects || []).map(proj => ({
-      //     name: proj.name,
-      //     description: proj.description,
-      //     technologies: proj.technologies || [],
-      //     link: proj.link || '',
-      //     startDate: proj.startDate || '',
-      //     endDate: proj.endDate || ''
-      //   }))
-      // );
+      // Add optimization tracking properties to experience before storing
+      const experienceWithOptimization = (parsedData.experience || []).map(exp => ({
+        ...exp,
+        description_optimized: null,
+        responsibilities_optimized: null,
+        achievements_optimized: null,
+        is_optimized: false
+      }));
+
+      // Add optimization tracking properties to projects before storing
+      const projectsWithOptimization = (parsedData.projects || []).map(proj => ({
+        ...proj,
+        description_optimized: null,
+        is_optimized: false
+      }));
+
+      // Add optimization tracking properties to education before storing
+      const educationWithOptimization = (parsedData.education || []).map(edu => ({
+        institution: edu.institution,
+        degree: edu.degree,
+        field: edu.field,
+        location: edu.location || '',
+        startDate: edu.startDate,
+        endDate: edu.endDate,
+        gpa: edu.gpa || '',
+        achievements: edu.achievements || [],
+        achievements_optimized: null,
+        is_optimized: false
+      }));
+
+      const educationJson = JSON.stringify(educationWithOptimization);
       
       // Log what we're about to store
       console.log('💾 Data being stored:');
-      console.log('  Processed Skills:', JSON.stringify(processedSkills, null, 2));
-      // console.log('  Experience:', experienceJson.substring(0, 200));
-      console.log('  Education:', educationJson.substring(0, 200));
-      // console.log('  Projects:', projectsJson.substring(0, 200));
       
+      // Prepare summary and objective in JSONB format (pass objects, not JSON strings)
+      const summaryJson = parsedData.summary ? {
+        content: parsedData.summary,
+        content_optimized: null,
+        is_optimized: false
+      } : null;
+      
+      const objectiveJson = parsedData.objective ? {
+        content: parsedData.objective,
+        content_optimized: null,
+        is_optimized: false
+      } : null;
+
       // Insert resume into database (without ATS score initially)
       const result = await db.query(
         `INSERT INTO resumes (
@@ -302,12 +307,12 @@ class ResumeStorageService {
           userId,
           resumeTitle,
           personalInfoJson,
-          parsedData.summary || '',
-          parsedData.objective || '',
+          summaryJson,
+          objectiveJson,
           skillsJson,
-          JSON.stringify(parsedData.experience),
+          JSON.stringify(experienceWithOptimization),
           educationJson,
-          JSON.stringify(parsedData.projects),
+          JSON.stringify(projectsWithOptimization),
           JSON.stringify(parsedData.certifications),
           'modern-professional'
         ]

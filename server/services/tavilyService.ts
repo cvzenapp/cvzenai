@@ -62,57 +62,223 @@ class TavilyService {
   /**
    * Search for jobs using Tavily's advanced search
    */
-  async searchJobs(params: JobSearchParams): Promise<TavilySearchResult[]> {
+  async searchJobs(params: JobSearchParams): Promise<any[]> {
     try {
-      // Build comprehensive search query
-      let searchQuery = params.query;
+      // Build specific search query for targeted job results
+      let searchQuery = `"${params.query}"`;
       
       if (params.location) {
-        searchQuery += ` in ${params.location}`;
+        searchQuery += ` "${params.location}"`;
       }
       
       if (params.jobType) {
-        searchQuery += ` ${params.jobType}`;
+        searchQuery += ` "${params.jobType}"`;
       }
       
       if (params.experienceLevel) {
-        searchQuery += ` ${params.experienceLevel} level`;
+        searchQuery += ` "${params.experienceLevel}"`;
       }
       
-      if (params.salary) {
-        searchQuery += ` salary ${params.salary}`;
-      }
-      
-      // Add job-specific keywords to improve results
-      searchQuery += " job opening position hiring";
-      
-      console.log(`🔍 Tavily Job Search Query: ${searchQuery}`);
+      console.log(`🔍 Tavily Job Search Query: "${searchQuery}"`);
       
       const response = await tavilyClient.search(searchQuery, {
         searchDepth: "advanced",
+        timeRange: "day",
+        includeDomains: ["indeed.com", "glassdoor.com", "linkedin.com", "ziprecruiter.com"],
         maxResults: params.maxResults || 10,
-        includeAnswer: true,
-        includeRawContent: false,
-        includeImages: false
+        includeAnswer: 'advanced',
+        includeImageDescriptions:true,
+        includeUsage:true,
+        includeImages: false,
+        country:"India"
       });
       
       console.log(`✅ Tavily returned ${response.results?.length || 0} results`);
       
-      // Transform Tavily results to our format
-      const results: TavilySearchResult[] = (response.results || []).map((result: any) => ({
-        title: result.title || '',
-        url: result.url || '',
-        content: result.content || '',
-        score: result.score || 0,
-        publishedDate: result.publishedDate
-      }));
+      if (!response.results || response.results.length === 0) {
+        return [];
+      }
+
+      // Process each result to extract job details
+      const jobs = [];
+      for (let i = 0; i < response.results.length; i++) {
+        const result = response.results[i];
+        
+        try {
+          // Extract job details from the content
+          const jobDetails = await this.extractJobFromContent(result, i);
+          if (jobDetails) {
+            jobs.push(jobDetails);
+          }
+        } catch (error) {
+          console.error(`Failed to extract job ${i}:`, error);
+          // Continue with next job
+        }
+      }
       
-      return results;
+      console.log(`📋 Successfully extracted ${jobs.length} job postings`);
+      return jobs;
       
     } catch (error) {
       console.error("Tavily search error:", error);
-      throw new Error(`Failed to search jobs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.warn('⚠️ Tavily search failed, returning empty results');
+      return [];
     }
+  }
+
+  /**
+   * Extract job details from Tavily search result content
+   */
+  private async extractJobFromContent(result: any, index: number): Promise<any | null> {
+    try {
+      const content = result.content || result.rawContent || '';
+      const url = result.url || '';
+      const title = result.title || '';
+      
+      // Skip if this looks like a job board search page rather than individual posting
+      if (this.isJobBoardSearchPage(url, content)) {
+        console.log(`⚠️ Skipping job board search page: ${url}`);
+        return null;
+      }
+
+      // Use the clean content from Tavily directly
+      const jobTitle = this.extractJobTitle(content) || title || 'Job Opening';
+      const company = this.extractCompanyFromContent(content) || this.extractCompanyFromUrl(url);
+      const location = this.extractLocation(content) || 'Not specified';
+      const salary = this.extractSalary(content);
+      const jobType = this.extractEmploymentType(content);
+      const description = content.substring(0, 300) || 'Job description not available';
+      const requirements = this.extractRequirementsArray(content);
+
+      // Create job object with clean data
+      const job = {
+        id: `job-${index}`,
+        title: jobTitle,
+        company: company,
+        location: location,
+        salary: salary,
+        type: jobType || 'Full-time',
+        description: description,
+        requirements: requirements,
+        url: url,
+        matchScore: Math.round(result.score * 100) || 50,
+        postedDate: result.publishedDate || 'Recently',
+        source: 'tavily'
+      };
+
+      console.log(`✅ Extracted job: ${job.title} at ${job.company}`);
+      return job;
+
+    } catch (error) {
+      console.error('Error extracting job from content:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clean job content by removing junk characters and formatting properly
+   */
+  private cleanJobContent(content: string): string {
+    if (!content) return '';
+    
+    return content
+      // Remove all blob URLs and image references first
+      .replace(/blob:[^\s)]+/g, '')
+      .replace(/!\[Image \d+:.*?\]\([^)]*\)/g, '')
+      .replace(/\[Image \d+:.*?\]/g, '')
+      .replace(/https?:\/\/[^\s)]+\.(jpg|jpeg|png|gif|svg|webp)/gi, '')
+      .replace(/https?:\/\/localhost[^\s)]+/g, '')
+      
+      // Remove markdown links but keep text
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      
+      // Remove excessive formatting and special characters
+      .replace(/={3,}/g, '')
+      .replace(/\*{2,}/g, '')
+      .replace(/-{3,}/g, '')
+      .replace(/_{3,}/g, '')
+      .replace(/#\s*/g, '')
+      
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, '')
+      
+      // Remove parentheses with URLs or blob references
+      .replace(/\([^)]*(?:blob|http|localhost)[^)]*\)/g, '')
+      
+      // Clean up remaining junk
+      .replace(/[^\w\s\-.,!?()$%&@#:]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Check if URL/content is a job board search page rather than individual posting
+   */
+  private isJobBoardSearchPage(url: string, content: string): boolean {
+    const searchPageIndicators = [
+      'search results',
+      'jobs found',
+      'showing jobs',
+      'filter by',
+      'sort by',
+      'page 1 of',
+      'results per page',
+      'refine your search'
+    ];
+
+    const lowerContent = content.toLowerCase();
+    const lowerUrl = url.toLowerCase();
+
+    // Check URL patterns
+    if (lowerUrl.includes('/search') || lowerUrl.includes('/jobs?') || lowerUrl.includes('q=')) {
+      return true;
+    }
+
+    // Check content patterns
+    return searchPageIndicators.some(indicator => lowerContent.includes(indicator));
+  }
+
+  /**
+   * Extract requirements as an array
+   */
+  private extractRequirementsArray(content: string): string[] {
+    const requirements: string[] = [];
+    
+    // Look for requirements section
+    const reqSection = content.match(/(?:requirements?|qualifications?|skills?):?\s*\n([\s\S]{0,500}?)(?:\n\s*(?:responsibilities|benefits|about|company)|$)/i);
+    
+    if (reqSection) {
+      const reqText = reqSection[1];
+      
+      // Extract bullet points
+      const bullets = reqText.match(/[•\-\*]\s*([^\n]+)/g);
+      if (bullets) {
+        requirements.push(...bullets.map(b => b.replace(/[•\-\*]\s*/, '').trim()).slice(0, 5));
+      } else {
+        // Extract sentences if no bullets
+        const sentences = reqText.split(/[.!?]\s+/).filter(s => s.trim().length > 10).slice(0, 3);
+        requirements.push(...sentences.map(s => s.trim()));
+      }
+    }
+
+    // If no requirements found, extract common skills from content
+    if (requirements.length === 0) {
+      const skillPatterns = [
+        /\b(JavaScript|Python|Java|React|Node\.js|SQL|AWS|Docker|Kubernetes)\b/gi,
+        /\b(\d+\+?\s*years?\s*(?:of\s*)?experience)\b/gi,
+        /\b(Bachelor'?s|Master'?s|degree)\b/gi
+      ];
+
+      for (const pattern of skillPatterns) {
+        const matches = content.match(pattern);
+        if (matches) {
+          requirements.push(...matches.slice(0, 2));
+          if (requirements.length >= 3) break;
+        }
+      }
+    }
+
+    return requirements.slice(0, 5); // Limit to 5 requirements
   }
 
   /**
@@ -284,7 +450,7 @@ class TavilyService {
             location: parsedDetails.location || 'Not specified',
             salary: parsedDetails.salary,
             type: parsedDetails.type || 'Full-time',
-            description: await this.cleanJobDescription(parsedDetails.description || searchResult.content),
+            description: parsedDetails.description || searchResult.content,
             requirements: parsedDetails.requirements || [],
             url: searchResult.url,
             matchScore: Math.round(searchResult.score * 100),
@@ -300,7 +466,7 @@ class TavilyService {
           company: this.extractCompanyFromUrl(searchResult.url),
           location: 'Not specified',
           type: 'Full-time',
-          description: await this.cleanJobDescription(searchResult.content),
+          description: searchResult.content,
           requirements: [],
           url: searchResult.url,
           matchScore: Math.round(searchResult.score * 100),
@@ -319,7 +485,13 @@ class TavilyService {
 
   async calculateJobMatchScore(jobContent: string, resumeData: any): Promise<number> {
     try {
-      const { groqService } = await import('./groqService.js');
+      // Validate input content
+      if (!jobContent || jobContent.trim() === '') {
+        console.warn('⚠️ Empty job content provided for match scoring');
+        return 50;
+      }
+
+      const { abstractedAiService } = await import('./abstractedAiService.js');
       
       const resumeSkills = Array.isArray(resumeData?.skills) ? resumeData.skills.join(', ') : (resumeData?.skills || '');
       const resumeExperience = Array.isArray(resumeData?.experience) ? resumeData.experience.map((e: any) => e.title).join(', ') : (resumeData?.experience || '');
@@ -332,7 +504,7 @@ Resume Experience: ${resumeExperience}
 
 Return ONLY a number 0-100, nothing else.`;
 
-      const result = await groqService.generateResponse(
+      const result = await abstractedAiService.generateResponse(
         'You are a job matching system. Return only a number.',
         prompt,
         { temperature: 0.3, maxTokens: 10 }
@@ -367,17 +539,22 @@ Return ONLY a number 0-100, nothing else.`;
         console.log(`🔄 Processing job ${i + 1}/${searchResults.length}: ${searchResult.title}`);
         
         try {
-          // Clean description
-          const cleanedDescription = await this.cleanJobDescription(searchResult.content);
+          // Use search result content directly
+          const cleanedDescription = searchResult.content || searchResult.title || 'Job description not available';
           
-          // Calculate AI match score
-          const matchScore = await this.calculateJobMatchScore(searchResult.content, resumeData);
-          console.log(`✅ Match score for "${searchResult.title}": ${matchScore}%`);
+          // Only calculate match score if we have meaningful content
+          let matchScore = 50; // Default score
+          if (cleanedDescription && cleanedDescription.trim().length > 10) {
+            matchScore = await this.calculateJobMatchScore(cleanedDescription, resumeData);
+            console.log(`✅ Match score for "${searchResult.title}": ${matchScore}%`);
+          } else {
+            console.warn(`⚠️ Insufficient content for "${searchResult.title}", using default score`);
+          }
           
           // Create job object
           const job = {
             id: `job-${i}`,
-            title: searchResult.title,
+            title: searchResult.title || 'Job Opening',
             company: this.extractCompanyFromUrl(searchResult.url),
             location: params.location || 'Not specified',
             type: 'Full-time',
@@ -406,18 +583,152 @@ Return ONLY a number 0-100, nothing else.`;
     }
   }
 
-  private async cleanJobDescription(content: string): Promise<string> {
-    if (!content) return '';
-    
-    // Use Groq to semantically clean and format the description
-    try {
-      const { groqService } = await import('./groqService.js');
-      const formatted = await groqService.formatJobDescription(content);
-      return formatted;
-    } catch (error) {
-      console.error('Groq formatting failed, using regex cleanup:', error);
-      
-      // Fallback to regex cleanup
+  /**
+     * Extract job details from URL using Tavily's extract API
+     */
+    async extractJobDetails(url: string): Promise<string> {
+      if (!url) return '';
+
+      try {
+        console.log(`🔍 Extracting job details from: ${url}`);
+
+        const response = await tavilyClient.extract([url], {
+          extract_depth: "advanced",
+          include_images: false
+        });
+
+        console.log('Tavily response:', JSON.stringify(response, null, 2));
+
+        if (response?.results?.length > 0) {
+          const extractedContent = response.results[0].raw_content;
+          console.log(`✅ Tavily extracted ${extractedContent?.length || 0} characters from ${url}`);
+          return this.parseExtractedJobContent(extractedContent || '');
+        } else if (response?.failed_results?.length > 0) {
+          console.warn(`⚠️ Tavily extraction failed for ${url}:`, response.failed_results[0].error);
+          return '';
+        } else {
+          console.warn(`⚠️ No content extracted from ${url}`);
+          return '';
+        }
+      } catch (error) {
+        console.error(`❌ Tavily extraction error for ${url}:`, error);
+        return '';
+      }
+    }
+
+    /**
+     * Parse extracted job content and extract relevant information
+     */
+    private parseExtractedJobContent(content: string): string {
+      if (!content) return '';
+
+      // Clean up the content by removing unwanted elements
+      let cleanContent = content
+        // Remove image references and links
+        .replace(/!\[Image \d+:.*?\]\(.*?\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/https?:\/\/[^\s)]+/g, '')
+        .replace(/blob:[^\s)]+/g, '')
+        // Remove excessive formatting
+        .replace(/={3,}/g, '')
+        .replace(/\*{2,}/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Extract key job information
+      const jobTitle = this.extractJobTitle(cleanContent);
+      const company = this.extractCompanyFromContent(cleanContent);
+      const description = this.extractJobDescription(cleanContent);
+
+      // Combine the extracted information
+      let result = '';
+      if (jobTitle) result += `Job Title: ${jobTitle}\n`;
+      if (company) result += `Company: ${company}\n`;
+      if (description) result += `Description: ${description}`;
+
+      return result || cleanContent.substring(0, 500);
+    }
+
+    /**
+     * Extract job title from content
+     */
+    private extractJobTitle(content: string): string {
+      const titlePatterns = [
+        // Look for specific job titles first
+        /(?:job title|position|role)[:\s]+([^\n]+)/i,
+        // Look for common job title patterns at start of content
+        /^([^\n]*(?:engineer|developer|manager|analyst|specialist|coordinator|director|lead|architect|designer|consultant|administrator|owner)[^\n]*)/im,
+        // Look for "We are hiring" patterns
+        /(?:hiring|seeking|looking for)[:\s]+([^\n]+)/i,
+        // Look for job titles in quotes
+        /"([^"]*(?:engineer|developer|manager|analyst|specialist|coordinator|director|lead|architect|designer|consultant|administrator|owner)[^"]*)"/i
+      ];
+
+      for (const pattern of titlePatterns) {
+        const match = content.match(pattern);
+        if (match && match[1]) {
+          const title = match[1].trim();
+          // Ensure it's a meaningful title
+          if (title.length > 5 && !title.toLowerCase().includes('job')) {
+            return title.substring(0, 100);
+          }
+        }
+      }
+
+      return '';
+    }
+
+    /**
+     * Extract company name from content
+     */
+    private extractCompanyFromContent(content: string): string {
+      const companyPatterns = [
+        /company[:\s]+([^\n]+)/i,
+        /employer[:\s]+([^\n]+)/i,
+        /organization[:\s]+([^\n]+)/i,
+        /at\s+([A-Z][a-zA-Z\s&]+(?:Inc|LLC|Corp|Ltd|Company))/
+      ];
+
+      for (const pattern of companyPatterns) {
+        const match = content.match(pattern);
+        if (match && match[1]) {
+          return match[1].trim().substring(0, 100);
+        }
+      }
+
+      return '';
+    }
+
+    /**
+     * Extract job description from content
+     */
+    private extractJobDescription(content: string): string {
+      const descriptionPatterns = [
+        /(?:job\s+)?description[:\s]+([\s\S]+?)(?:\n\s*(?:requirements|qualifications|responsibilities)|$)/i,
+        /(?:about\s+(?:the\s+)?(?:role|position|job))[:\s]+([\s\S]+?)(?:\n\s*(?:requirements|qualifications|responsibilities)|$)/i,
+        /summary[:\s]+([\s\S]+?)(?:\n\s*(?:requirements|qualifications|responsibilities)|$)/i
+      ];
+
+      for (const pattern of descriptionPatterns) {
+        const match = content.match(pattern);
+        if (match && match[1]) {
+          return match[1].trim().substring(0, 300);
+        }
+      }
+
+      // Fallback: return first 300 characters
+      return content.substring(0, 300);
+    }
+
+    /**
+     * @deprecated Use extractJobDetails instead
+     */
+    private async cleanJobDescription(content: string): Promise<string> {
+      console.warn('cleanJobDescription is deprecated, use extractJobDetails for URL-based extraction');
+
+      if (!content) return '';
+
+      // Fallback to regex cleanup for non-URL content
       content = content.replace(/!\[Image \d+:.*?\]\(.*?\)/g, '');
       content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
       content = content.replace(/https?:\/\/[^\s)]+/g, '');
@@ -427,7 +738,7 @@ Return ONLY a number 0-100, nothing else.`;
       content = content.replace(/\s+/g, ' ');
       return content.trim().substring(0, 250);
     }
-  }
+
 
   /**
    * Extract company name from URL

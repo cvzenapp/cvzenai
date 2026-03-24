@@ -310,7 +310,7 @@ class GuestResumeService {
     const { emailService } = await import('./emailService.js');
     
     try {
-      const success = await emailService.sendWelcomeEmail(email, name, password, resumeUrl);
+      const success = await emailService.sendPasswordSetupEmail(email, name, password, resumeUrl);
       
       if (success) {
         console.log('✅ Welcome email sent successfully to:', email);
@@ -321,7 +321,7 @@ class GuestResumeService {
         console.log('  Email:', email);
         console.log('  Password:', password);
         console.log('  Resume URL:', resumeUrl);
-        console.log('  Login URL:', `${process.env.FRONTEND_URL || 'http://localhost:8080'}/login`);
+        console.log('  Login URL:', `${process.env.FRONTEND_URL || 'http://localhost:8080'}/`);
       }
     } catch (error) {
       console.error('❌ Email service error:', error);
@@ -330,7 +330,7 @@ class GuestResumeService {
       console.log('  Email:', email);
       console.log('  Password:', password);
       console.log('  Resume URL:', resumeUrl);
-      console.log('  Login URL:', `${process.env.FRONTEND_URL || 'http://localhost:8080'}/login`);
+      console.log('  Login URL:', `${process.env.FRONTEND_URL || 'http://localhost:8080'}/`);
     }
   }
 }

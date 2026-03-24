@@ -571,23 +571,33 @@ router.post("/prepare-ai", async (req: Request, res: Response) => {
     }
 
     try {
-      // Import groqService
-      const { groqService } = await import('../services/groqService.js');
+      // Import abstractedAiService
+      const { abstractedAiService } = await import('../services/abstractedAiService.js');
 
       // Generate AI content
       console.log('🤖 Generating AI interview preparation...');
-      const aiContent = await groqService.generateInterviewPreparation(
-        jobDescription,
-        job.title,
-        candidateResume,
-        candidateSkills,
-        interviewType,
-        interviewMode,
-        interviewDateTime,
-        durationMinutes
+      const aiContent = await abstractedAiService.generateResponse(
+        'You are an expert interview coach. Generate helpful interview preparation content.',
+        `Generate interview preparation content for this job:
+Title: ${job.title}
+Description: ${jobDescription}
+Candidate Resume: ${candidateResume}
+Skills: ${candidateSkills.join(', ')}
+Interview Type: ${interviewType}
+Interview Mode: ${interviewMode}
+Duration: ${durationMinutes} minutes
+
+Include:
+1. Common interview questions for this role
+2. Key skills to highlight based on candidate background
+3. Technical preparation if applicable
+4. Tips specific to ${interviewMode} interviews
+
+Format as structured text.`,
+        { temperature: 0.7, maxTokens: 1000 }
       );
 
-      console.log('✅ AI interview preparation generated successfully');
+      // console.log('✅ AI interview preparation generated successfully');
 
       res.json({
         success: true,
@@ -1225,8 +1235,8 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
            ORDER BY i.${sortColumn} ${sortDirection}
            ${paginationClause}`;
 
-      console.log('🔍 Executing filtered query:', query);
-      console.log('🔍 Query parameters:', params);
+      // console.log('🔍 Executing filtered query:', query);
+      // console.log('🔍 Query parameters:', params);
 
       const result = await db.query(query, params);
       
@@ -1237,16 +1247,16 @@ router.get("/my-interviews", async (req: Request, res: Response) => {
 
       // If no results with JOINs, try a simpler query
       if (result.rows.length === 0) {
-        console.log('🔍 No results with JOINs, trying simple query...');
+        // console.log('🔍 No results with JOINs, trying simple query...');
         const simpleQuery = auth.userType === 'recruiter' 
           ? 'SELECT * FROM interview_invitations WHERE recruiter_id = $1 ORDER BY created_at DESC'
           : 'SELECT * FROM interview_invitations WHERE candidate_id = $1 ORDER BY created_at DESC';
         
         const simpleResult = await db.query(simpleQuery, [auth.userId]);
-        console.log('🔍 Simple query result:', {
-          rowCount: simpleResult.rows.length,
-          rows: simpleResult.rows
-        });
+        // console.log('🔍 Simple query result:', {
+        //   rowCount: simpleResult.rows.length,
+        //   rows: simpleResult.rows
+        // });
         
         if (simpleResult.rows.length > 0) {
           // Return simplified interview data without JOINs
@@ -1840,12 +1850,12 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
         // Don't fail the completion if email fails
       }
 
-      console.log('✅ Application updated with interview feedback:', {
-        candidateId: interview.candidate_id,
-        jobPostingId: interview.job_posting_id,
-        decision,
-        status: applicationStatus
-      });
+      // console.log('✅ Application updated with interview feedback:', {
+      //   candidateId: interview.candidate_id,
+      //   jobPostingId: interview.job_posting_id,
+      //   decision,
+      //   status: applicationStatus
+      // });
     } else {
       console.log('⚠️ Skipping feedback update:', {
         isRecruiter,
@@ -1855,14 +1865,14 @@ router.post("/:interviewId/complete", async (req: Request, res: Response) => {
       });
     }
 
-    console.log('✅ Interview marked as completed:', {
-      interviewId,
-      markedBy: isRecruiter ? 'recruiter' : 'candidate',
-      userId: auth.userId,
-      decision: decision || 'none',
-      hasFeedback: !!feedback,
-      hasEvaluationMetrics: !!evaluationMetrics
-    });
+    // console.log('✅ Interview marked as completed:', {
+    //   interviewId,
+    //   markedBy: isRecruiter ? 'recruiter' : 'candidate',
+    //   userId: auth.userId,
+    //   decision: decision || 'none',
+    //   hasFeedback: !!feedback,
+    //   hasEvaluationMetrics: !!evaluationMetrics
+    // });
 
     res.json({
       success: true,
@@ -2056,11 +2066,11 @@ router.get("/:interviewId/accept", async (req: Request, res: Response) => {
       // Don't fail the acceptance if email fails
     }
 
-    console.log('✅ Interview accepted via email link:', {
-      interviewId,
-      candidateId: auth.userId,
-      title: interview.title
-    });
+    // console.log('✅ Interview accepted via email link:', {
+    //   interviewId,
+    //   candidateId: auth.userId,
+    //   title: interview.title
+    // });
 
     // Redirect to dashboard with success message
     return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?message=${encodeURIComponent('Interview invitation accepted successfully!')}&tab=interviews`);
@@ -2167,11 +2177,11 @@ router.get("/:interviewId/decline", async (req: Request, res: Response) => {
       // Don't fail the decline if email fails
     }
 
-    console.log('✅ Interview declined via email link:', {
-      interviewId,
-      candidateId: auth.userId,
-      title: interview.title
-    });
+    // console.log('✅ Interview declined via email link:', {
+    //   interviewId,
+    //   candidateId: auth.userId,
+    //   title: interview.title
+    // });
 
     // Redirect to dashboard with message
     return res.redirect(`${process.env.APP_URL || 'https://cvzen.ai'}/dashboard?message=${encodeURIComponent('Interview invitation declined')}&tab=interviews`);

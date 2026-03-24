@@ -69,12 +69,41 @@ router.get('/profile', async (req: AuthRequest, res: Response) => {
 
     const user = result.rows[0];
     
+    // If mobile is not in users table, try to get it from resume personal_info
+    let mobile = user.mobile;
+    if (!mobile) {
+      try {
+        const resumeResult = await db.query(`
+          SELECT personal_info 
+          FROM resumes 
+          WHERE user_id = $1 
+          ORDER BY updated_at DESC 
+          LIMIT 1
+        `, [userId]);
+        
+        if (resumeResult.rows.length > 0) {
+          const personalInfo = typeof resumeResult.rows[0].personal_info === 'string' 
+            ? JSON.parse(resumeResult.rows[0].personal_info) 
+            : resumeResult.rows[0].personal_info;
+          
+          console.log('Personal info from resume:', personalInfo);
+          
+          if (personalInfo?.phone) {
+            mobile = personalInfo.phone;
+            console.log('Found phone in personal_info:', mobile);
+          }
+        }
+      } catch (resumeError) {
+        console.warn('Could not fetch mobile from resume:', resumeError);
+      }
+    }
+    
     // Combine first_name and last_name into name for response
     const profileData = {
       id: user.id,
       email: user.email,
       name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-      mobile: user.mobile,
+      mobile: mobile,
       avatar: user.avatar,
       createdAt: user.created_at,
       updatedAt: user.updated_at,

@@ -43,135 +43,11 @@ export const ExperienceProjects: React.FC<ExperienceProjectsProps> = ({
     >
       <div className="space-y-8">
         {/* Work Experience Section */}
-        {resume.experiences && resume.experiences.length > 0 && (
-          <div className="experience-section">
-            <h2 className="text-xl sm:text-2xl font-semibold text-foreground mb-6 border-b border-border pb-2 flex items-center gap-2">
-              <Briefcase className="w-5 h-5" />
-              Experience Test
-            </h2>
-            <div className="space-y-6">
-              {resume.experiences
-                .sort((a, b) => {
-                  // Sort by start date in reverse chronological order (most recent first)
-                  const dateA = new Date(a.startDate || '1900-01-01');
-                  const dateB = new Date(b.startDate || '1900-01-01');
-                  return dateB.getTime() - dateA.getTime();
-                })
-                .map((experience, index) => (
-                  <div 
-                    key={index} 
-                    className="experience-item border-l-2 border-primary/20 pl-6 relative hover:border-primary/40 transition-colors"
-                  >
-                    {/* Timeline indicator */}
-                    <div className="absolute -left-2 top-0 w-4 h-4 bg-primary rounded-full border-2 border-background"></div>
-                    
-                    <div className="space-y-3">
-                      {/* Position and Company */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground">
-                            {experience.position}
-                          </h3>
-                          <p className="text-primary font-medium">
-                            {experience.company}
-                          </p>
-                        </div>
-                        
-                        {/* Date Range */}
-                        <div className="text-sm text-muted-foreground font-medium">
-                          {formatDateRange(experience.startDate, experience.endDate)}
-                          {experience.endDate === null && (
-                            <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Current
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Location */}
-                      {experience.location && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {experience.location}
-                        </p>
-                      )}
-
-                      {/* Description - Summary with Progressive Disclosure */}
-                      {experience.description && (
-                        <ProgressiveDisclosure
-                          summary={
-                            <div className="prose prose-sm max-w-none">
-                              <p className="text-muted-foreground leading-relaxed">
-                                {experience.description.length > 150 
-                                  ? `${experience.description.substring(0, 150)}...`
-                                  : experience.description
-                                }
-                              </p>
-                            </div>
-                          }
-                          details={
-                            <div className="space-y-4">
-                              {experience.description.length > 150 && (
-                                <div className="prose prose-sm max-w-none">
-                                  <p className="text-muted-foreground leading-relaxed">
-                                    {experience.description}
-                                  </p>
-                                </div>
-                              )}
-                              
-                              {/* Achievements (if available in description) */}
-                              {hasQuantifiedResults(experience.description) && (
-                                <div className="achievements bg-muted/30 rounded-lg p-3 border-l-4 border-primary/50">
-                                  <h4 className="text-sm font-medium text-foreground mb-2">Key Achievements</h4>
-                                  <div className="text-sm text-muted-foreground">
-                                    {extractAchievements(experience.description).map((achievement, achIndex) => (
-                                      <div key={achIndex} className="flex items-start gap-2 mb-1">
-                                        <span className="text-primary mt-1">•</span>
-                                        <span>{achievement}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Technologies/Skills used */}
-                              {experience.technologies && experience.technologies.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm font-medium text-foreground mb-2">Technologies Used</h4>
-                                  <div className="flex flex-wrap gap-2">
-                                    {experience.technologies.map((tech, techIndex) => (
-                                      <span
-                                        key={techIndex}
-                                        className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-secondary/20 text-secondary-foreground border border-secondary/30"
-                                      >
-                                        {tech}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          }
-                          expandLabel="Show full details"
-                          collapseLabel="Show less"
-                          variant="default"
-                          id={`experience-${index}`}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
+     
         {/* Projects Section with Carousel */}
         {resume.projects && resume.projects.length > 0 && (
           <div className="projects-section">
-            <ProjectsCarousel
+            {/* <ProjectsCarousel
               projects={resume.projects}
               primaryColor={'#3b82f6'}
               accentColor={'#60a5fa'}
@@ -181,9 +57,9 @@ export const ExperienceProjects: React.FC<ExperienceProjectsProps> = ({
               isImprovingSection={isImprovingSection}
               showImproveButtons={showImproveButtons}
             />
-            
+             */}
             {/* Portfolio & Code Repositories */}
-            {(resume.personalInfo.github || resume.personalInfo.website) && (
+            {/* {(resume.personalInfo.github || resume.personalInfo.website) && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-foreground mb-3">Portfolio & Code Repositories</h3>
                 <div className="flex flex-wrap gap-4">
@@ -215,82 +91,14 @@ export const ExperienceProjects: React.FC<ExperienceProjectsProps> = ({
                   )}
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         )}
 
         {/* Education Section */}
-        {resume.education && resume.education.length > 0 && (
-          <div className="education-section">
-            <h2 className="text-xl sm:text-2xl font-semibold text-foreground mb-6 border-b border-border pb-2 flex items-center gap-2">
-              <GraduationCap className="w-5 h-5" />
-              Education
-            </h2>
-            <div className="space-y-4">
-              {resume.education
-                .sort((a, b) => {
-                  // Sort by end date in reverse chronological order (most recent first)
-                  const dateA = new Date(a.endDate || a.startDate || '1900-01-01');
-                  const dateB = new Date(b.endDate || b.startDate || '1900-01-01');
-                  return dateB.getTime() - dateA.getTime();
-                })
-                .map((edu, index) => (
-                  <div 
-                    key={index} 
-                    className="education-item border border-border rounded-lg p-4 hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex flex-col gap-3 mb-2">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-foreground leading-tight">
-                            {edu.degree}
-                          </h3>
-                          <p className="text-primary font-medium mt-1">
-                            {edu.institution}
-                          </p>
-                        </div>
-                        <div className="text-sm text-muted-foreground font-medium sm:text-right sm:flex-shrink-0">
-                          {formatDateRange(edu.startDate, edu.endDate)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Additional Education Details */}
-                    <div className="space-y-2">
-                      {edu.gpa && (
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-medium">GPA:</span> {edu.gpa}
-                        </p>
-                      )}
-                      {(edu as any).honors && (
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-medium">Honors:</span> {(edu as any).honors}
-                        </p>
-                      )}
-                      {(edu as any).relevantCourses && (edu as any).relevantCourses.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-foreground mb-1">Relevant Coursework:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {(edu as any).relevantCourses.map((course: string, courseIndex: number) => (
-                              <span
-                                key={courseIndex}
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-muted text-muted-foreground"
-                              >
-                                {course}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
+        
         {/* Certifications Section */}
-        {(resume as any).certifications && (resume as any).certifications.length > 0 && (
+        {/* {(resume as any).certifications && (resume as any).certifications.length > 0 && (
           <div className="certifications-section">
             <h2 className="text-xl sm:text-2xl font-semibold text-foreground mb-6 border-b border-border pb-2">
               Certifications
@@ -326,7 +134,7 @@ export const ExperienceProjects: React.FC<ExperienceProjectsProps> = ({
               ))}
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </section>
   );

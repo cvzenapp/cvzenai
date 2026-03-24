@@ -208,10 +208,13 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
 
   // Fetch recruiter-posted jobs
   const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
-    queryKey: ['job-recommendations', userId],
+    queryKey: ['job-recommendations', userId, activeTab],
     queryFn: async () => {
       console.log('🔍 Fetching recruiter jobs for activeTab:', activeTab);
+      console.log('🔍 Making API call to /api/jobs/recommendations');
       const token = localStorage.getItem('authToken');
+      console.log('🔍 Using token:', token ? 'present' : 'missing');
+      
       const response = await fetch(`/api/jobs/recommendations?limit=20`, {
         headers: {
           'Content-Type': 'application/json',
@@ -219,11 +222,15 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
         }
       });
       
+      console.log('🔍 API response status:', response.status);
+      
       if (!response.ok) {
+        console.error('❌ API call failed with status:', response.status);
         throw new Error(`API call failed: ${response.status}`);
       }
       
       const result = await response.json();
+      console.log('🔍 API response data:', result);
       
       if (result.success === false) {
         console.error('❌ JobMatchingDashboard - API returned error:', result.error);
@@ -234,7 +241,7 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
       console.log('✅ JobMatchingDashboard - Returning data:', responseData);
       return responseData;
     },
-    enabled: activeTab === 'search',
+    enabled: true, // Force enable to test
     retry: false,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -283,7 +290,11 @@ export default function JobMatchingDashboard({ userId, resumeData }: JobMatching
             AI Recommendations
           </button>
           <button
-            onClick={() => setActiveTab('search')}
+            onClick={() => {
+              console.log('🔍 Recruiter Jobs tab clicked, current activeTab:', activeTab);
+              setActiveTab('search');
+              console.log('🔍 Set activeTab to search');
+            }}
             className={`pb-3 sm:pb-4 px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
               activeTab === 'search'
                 ? 'border-brand-main text-brand-main'

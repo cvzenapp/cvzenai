@@ -195,16 +195,34 @@ export default function EnhancedTechnologyTemplate({
   // Calculate total experience in years
   const calculateTotalExperience = (): string => {
     if (!resume.experiences || resume.experiences.length === 0) return "0";
-    const totalMonths = resume.experiences.reduce((acc, exp) => {
+    
+    // Find the earliest start date and latest end date
+    let earliestStart: Date | null = null;
+    let latestEnd: Date | null = null;
+    
+    resume.experiences.forEach(exp => {
       const start = new Date(exp.startDate);
-      const end = exp.endDate ? new Date(exp.endDate) : new Date();
-      const months =
-        (end.getFullYear() - start.getFullYear()) * 12 +
-        (end.getMonth() - start.getMonth());
-      return acc + months;
-    }, 0);
-    const years = Math.floor(totalMonths / 12);
-    return years > 0 ? `${years}` : "< 1";
+      const end = exp.endDate ? new Date(exp.endDate) : new Date(); // Current date if no end date
+      
+      if (!earliestStart || start < earliestStart) {
+        earliestStart = start;
+      }
+      
+      if (!latestEnd || end > latestEnd) {
+        latestEnd = end;
+      }
+    });
+    
+    if (!earliestStart || !latestEnd) return "0";
+    
+    // Calculate total years from earliest start to latest end
+    const totalYears = latestEnd.getFullYear() - earliestStart.getFullYear();
+    const monthDiff = latestEnd.getMonth() - earliestStart.getMonth();
+    
+    // If we haven't reached the same month yet, subtract 1 year
+    const adjustedYears = monthDiff < 0 ? totalYears - 1 : totalYears;
+    
+    return adjustedYears > 0 ? `${adjustedYears}` : "< 1";
   };
 
   const formatDate = (dateString: string) => {
@@ -452,7 +470,7 @@ export default function EnhancedTechnologyTemplate({
                          fontFamily: 'var(--template-font-family)',
                          fontWeight: 'var(--template-heading-weight)'
                        }}>                       
-                    {metrics.experience}+
+                    {metrics.experience}
                   </div>
                   <div className="text-sm" style={{ color: 'var(--template-background-color)', opacity: 0.6 }}>Years Exp</div>
                 </div>
@@ -552,7 +570,11 @@ export default function EnhancedTechnologyTemplate({
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer pointer-events-none"></div>
                       )}
                       <p className="text-slate-700 leading-relaxed text-base">
-                        {resume.summary}
+                        {typeof resume.summary === 'object' && resume.summary?.is_optimized && resume.summary?.content_optimized 
+                          ? resume.summary.content_optimized 
+                          : typeof resume.summary === 'object' 
+                            ? resume.summary?.content 
+                            : resume.summary}
                       </p>
                     </div>
                   ) : (
@@ -619,7 +641,11 @@ export default function EnhancedTechnologyTemplate({
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer pointer-events-none"></div>
                       )}
                       <p className="text-slate-700 leading-relaxed text-base">
-                        {resume.objective}
+                        {typeof resume.objective === 'object' && resume.objective?.is_optimized && resume.objective?.content_optimized 
+                          ? resume.objective.content_optimized 
+                          : typeof resume.objective === 'object' 
+                            ? resume.objective?.content 
+                            : resume.objective}
                       </p>
                     </div>
                   ) : (

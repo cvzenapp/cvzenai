@@ -287,10 +287,12 @@ export default function CreativeDesignerTemplate({
                           {formatDateRange(exp.startDate, exp.endDate)}
                         </span>
                       </div>
-                      <p className="text-slate-700 mb-3">{exp.description}</p>
+                      <p className="text-slate-700 mb-3">
+                        {exp.is_optimized && exp.description_optimized ? exp.description_optimized : exp.description}
+                      </p>
                       {exp.achievements && exp.achievements.length > 0 && (
                         <ul className="list-disc list-inside text-slate-700 space-y-1">
-                          {exp.achievements.map((achievement, achIndex) => (
+                          {(exp.is_optimized && exp.achievements_optimized ? exp.achievements_optimized : exp.achievements).map((achievement, achIndex) => (
                             <li key={achIndex}>{achievement}</li>
                           ))}
                         </ul>

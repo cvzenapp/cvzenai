@@ -79,6 +79,34 @@ export function createMockTestRoutes() {
     }
   });
 
+  // Get next question for dynamic generation
+  router.get('/session/:sessionId/next-question', requireAuth, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const candidateId = req.user?.id;
+
+      if (!candidateId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const questionData = await mockTestService.getNextQuestion(
+        parseInt(sessionId),
+        candidateId
+      );
+
+      res.json({
+        success: true,
+        ...questionData
+      });
+
+    } catch (error: any) {
+      console.error('Error getting next question:', error);
+      res.status(500).json({ 
+        error: error.message || 'Failed to get next question' 
+      });
+    }
+  });
+
   // Get mock test questions
   router.get('/session/:sessionId/questions', requireAuth, async (req, res) => {
     try {
@@ -212,12 +240,12 @@ export function createMockTestRoutes() {
         return res.status(401).json({ error: 'User not authenticated' });
       }
 
-      const results = await mockTestService.getMockTestResults(
+      const data = await mockTestService.getMockTestResults(
         parseInt(sessionId),
         candidateId
       );
 
-      if (results.session.status !== 'completed') {
+      if (data.session.status !== 'completed') {
         return res.status(400).json({ 
           error: 'Mock test must be completed to view results' 
         });
@@ -225,7 +253,7 @@ export function createMockTestRoutes() {
 
       res.json({
         success: true,
-        results
+        results: data.results // Return the formatted results object
       });
 
     } catch (error: any) {

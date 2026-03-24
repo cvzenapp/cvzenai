@@ -216,7 +216,7 @@ export default function CEOTemplate({
                 <h2 className="text-xl font-bold text-emerald-900 mb-4 border-b-2 border-emerald-200 pb-2">
                   Executive Summary
                 </h2>
-                <p className="text-slate-700 leading-relaxed">{resume.summary}</p>
+                <p className="text-slate-700 leading-relaxed">{typeof resume.summary === 'object' ? resume.summary?.content : resume.summary}</p>
               </section>
             )}
 
@@ -261,10 +261,12 @@ export default function CEOTemplate({
                           {formatDateRange(exp.startDate, exp.endDate)}
                         </span>
                       </div>
-                      <p className="text-slate-700 mb-3">{exp.description}</p>
+                      <p className="text-slate-700 mb-3">
+                        {exp.is_optimized && exp.description_optimized ? exp.description_optimized : exp.description}
+                      </p>
                       {exp.achievements && exp.achievements.length > 0 && (
                         <ul className="list-disc list-inside text-slate-700 space-y-1">
-                          {exp.achievements.map((achievement, achIndex) => (
+                          {(exp.is_optimized && exp.achievements_optimized ? exp.achievements_optimized : exp.achievements).map((achievement, achIndex) => (
                             <li key={achIndex}>{achievement}</li>
                           ))}
                         </ul>

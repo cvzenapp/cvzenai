@@ -67,13 +67,39 @@ export function ProjectsEditModal({
     endDate: "",
     github: "",
     url: "",
-    images: [] as string[]
+    images: [] as string[],
+    achievements: "",
+    features: "",
+    status: "",
+    is_optimized: false
   });
 
-  // Debug form data changes
+  // Auto-save project when form data changes
   useEffect(() => {
-    console.log('🔍 Form data updated:', formData);
-  }, [formData]);
+    if (selectedProjectIndex !== null && !isAddingNew) {
+      const projectData: Project = {
+        id: projects[selectedProjectIndex].id,
+        name: formData.name,
+        title: formData.name,
+        description: formData.description,
+        technologies: formData.technologies.split(',').map(tech => tech.trim()).filter(tech => tech),
+        startDate: formData.startDate || "",
+        endDate: formData.endDate || "",
+        github: formData.github || "",
+        url: formData.url || "",
+        link: formData.url || "",
+        images: formData.images || [],
+        achievements: formData.achievements ? formData.achievements.split('\n•').map(item => item.trim()).filter(item => item) : [],
+        features: formData.features ? formData.features.split('\n•').map(item => item.trim()).filter(item => item) : [],
+        status: formData.status || "",
+        is_optimized: formData.is_optimized
+      };
+      
+      const updatedProjects = [...projects];
+      updatedProjects[selectedProjectIndex] = projectData;
+      setProjects(updatedProjects);
+    }
+  }, [formData, selectedProjectIndex, isAddingNew]);
 
   // Initialize form data with first project if available
   useEffect(() => {
@@ -86,13 +112,23 @@ export function ProjectsEditModal({
       setSelectedProjectIndex(0);
       setFormData({
         name: firstProject.name || "",
-        description: firstProject.description || "",
+        description: firstProject.is_optimized && firstProject.description_optimized 
+          ? firstProject.description_optimized 
+          : firstProject.description || "",
         technologies: Array.isArray(firstProject.technologies) ? firstProject.technologies.join(', ') : "",
         startDate: formatDateForInput(firstProject.startDate),
         endDate: formatDateForInput(firstProject.endDate),
         github: firstProject.github || "",
         url: firstProject.url || firstProject.link || "",
-        images: firstProject.images || []
+        images: firstProject.images || [],
+        achievements: firstProject.is_optimized && firstProject.achievements_optimized 
+          ? (Array.isArray(firstProject.achievements_optimized) ? firstProject.achievements_optimized.join('\n• ') : firstProject.achievements_optimized || "")
+          : (Array.isArray(firstProject.achievements) ? firstProject.achievements?.join('\n• ') || "" : firstProject.achievements || ""),
+        features: firstProject.is_optimized && firstProject.features_optimized 
+          ? (Array.isArray(firstProject.features_optimized) ? firstProject.features_optimized.join('\n• ') : firstProject.features_optimized || "")
+          : (Array.isArray(firstProject.features) ? firstProject.features?.join('\n• ') || "" : firstProject.features || ""),
+        status: firstProject.status || "",
+        is_optimized: firstProject.is_optimized || false
       });
     } else if (isOpen) {
       setProjects(currentProjects || []);
@@ -108,13 +144,23 @@ export function ProjectsEditModal({
     setSelectedProjectIndex(index);
     setFormData({
       name: project.name || "",
-      description: project.description || "",
+      description: project.is_optimized && project.description_optimized 
+        ? project.description_optimized 
+        : project.description || "",
       technologies: Array.isArray(project.technologies) ? project.technologies.join(', ') : "",
       startDate: formatDateForInput(project.startDate),
       endDate: formatDateForInput(project.endDate),
       github: project.github || "",
       url: project.url || project.link || "",
-      images: project.images || []
+      images: project.images || [],
+      achievements: project.is_optimized && project.achievements_optimized 
+        ? (Array.isArray(project.achievements_optimized) ? project.achievements_optimized.join('\n• ') : project.achievements_optimized || "")
+        : (Array.isArray(project.achievements) ? project.achievements?.join('\n• ') || "" : project.achievements || ""),
+      features: project.is_optimized && project.features_optimized 
+        ? (Array.isArray(project.features_optimized) ? project.features_optimized.join('\n• ') : project.features_optimized || "")
+        : (Array.isArray(project.features) ? project.features?.join('\n• ') || "" : project.features || ""),
+      status: project.status || "",
+      is_optimized: project.is_optimized || false
     });
     setIsAddingNew(false);
   };
@@ -130,15 +176,21 @@ export function ProjectsEditModal({
       endDate: "",
       github: "",
       url: "",
-      images: []
+      images: [],
+      achievements: "",
+      features: "",
+      status: "",
+      is_optimized: false
     });
   };
 
   const handleSaveProject = () => {
-    console.log('🔍 Saving project with form data:', formData);
+    if (!isAddingNew) return; // Only handle adding new projects
+    
+    console.log('🔍 Adding new project with form data:', formData);
     
     const projectData: Project = {
-      id: isAddingNew ? `project-${Date.now()}` : projects[selectedProjectIndex!].id,
+      id: `project-${Date.now()}`,
       name: formData.name,
       title: formData.name,
       description: formData.description,
@@ -148,23 +200,19 @@ export function ProjectsEditModal({
       github: formData.github || "",
       url: formData.url || "",
       link: formData.url || "",
-      images: formData.images || []
+      images: formData.images || [],
+      achievements: formData.achievements ? formData.achievements.split('\n•').map(item => item.trim()).filter(item => item) : [],
+      features: formData.features ? formData.features.split('\n•').map(item => item.trim()).filter(item => item) : [],
+      status: formData.status || "",
+      is_optimized: formData.is_optimized
     };
 
     console.log('🔍 Created project data:', projectData);
-    console.log('🔍 Project dates:', { startDate: projectData.startDate, endDate: projectData.endDate });
 
-    if (isAddingNew) {
-      const newProjects = [...projects, projectData];
-      setProjects(newProjects);
-      // Select the newly added project
-      setSelectedProjectIndex(newProjects.length - 1);
-    } else if (selectedProjectIndex !== null) {
-      const updatedProjects = [...projects];
-      updatedProjects[selectedProjectIndex] = projectData;
-      setProjects(updatedProjects);
-    }
-
+    const newProjects = [...projects, projectData];
+    setProjects(newProjects);
+    // Select the newly added project
+    setSelectedProjectIndex(newProjects.length - 1);
     setIsAddingNew(false);
   };
 
@@ -324,7 +372,7 @@ export function ProjectsEditModal({
     }
   };
 
-  const canSaveProject = formData.name.trim() && (isAddingNew || selectedProjectIndex !== null);
+  const canSaveProject = formData.name.trim() && isAddingNew;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -447,8 +495,42 @@ export function ProjectsEditModal({
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe your project, its features, and your role..."
+                    placeholder="Describe your project, its purpose, and your role..."
                     rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="achievements">Key Achievements</Label>
+                  <Textarea
+                    id="achievements"
+                    value={formData.achievements}
+                    onChange={(e) => setFormData(prev => ({ ...prev, achievements: e.target.value }))}
+                    placeholder="• Increased user engagement by 40%&#10;• Reduced load time by 60%&#10;• Implemented secure payment system"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500">Use bullet points (•) to separate achievements</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="features">Key Features</Label>
+                  <Textarea
+                    id="features"
+                    value={formData.features}
+                    onChange={(e) => setFormData(prev => ({ ...prev, features: e.target.value }))}
+                    placeholder="• Real-time chat functionality&#10;• Advanced search and filtering&#10;• Mobile-responsive design"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500">Use bullet points (•) to separate features</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Project Status</Label>
+                  <Input
+                    id="status"
+                    value={formData.status}
+                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                    placeholder="e.g., Completed, In Progress, Deployed"
                   />
                 </div>
 
@@ -459,30 +541,7 @@ export function ProjectsEditModal({
                       id="startDate"
                       type="month"
                       value={formData.startDate}
-                      onChange={(e) => {
-                        const newFormData = { ...formData, startDate: e.target.value };
-                        setFormData(newFormData);
-                        
-                        // Auto-save the project when date changes
-                        if (selectedProjectIndex !== null) {
-                          const projectData: Project = {
-                            id: projects[selectedProjectIndex].id,
-                            name: newFormData.name,
-                            title: newFormData.name,
-                            description: newFormData.description,
-                            technologies: newFormData.technologies.split(',').map(tech => tech.trim()).filter(tech => tech),
-                            startDate: newFormData.startDate || "",
-                            endDate: newFormData.endDate || "",
-                            github: newFormData.github || "",
-                            url: newFormData.url || "",
-                            images: newFormData.images || []
-                          };
-                          
-                          const updatedProjects = [...projects];
-                          updatedProjects[selectedProjectIndex] = projectData;
-                          setProjects(updatedProjects);
-                        }
-                      }}
+                      onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                     />
                   </div>
                   
@@ -492,30 +551,7 @@ export function ProjectsEditModal({
                       id="endDate"
                       type="month"
                       value={formData.endDate}
-                      onChange={(e) => {
-                        const newFormData = { ...formData, endDate: e.target.value };
-                        setFormData(newFormData);
-                        
-                        // Auto-save the project when date changes
-                        if (selectedProjectIndex !== null) {
-                          const projectData: Project = {
-                            id: projects[selectedProjectIndex].id,
-                            name: newFormData.name,
-                            title: newFormData.name,
-                            description: newFormData.description,
-                            technologies: newFormData.technologies.split(',').map(tech => tech.trim()).filter(tech => tech),
-                            startDate: newFormData.startDate || "",
-                            endDate: newFormData.endDate || "",
-                            github: newFormData.github || "",
-                            url: newFormData.url || "",
-                            images: newFormData.images || []
-                          };
-                          
-                          const updatedProjects = [...projects];
-                          updatedProjects[selectedProjectIndex] = projectData;
-                          setProjects(updatedProjects);
-                        }
-                      }}
+                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -604,17 +640,19 @@ export function ProjectsEditModal({
                   </div>
                 </div>
 
-                {/* Save Project Button */}
-                <div className="pt-4 border-t">
-                  <Button
-                    onClick={handleSaveProject}
-                    disabled={!canSaveProject}
-                    className="w-full brand-button"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {isAddingNew ? 'Add Project' : 'Update Project'}
-                  </Button>
-                </div>
+                {/* Add Project Button - Only show when adding new */}
+                {isAddingNew && (
+                  <div className="pt-4 border-t">
+                    <Button
+                      onClick={handleSaveProject}
+                      disabled={!canSaveProject}
+                      className="w-full brand-button"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Add Project
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">

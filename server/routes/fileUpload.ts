@@ -6,6 +6,7 @@ import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import unifiedAuth, { AuthRequest } from '../middleware/unifiedAuth.js';
 import { resumeParsingService } from '../services/resumeParsingService.js';
+import { resumeStorageService } from '../services/resumeStorageService.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -114,15 +115,15 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
       path: filePath
     });
 
-    // Parse resume with Groq AI
+    // Parse resume with AI
     let parsedData = null;
     let resumeId = null;
     
     try {
-      console.log('🤖 Starting resume parsing with Groq...');
+      console.log('🤖 Starting resume parsing with AI...');
       
       // Extract text from file with error handling for test file interference
-      let resumeText;
+      let resumeText: string;
       try {
         resumeText = await resumeParsingService.extractTextFromFile(filePath, req.file.mimetype);
         console.log('📄 Text extraction successful:', {
@@ -144,140 +145,24 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
         console.warn('⚠️ Parsed data validation warnings:', validation.errors);
       }
       
-      // console.log('✅ Resume parsed successfully');
-      // console.log('📊 Parsed data structure:', {
-      //   personalInfo: parsedData.personalInfo,
-      //   skillsCount: parsedData.skills?.length,
-      //   firstSkills: parsedData.skills?.slice(0, 3),
-      //   experienceCount: parsedData.experience?.length,
-      //   firstExperience: parsedData.experience?.[0],
-      //   educationCount: parsedData.education?.length,
-      //   projectsCount: parsedData.projects?.length
-      // });
-      
-      // Create resume in database
-      const { getDatabase } = await import('../database/connection.js');
-      const db = await getDatabase();
-      
+      // Store resume using the centralized storage service
       const resumeTitle = `${parsedData.personalInfo.fullName}'s Resume` || 'Imported Resume';
+      const storageResult = await resumeStorageService.storeResumeData(req.user.id, parsedData, resumeTitle);
       
-      // Add IDs to array items for ResumeBuilder compatibility - preserve raw AI JSON
-      const experienceWithIds = (parsedData.experience || []).map((exp: any, index: number) => ({
-        ...exp, // Keep ALL properties from AI response including skills
-        id: exp.id || `exp-${Date.now()}-${index}`
-      }));
+      resumeId = storageResult.resumeId;
       
-      const educationWithIds = (parsedData.education || []).map((edu: any, index: number) => ({
-        ...edu,
-        id: edu.id || `edu-${Date.now()}-${index}`
-      }));
-      
-      const skillsWithIds = (parsedData.skills || []).map((skill: any, index: number) => {
-        // Handle both string skills and object skills
-        if (typeof skill === 'string') {
-          return {
-            id: `skill-${Date.now()}-${index}`,
-            name: skill,
-            category: 'General',
-            yearsOfExperience: 0,
-            proficiency: 50,
-            isCore: false
-          };
-        }
-        // Skill is already an object with category and proficiency
-        return {
-          id: skill.id || `skill-${Date.now()}-${index}`,
-          name: skill.name || skill,
-          category: skill.category || 'General',
-          yearsOfExperience: skill.yearsOfExperience || 0,
-          proficiency: skill.proficiency || 50,
-          isCore: skill.isCore || false
-        };
-      });
-      
-      const projectsWithIds = (parsedData.projects || []).map((proj: any, index: number) => ({
-        ...proj,
-        id: proj.id || `proj-${Date.now()}-${index}`,
-        technologies: proj.technologies || [],
-        images: proj.images || []
-      }));
-      
-      // First, try to remove the problematic unique constraint if it exists
-      try {
-        await db.query(`
-          DO $$ 
-          BEGIN
-            IF EXISTS (
-              SELECT 1 FROM pg_constraint 
-              WHERE conname = 'resumes_id_unique' 
-              AND conrelid = 'resumes'::regclass
-            ) THEN
-              ALTER TABLE resumes DROP CONSTRAINT resumes_id_unique;
-            END IF;
-          END $$;
-        `);
-      } catch (constraintError) {
-        console.log('⚠️ Could not drop constraint (may not exist):', constraintError.message);
-      }
-      
-      const insertResult = await db.query(`
-        INSERT INTO resumes (
-          id,
-          user_id,
-          title,
-          personal_info,
-          experience,
-          education,
-          skills,
-          projects,
-          summary,
-          objective,
-          template_id,
-          is_active
-        ) VALUES (
-          (SELECT COALESCE(MAX(id), 1) + 1 FROM resumes),
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-        )
-        RETURNING id
-      `, [
-        req.user.id,
-        resumeTitle,
-        JSON.stringify(parsedData.personalInfo),
-        JSON.stringify(experienceWithIds),
-        JSON.stringify(educationWithIds),
-        JSON.stringify(skillsWithIds),
-        JSON.stringify(projectsWithIds),
-        parsedData.summary || '',
-        parsedData.objective || '',
-        'modern-professional', // Default template
-        true // Set as active resume
-      ]);
-      
-      resumeId = insertResult.rows[0].id;
-      
-      console.log('✅ Resume created in database:', {
+      console.log('✅ Resume stored via storage service:', {
         resumeId,
         userId: req.user.id,
         title: resumeTitle,
-        dataInserted: {
-          skills: parsedData.skills?.length,
-          experience: parsedData.experience?.length,
-          education: parsedData.education?.length,
-          projects: parsedData.projects?.length
-        },
-        experienceWithSkills: experienceWithIds.map(exp => ({
-          title: exp.title,
-          company: exp.company,
-          skillsCount: exp.skills?.length || 0
-        }))
+        success: storageResult.success
       });
 
       // Generate shareToken automatically using proper slug generator
-      const fullName = parsedData.personalInfo.fullName || parsedData.personalInfo.name || 'resume';
-      
-      // Import and use the proper slug generator
+      const { getDatabase } = await import('../database/connection.js');
+      const db = await getDatabase();
       const { generateUniqueSlug } = await import('../lib/slugGenerator.js');
-      const shareToken = await generateUniqueSlug(db, fullName);
+      const shareToken = await generateUniqueSlug(db, parsedData.personalInfo.fullName || 'resume');
       
       // Create resume share entry
       await db.query(`
@@ -286,6 +171,14 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
       `, [resumeId, req.user.id, shareToken]);
 
       console.log('✅ ShareToken created:', shareToken, 'for resume:', resumeId);
+      
+      // Clean up the uploaded file after successful parsing and storage
+      try {
+        await resumeParsingService.cleanupFile(filePath);
+        console.log('🗑️ Uploaded file cleaned up:', filePath);
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup uploaded file:', cleanupError.message);
+      }
       
     } catch (parseError) {
       console.error('❌ Resume parsing or database insertion failed:', parseError);
@@ -309,6 +202,14 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
       // For other parsing errors, still allow the upload but without parsing
       console.log('⚠️ Continuing with upload despite parsing failure');
       parsedData = null;
+      
+      // Clean up the uploaded file even on parsing failure
+      try {
+        await resumeParsingService.cleanupFile(filePath);
+        console.log('🗑️ Uploaded file cleaned up after parsing failure:', filePath);
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup uploaded file after parsing failure:', cleanupError.message);
+      }
     }
 
     res.json({
@@ -323,6 +224,17 @@ router.post('/resume', unifiedAuth.requireAuth, upload.single('file'), async (re
     });
   } catch (error) {
     console.error('❌ Resume upload error:', error);
+    
+    // Clean up the uploaded file in case of any unexpected error
+    if (req.file?.path) {
+      try {
+        await resumeParsingService.cleanupFile(req.file.path);
+        console.log('🗑️ Uploaded file cleaned up after error:', req.file.path);
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup uploaded file after error:', cleanupError.message);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to upload CV'
@@ -473,6 +385,17 @@ router.post('/test-parse', unifiedAuth.requireAuth, upload.single('file'), async
     }
   } catch (error) {
     console.error('❌ Test parsing error:', error);
+    
+    // Clean up the uploaded file in case of any unexpected error
+    if (req.file?.path) {
+      try {
+        await resumeParsingService.cleanupFile(req.file.path);
+        console.log('🗑️ Uploaded file cleaned up after error:', req.file.path);
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup uploaded file after error:', cleanupError.message);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Failed to test parse file'

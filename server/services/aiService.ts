@@ -1199,16 +1199,30 @@ class AIService {
   }
 
   /**
-   * Search for jobs using Tavily API
+   * Search for jobs using cached service (with Tavily fallback)
    */
-  async searchJobsWithTavily(params: JobSearchParams): Promise<any[]> {
+  async searchJobsWithTavily(params: JobSearchParams, userId?: string, resumeData?: any): Promise<any[]> {
     try {
-      console.log('🔍 Searching jobs with Tavily:', params);
-      const jobs = await tavilyService.searchAndCrawlJobs(params);
-      console.log(`✅ Found ${jobs.length} jobs via Tavily`);
+      console.log('🔍 Searching jobs with cached service:', params);
+      
+      if (userId) {
+        // Use cached job search service for logged-in users
+        const { cachedJobSearchService } = await import('./cachedJobSearchService.js');
+        const result = await cachedJobSearchService.searchJobs(userId, params);
+        
+        if (result.success && result.data) {
+          console.log(`✅ Found ${result.data.length} jobs via cached service`);
+          return result.data;
+        }
+      }
+      
+      // Fallback to direct Tavily search for guests or if cached service fails
+      console.log('🔄 Falling back to direct Tavily search');
+      const jobs = await tavilyService.searchJobs(params);
+      console.log(`✅ Found ${jobs.length} jobs via direct Tavily`);
       return jobs;
     } catch (error) {
-      console.error('❌ Tavily job search failed:', error);
+      console.error('❌ Job search failed:', error);
       throw error;
     }
   }
@@ -1223,7 +1237,25 @@ class AIService {
   ): Promise<void> {
     try {
       console.log('🔍 Streaming job search with AI scoring:', params);
-      console.log('📄 Resume data:', JSON.stringify(resumeData, null, 2));
+      
+      // Extract user ID for caching
+      const userId = resumeData?.userId || resumeData?.user_id;
+      
+      // Check cache first if user ID is available
+      if (userId) {
+        const { cachedJobSearchService } = await import('./cachedJobSearchService.js');
+        const cachedResult = await cachedJobSearchService.getJobResults(userId, false);
+        
+        if (cachedResult.success && cachedResult.data && cachedResult.data.length > 0) {
+          console.log(`📦 Using ${cachedResult.data.length} cached job results`);
+          
+          // Stream cached results
+          for (const job of cachedResult.data) {
+            onJob(job);
+          }
+          return;
+        }
+      }
       
       // Extract locations from resume experience only if no location filter is set
       if (!params.location) {
@@ -1240,14 +1272,36 @@ class AIService {
       
       // If query is vague (like "more"), use resume data to build better query
       if (!params.query || params.query.length < 5 || params.query === 'more') {
-        const skills = resumeData?.skills?.slice(0, 3).join(' ') || '';
+        const skills = Array.isArray(resumeData?.skills) 
+          ? resumeData.skills.slice(0, 3).map(skill => typeof skill === 'string' ? skill : skill.name).join(' ')
+          : '';
         const latestJob = resumeData?.experience?.[0]?.title || '';
         params.query = latestJob || skills || 'software developer';
         console.log('🔄 Using resume-based query:', params.query);
       }
       
+      // Collect jobs for caching
+      const jobsToCache: any[] = [];
+      
       // Stream jobs one by one with AI scoring
-      await tavilyService.streamJobsWithAIScoring(params, resumeData, onJob);
+      await tavilyService.streamJobsWithAIScoring(params, resumeData, (job) => {
+        jobsToCache.push(job);
+        onJob(job);
+      });
+      
+      // Cache results if user ID is available and we have jobs
+      if (userId && jobsToCache.length > 0) {
+        const { cachedJobSearchService } = await import('./cachedJobSearchService.js');
+        // Use the public searchJobs method to update cache
+        await cachedJobSearchService.searchJobs(userId, {
+          query: params.query,
+          location: params.location,
+          jobType: params.jobType,
+          experienceLevel: params.experienceLevel,
+          limit: jobsToCache.length
+        });
+        console.log(`💾 Updated cache with ${jobsToCache.length} job results for user ${userId}`);
+      }
       
       console.log('✅ Job streaming completed');
     } catch (error) {
@@ -1259,62 +1313,134 @@ class AIService {
   /**
    * Extract job search parameters from natural language query
    */
-  extractJobSearchParams(query: string): JobSearchParams {
+  extractJobSearchParams(query: string, resumeData?: any): JobSearchParams {
     const lowerQuery = query.toLowerCase();
     
-    // Extract job title/role
-    const jobTitlePatterns = [
-      /(?:looking for|searching for|find|show me)\s+([a-z\s]+?)\s+(?:jobs?|positions?|roles?)/i,
-      /([a-z\s]+?)\s+(?:jobs?|positions?|roles?)/i
-    ];
-    
-    let jobTitle = '';
-    for (const pattern of jobTitlePatterns) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        jobTitle = match[1].trim();
-        break;
+    // If query is asking to find jobs based on resume, build from resume data directly
+    if (!query.trim() || lowerQuery.includes('find jobs based on my resume') || lowerQuery.includes('based on my resume and skills')) {
+      console.log(`🔄 [AI SERVICE] Resume-based job search detected, building from resume data`);
+      
+      let builtQuery = 'software developer'; // default fallback
+      let builtLocation = undefined;
+      let builtJobType = 'full-time';
+      let builtExperienceLevel = 'mid';
+      
+      if (resumeData) {
+        console.log('📄 [AI SERVICE] Resume data available:', {
+          hasExperience: !!resumeData.experience?.length,
+          hasSkills: !!resumeData.skills?.length,
+          hasPersonalInfo: !!resumeData.personal_info
+        });
+        
+        // Use latest job title from experience
+        if (resumeData.experience?.length > 0) {
+          const latestJob = resumeData.experience[0];
+          builtQuery = latestJob.position || latestJob.title || builtQuery;
+          console.log(`✅ [AI SERVICE] Using job title from experience: "${builtQuery}"`);
+          
+          // Determine experience level from work history
+          const totalYears = resumeData.experience.length;
+          if (totalYears <= 2) builtExperienceLevel = 'entry';
+          else if (totalYears <= 5) builtExperienceLevel = 'mid';
+          else builtExperienceLevel = 'senior';
+          
+          // Check for remote work preference
+          const hasRemoteExp = resumeData.experience.some((exp: any) => 
+            exp.location?.toLowerCase().includes('remote')
+          );
+          if (hasRemoteExp) builtJobType = 'remote';
+        }
+        // If no job title, use skills
+        else if (resumeData.skills?.length > 0) {
+          const topSkills = resumeData.skills.slice(0, 2)
+            .map((s: any) => typeof s === 'string' ? s : s.name)
+            .filter(Boolean)
+            .join(' ');
+          if (topSkills) {
+            builtQuery = `${topSkills} developer`;
+            console.log(`✅ [AI SERVICE] Using skills for query: "${builtQuery}"`);
+          }
+        }
+        
+        // Use location from resume personal info
+        if (resumeData.personal_info?.location) {
+          builtLocation = resumeData.personal_info.location;
+          console.log(`✅ [AI SERVICE] Using location from resume: "${builtLocation}"`);
+        }
+      } else {
+        console.log('⚠️ [AI SERVICE] No resume data provided, using defaults');
       }
+      
+      const finalParams = {
+        query: builtQuery,
+        location: builtLocation,
+        jobType: builtJobType,
+        experienceLevel: builtExperienceLevel,
+        maxResults: 10
+      };
+      
+      console.log(`🎯 [AI SERVICE] Final resume-based params:`, finalParams);
+      
+      return finalParams;
     }
     
-    // Extract location
-    const locationPatterns = [
-      /(?:in|at|near|around)\s+([a-z\s,]+?)(?:\s+(?:area|region|city|state))?(?:\s|$|,)/i,
-      /location:?\s*([a-z\s,]+)/i
-    ];
+    // For all other queries, just use the user's input directly
+    console.log(`🎯 [AI SERVICE] Using user query directly: "${query}"`);
     
-    let location = '';
-    for (const pattern of locationPatterns) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        location = match[1].trim();
-        break;
-      }
-    }
+    // Extract location if mentioned
+    const locationMatch = query.match(/(?:in|at|near|around)\s+([a-z\s,]+?)(?:\s|$|,)/i);
+    const location = locationMatch ? locationMatch[1].trim() : undefined;
     
-    // Extract job type
-    let jobType = '';
+    // Extract job type if mentioned
+    let jobType = undefined;
     if (lowerQuery.includes('remote')) jobType = 'remote';
     else if (lowerQuery.includes('hybrid')) jobType = 'hybrid';
-    else if (lowerQuery.includes('on-site') || lowerQuery.includes('onsite')) jobType = 'on-site';
-    else if (lowerQuery.includes('full-time') || lowerQuery.includes('full time')) jobType = 'full-time';
-    else if (lowerQuery.includes('part-time') || lowerQuery.includes('part time')) jobType = 'part-time';
+    else if (lowerQuery.includes('full-time')) jobType = 'full-time';
+    else if (lowerQuery.includes('part-time')) jobType = 'part-time';
     else if (lowerQuery.includes('contract')) jobType = 'contract';
     
-    // Extract experience level
-    let experienceLevel = '';
+    // Extract experience level if mentioned
+    let experienceLevel = undefined;
     if (lowerQuery.includes('entry') || lowerQuery.includes('junior')) experienceLevel = 'entry';
     else if (lowerQuery.includes('mid') || lowerQuery.includes('intermediate')) experienceLevel = 'mid';
     else if (lowerQuery.includes('senior')) experienceLevel = 'senior';
     else if (lowerQuery.includes('lead') || lowerQuery.includes('principal')) experienceLevel = 'lead';
     
-    return {
-      query: jobTitle || query,
-      location: location || undefined,
-      jobType: jobType || undefined,
-      experienceLevel: experienceLevel || undefined,
+    // Fill missing params from resume if available
+    if (resumeData) {
+      if (!location && resumeData.personal_info?.location) {
+        location = resumeData.personal_info.location;
+        console.log(`✅ [AI SERVICE] Added location from resume: "${location}"`);
+      }
+      
+      if (!experienceLevel && resumeData.experience?.length > 0) {
+        const totalYears = resumeData.experience.length;
+        if (totalYears <= 2) experienceLevel = 'entry';
+        else if (totalYears <= 5) experienceLevel = 'mid';
+        else experienceLevel = 'senior';
+        console.log(`✅ [AI SERVICE] Determined experience level from resume: "${experienceLevel}"`);
+      }
+      
+      if (!jobType) {
+        const hasRemoteExp = resumeData.experience?.some((exp: any) => 
+          exp.location?.toLowerCase().includes('remote')
+        );
+        jobType = hasRemoteExp ? 'remote' : 'full-time';
+        console.log(`✅ [AI SERVICE] Set job type from resume: "${jobType}"`);
+      }
+    }
+    
+    const finalParams = {
+      query: query, // Use the exact user query
+      location: location,
+      jobType: jobType,
+      experienceLevel: experienceLevel,
       maxResults: 10
     };
+    
+    console.log(`🎯 [AI SERVICE] Final params with user query:`, finalParams);
+    
+    return finalParams;
   }
 }
 

@@ -182,6 +182,33 @@ function parseSkills(skillsData: any): any[] {
 /**
  * Process experience data - merge achievements/responsibilities with description for display
  */
+function processProjectsData(projectsData: any): any[] {
+  if (!projectsData) return [];
+  
+  const parsed = typeof projectsData === 'string' ? JSON.parse(projectsData) : projectsData;
+  if (!Array.isArray(parsed)) return [];
+  
+  return parsed.map(project => {
+    return {
+      id: project.id || `proj-${Date.now()}-${Math.random()}`,
+      name: project.name || project.title || '',
+      title: project.title || project.name || '', // Add title field for compatibility
+      description: project.description || '',
+      url: project.url || '',
+      technologies: project.technologies || [],
+      startDate: project.startDate || '',
+      endDate: project.endDate || '',
+      // Preserve optimization fields
+      is_optimized: project.is_optimized || false,
+      description_optimized: project.description_optimized || null,
+      achievements: project.achievements || [],
+      achievements_optimized: project.achievements_optimized || null,
+      features: project.features || [],
+      features_optimized: project.features_optimized || null
+    };
+  });
+}
+
 function processExperienceData(experienceData: any): any[] {
   if (!experienceData) return [];
   
@@ -189,43 +216,39 @@ function processExperienceData(experienceData: any): any[] {
   if (!Array.isArray(parsed)) return [];
   
   return parsed.map(exp => {
-    let combinedDescription = exp.description || '';
-    
-    // Add responsibilities if they exist
-    if (exp.responsibilities && Array.isArray(exp.responsibilities) && exp.responsibilities.length > 0) {
-      if (combinedDescription) combinedDescription += '\n\n';
-      // Convert responsibilities to markdown list
-      combinedDescription += exp.responsibilities.map((resp: string) => `- ${resp}`).join('\n');
-    }
-    
-    // Add achievements if they exist
-    if (exp.achievements && Array.isArray(exp.achievements) && exp.achievements.length > 0) {
-      if (combinedDescription) combinedDescription += '\n\n';
-      combinedDescription += '**Key Achievements:**\n';
-      // Convert achievements to markdown list
-      combinedDescription += exp.achievements.map((achievement: string) => `- ${achievement}`).join('\n');
-    }
-    
     return {
       id: exp.id || `exp-${Date.now()}-${Math.random()}`,
       company: exp.company || '',
       position: exp.title || exp.position || '',
+      title: exp.title || exp.position || '',
       location: exp.location || '',
       startDate: exp.startDate || '',
       endDate: exp.endDate || '',
       current: exp.endDate?.toLowerCase() === 'present' || exp.current || false,
-      description: combinedDescription,
-      skills: exp.skills || []
+      description: exp.description || '',
+      skills: exp.skills || [],
+      // Preserve optimization fields
+      is_optimized: exp.is_optimized || false,
+      description_optimized: exp.description_optimized || null,
+      responsibilities: exp.responsibilities || [],
+      responsibilities_optimized: exp.responsibilities_optimized || null,
+      achievements: exp.achievements || [],
+      achievements_optimized: exp.achievements_optimized || null
     };
   });
 }
 
 // API endpoint handlers
 export const getUserResumes = async (req: AuthRequest, res: Response) => {
+  console.log('🔍 Server: getUserResumes called');
+  console.log('🔍 Server: User ID:', req.user?.id);
+  console.log('🔍 Server: Auth headers:', req.headers.authorization);
+  
   try {
     const userId = req.user?.id;
 
     if (!userId) {
+      console.log('❌ Server: No user ID found, returning 401');
       return res.status(401).json({
         success: false,
         error: "Authentication required"
@@ -247,6 +270,7 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
     `, [userId]);
 
     const resumes = resumesResult.rows;
+    console.log('🔍 Server: Found resumes:', resumes.length);
 
     const formattedResumes = resumes.map((resume: any) => {
       const personalInfo = typeof resume.personal_info === 'string' ? JSON.parse(resume.personal_info) : (resume.personal_info || {});
@@ -289,16 +313,17 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
         experiences: processExperienceData(resume.experience),
         education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
         skills: parseSkills(resume.skills),
-        projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
+        projects: processProjectsData(resume.projects),
         certifications: typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || []),
-        summary: resume.summary || '',
-        objective: resume.objective || '',
+        summary: resume.summary || null,
+        objective: resume.objective || null,
         templateId: resume.template_id,
         shareToken: resume.share_token, // Include shareToken from resume_shares table
         atsScore
       };
     });
 
+    console.log('✅ Server: Returning resumes:', formattedResumes.length);
     res.json({
       success: true,
       data: formattedResumes,
@@ -306,7 +331,7 @@ export const getUserResumes = async (req: AuthRequest, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error fetching user resumes:", error);
+    console.error("❌ Server: Error fetching user resumes:", error);
     res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -380,8 +405,8 @@ export const getResumePublic = async (req: any, res: Response) => {
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
         certifications: typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || []),
-        summary: resume.summary || '',
-        objective: resume.objective || '',
+        summary: resume.summary || null,
+        objective: resume.objective || null,
         templateId: resume.template_id,
         atsScore
       }
@@ -471,8 +496,8 @@ export const getResume = async (req: AuthRequest, res: Response) => {
         skills: parseSkills(resume.skills),
         projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
         certifications: typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || []),
-        summary: resume.summary || '',
-        objective: resume.objective || '',
+        summary: resume.summary || null,
+        objective: resume.objective || null,
         templateId: resume.template_id,
         atsScore
       }
@@ -555,8 +580,18 @@ export const createResume = async (req: AuthRequest, res: Response) => {
       userId,
       resumeData.title || content.title || 'Untitled Resume',
       JSON.stringify(content.personalInfo || {}),
-      content.summary || content.personalInfo?.summary || '',
-      content.objective || '',
+      // Handle summary as JSONB
+      content.summary ? (typeof content.summary === 'string' ? JSON.stringify({
+        content: content.summary,
+        content_optimized: null,
+        is_optimized: false
+      }) : JSON.stringify(content.summary)) : null,
+      // Handle objective as JSONB
+      content.objective ? (typeof content.objective === 'string' ? JSON.stringify({
+        content: content.objective,
+        content_optimized: null,
+        is_optimized: false
+      }) : JSON.stringify(content.objective)) : null,
       JSON.stringify(content.skills || []),
       JSON.stringify(content.experience || []),
       JSON.stringify(content.education || []),
@@ -688,8 +723,18 @@ export const updateResume = async (req: AuthRequest, res: Response) => {
     `, [
       resumeData.title || content.title || 'Untitled Resume',
       JSON.stringify(content.personalInfo || {}),
-      content.summary || content.personalInfo?.summary || '',
-      content.objective || '',
+      // Handle summary as JSONB
+      content.summary ? (typeof content.summary === 'string' ? JSON.stringify({
+        content: content.summary,
+        content_optimized: null,
+        is_optimized: false
+      }) : JSON.stringify(content.summary)) : null,
+      // Handle objective as JSONB
+      content.objective ? (typeof content.objective === 'string' ? JSON.stringify({
+        content: content.objective,
+        content_optimized: null,
+        is_optimized: false
+      }) : JSON.stringify(content.objective)) : null,
       JSON.stringify(content.skills || []),
       JSON.stringify(content.experience || []),
       JSON.stringify(content.education || []),
@@ -891,12 +936,30 @@ export const updateResumeSection = async (req: AuthRequest, res: Response) => {
 
     if (updates.summary !== undefined) {
       updateFields.push(`summary = $${paramIndex++}`);
-      updateValues.push(updates.summary);
+      // Handle both string and object formats for summary
+      if (typeof updates.summary === 'string') {
+        updateValues.push(JSON.stringify({
+          content: updates.summary,
+          content_optimized: null,
+          is_optimized: false
+        }));
+      } else {
+        updateValues.push(JSON.stringify(updates.summary));
+      }
     }
 
     if (updates.objective !== undefined) {
       updateFields.push(`objective = $${paramIndex++}`);
-      updateValues.push(updates.objective);
+      // Handle both string and object formats for objective
+      if (typeof updates.objective === 'string') {
+        updateValues.push(JSON.stringify({
+          content: updates.objective,
+          content_optimized: null,
+          is_optimized: false
+        }));
+      } else {
+        updateValues.push(JSON.stringify(updates.objective));
+      }
     }
 
     if (updates.personalInfo !== undefined) {

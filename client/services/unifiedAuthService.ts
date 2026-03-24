@@ -365,8 +365,8 @@ class UnifiedAuthService extends BaseApiClient {
           );
           
           // Auth responses now have user and token at root level (not wrapped in data)
-          const user = response.user;
-          const token = response.token;
+          const user = (response as any).data?.user || (response as any).user;
+          const token = (response as any).data?.token || (response as any).token;
 
           if (response.success && user && token) {
             const authResponse: AuthResponse = {
@@ -402,10 +402,10 @@ class UnifiedAuthService extends BaseApiClient {
           this.setLoading(false);
           
           if (error instanceof Error && 'type' in error) {
-            const authError = error as AuthError;
+            const authError = error as unknown as AuthError;
             authLogger.error(AuthOperation.LOGIN, 'Login failed with auth error', {
               errorType: authError.type
-            }, authError);
+            }, new Error(authError.message));
             AuthErrorHandler.logError(authError);
             return {
               success: false,
@@ -414,7 +414,7 @@ class UnifiedAuthService extends BaseApiClient {
           }
           
           const authError = AuthErrorHandler.parseNetworkError(error as Error, 'login');
-          authLogger.error(AuthOperation.LOGIN, 'Login failed with network error', {}, authError);
+          authLogger.error(AuthOperation.LOGIN, 'Login failed with network error', {}, new Error(authError.message));
           AuthErrorHandler.logError(authError);
           return {
             success: false,
@@ -451,7 +451,7 @@ class UnifiedAuthService extends BaseApiClient {
             let errorType = AuthErrorType.REGISTRATION_FAILED;
             
             // Check both message and error fields for error details
-            const errorMessage = (result.message || result.error || '').toLowerCase();
+            const errorMessage = (result.message || (typeof result.error === 'string' ? result.error : '') || '').toLowerCase();
             
             if (errorMessage.includes('already exists')) {
               errorType = AuthErrorType.EMAIL_ALREADY_EXISTS;
@@ -501,20 +501,20 @@ class UnifiedAuthService extends BaseApiClient {
       this.setLoading(false);
       return {
         success: false,
-        message: response.error || response.message || 'Registration failed',
+        message: typeof response.error === 'string' ? response.error : response.message || 'Registration failed',
         errors: response.errors
       };
     } catch (error) {
       this.setLoading(false);
       
       if (error instanceof Error && 'type' in error) {
-        const authError = error as AuthError;
+        const authError = error as unknown as AuthError;
         AuthErrorHandler.logError(authError);
         return {
           success: false,
           message: AuthErrorHandler.getUserMessage(authError),
           errors: authError.details?.errors,
-          error: authError
+          error: authError.message
         };
       }
       
@@ -523,7 +523,7 @@ class UnifiedAuthService extends BaseApiClient {
       return {
         success: false,
         message: AuthErrorHandler.getUserMessage(authError),
-        error: authError
+        error: authError.message
       };
     }
   }
@@ -607,11 +607,11 @@ class UnifiedAuthService extends BaseApiClient {
       this.clearAuthState();
       return {
         success: false,
-        message: response.error || response.message || 'Token refresh failed'
+        message: typeof response.error === 'string' ? response.error : response.message || 'Token refresh failed'
       };
     } catch (error) {
       if (error instanceof Error && 'type' in error) {
-        const authError = error as AuthError;
+        const authError = error as unknown as AuthError;
         AuthErrorHandler.logError(authError);
         this.clearAuthState();
         return {
@@ -627,7 +627,7 @@ class UnifiedAuthService extends BaseApiClient {
       return {
         success: false,
         message: AuthErrorHandler.getUserMessage(authError),
-        error: authError
+        error: authError.message
       };
     }
   }
@@ -695,7 +695,7 @@ class UnifiedAuthService extends BaseApiClient {
     const response = await this.post<AuthResponse>("/forgot-password", data, { skipAuth: true });
     return {
       success: response.success,
-      message: response.data?.message || response.message || response.error
+      message: response.data?.message || response.message || (typeof response.error === 'string' ? response.error : 'Password reset request failed')
     };
   }
 
@@ -706,7 +706,7 @@ class UnifiedAuthService extends BaseApiClient {
     const response = await this.post<AuthResponse>("/reset-password", data, { skipAuth: true });
     return {
       success: response.success,
-      message: response.data?.message || response.message || response.error
+      message: response.data?.message || response.message || (typeof response.error === 'string' ? response.error : 'Password reset failed')
     };
   }
 
@@ -717,7 +717,7 @@ class UnifiedAuthService extends BaseApiClient {
     const response = await this.post<AuthResponse>("/change-password", data);
     return {
       success: response.success,
-      message: response.data?.message || response.message || response.error
+      message: response.data?.message || response.message || (typeof response.error === 'string' ? response.error : 'Password change failed')
     };
   }
 
@@ -736,7 +736,7 @@ class UnifiedAuthService extends BaseApiClient {
     return {
       success: response.success,
       user: response.data?.user,
-      message: response.data?.message || response.message || response.error
+      message: response.data?.message || response.message || (typeof response.error === 'string' ? response.error : 'Profile update failed')
     };
   }
 
@@ -749,7 +749,7 @@ class UnifiedAuthService extends BaseApiClient {
     const response = await this.post<AuthResponse>("/resend-verification");
     return {
       success: response.success,
-      message: response.data?.message || response.message || response.error
+      message: response.data?.message || response.message || (typeof response.error === 'string' ? response.error : 'Failed to resend verification email')
     };
   }
 
@@ -760,7 +760,7 @@ class UnifiedAuthService extends BaseApiClient {
     const response = await this.post<AuthResponse>("/verify-email", { token }, { skipAuth: true });
     return {
       success: response.success,
-      message: response.data?.message || response.message || response.error
+      message: response.data?.message || response.message || (typeof response.error === 'string' ? response.error : 'Email verification failed')
     };
   }
 

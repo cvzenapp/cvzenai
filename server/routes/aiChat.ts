@@ -3,6 +3,7 @@ import { z } from "zod";
 import unifiedAuth from "../middleware/unifiedAuth.js";
 import { aiService } from "../services/aiService.js";
 import { aiMemoryService } from "../services/aiMemoryService.js";
+import { cachedJobSearchService } from "../services/cachedJobSearchService.js";
 import multer from 'multer';
 import { fileProcessingService } from "../services/fileProcessingService.js";
 
@@ -34,7 +35,7 @@ const upload = multer({
 
 // Validation schemas
 const chatMessageSchema = z.object({
-  message: z.string().min(1).max(2000),
+  message: z.string().min(1).max(2000), // Require non-empty messages
   type: z.enum(['general_chat', 'resume_analysis', 'career_advice', 'job_search', 'interview_prep']).optional(),
   usePremium: z.boolean().optional(),
   context: z.object({
@@ -121,29 +122,34 @@ router.post("/initial-jobs", unifiedAuth.requireAuth, async (req: Request, res: 
     console.log('🎯 Job search params:', { jobQuery, jobLocation });
     
     try {
-      console.log('🔍 Searching initial jobs for user:', { userId: user.id, query: jobQuery, location });
+      console.log('🔍 Using cached job search for initial jobs:', { userId: user.id });
       
-      // Search for jobs using Tavily
-      const jobParams = { query: jobQuery, location: jobLocation || undefined };
-      const jobs = await aiService.searchJobsWithTavily(jobParams);
-      console.log('✅ Found jobs:', jobs.length);
+      // Use cached job search service for initial jobs
+      const cachedResult = await cachedJobSearchService.getJobResults(user.id, false);
       
-      const chatResponse: ChatResponse = {
-        success: true,
-        response: {
-          type: 'jobs',
-          content: '',
-          jobResults: jobs,
-          suggestions: [
-            'Tailor resume for these roles',
-            'Research companies before applying',
-            'Network with professionals'
-          ]
-        }
-      };
-      
-      console.log(`✅ Sending response with ${jobs.length} jobs:`, JSON.stringify(chatResponse, null, 2));
-      return res.json(chatResponse);
+      if (cachedResult.success && cachedResult.data) {
+        console.log(`✅ Found ${cachedResult.data.length} jobs ${cachedResult.fromCache ? 'from cache' : 'fresh'}`);
+        
+        const chatResponse: ChatResponse = {
+          success: true,
+          response: {
+            type: 'jobs',
+            content: '',
+            jobResults: cachedResult.data,
+            suggestions: [
+              'Tailor resume for these roles',
+              'Research companies before applying',
+              'Network with professionals'
+            ]
+          }
+        };
+        
+        console.log(`✅ Sending response with ${cachedResult.data.length} jobs`);
+        return res.json(chatResponse);
+      } else {
+        console.error('Failed to get cached job results:', cachedResult.message);
+        throw new Error(cachedResult.message || 'Failed to load jobs');
+      }
       
     } catch (jobSearchError) {
       console.error('Initial job search error:', jobSearchError);
@@ -194,15 +200,26 @@ router.post("/message", unifiedAuth.requireAuth, async (req: Request, res: Respo
       
       if (resumeResult.rows.length > 0) {
         const resume = resumeResult.rows[0];
+        
+        // Parse JSON fields properly
+        const parsedSkills = typeof resume.skills === 'string' ? JSON.parse(resume.skills) : (resume.skills || []);
+        const parsedExperience = typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []);
+        const parsedEducation = typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []);
+        const parsedProjects = typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []);
+        const parsedCertifications = typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || []);
+        const parsedPersonalInfo = typeof resume.personal_info === 'string' ? JSON.parse(resume.personal_info) : (resume.personal_info || {});
+        
         activeResumeData = {
           title: resume.title,
           summary: resume.summary || '',
           objective: resume.objective || '',
-          skills: typeof resume.skills === 'string' ? JSON.parse(resume.skills) : (resume.skills || []),
-          experience: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
-          education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
-          projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
-          certifications: typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || [])
+          skills: parsedSkills,
+          experience: parsedExperience,
+          education: parsedEducation,
+          projects: parsedProjects,
+          certifications: parsedCertifications,
+          // Use the actual personal_info from the database
+          personal_info: parsedPersonalInfo
         };
       }
     } catch (resumeError) {
@@ -228,11 +245,11 @@ router.post("/message", unifiedAuth.requireAuth, async (req: Request, res: Respo
     if (aiType === 'job_search') {
       try {
         // Extract job search parameters from the message
-        const jobParams = aiService.extractJobSearchParams(message);
-        console.log('🔍 Extracted job search params:', jobParams);
+        const jobParams = aiService.extractJobSearchParams(message, activeResumeData);
+        // Log moved to extractJobSearchParams method to show final params
         
         // Search for jobs using Tavily
-        const jobs = await aiService.searchJobsWithTavily(jobParams);
+        const jobs = await aiService.searchJobsWithTavily(jobParams, user?.id, activeResumeData);
         
         // Generate AI response with job results
         const aiResponse = await aiService.generateResponse({
@@ -383,24 +400,37 @@ router.post("/stream", unifiedAuth.requireAuth, async (req: Request, res: Respon
           id: resume.id,
           title: resume.title,
           hasExperience: !!resume.experience,
+          hasPersonalInfo: !!resume.personal_info,
           experienceType: typeof resume.experience
         });
+        
+        // Parse JSON fields properly
+        const parsedSkills = typeof resume.skills === 'string' ? JSON.parse(resume.skills) : (resume.skills || []);
+        const parsedExperience = typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []);
+        const parsedEducation = typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []);
+        const parsedProjects = typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []);
+        const parsedCertifications = typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || []);
+        const parsedPersonalInfo = typeof resume.personal_info === 'string' ? JSON.parse(resume.personal_info) : (resume.personal_info || {});
         
         activeResumeData = {
           title: resume.title,
           summary: resume.summary || '',
           objective: resume.objective || '',
-          skills: typeof resume.skills === 'string' ? JSON.parse(resume.skills) : (resume.skills || []),
-          experience: typeof resume.experience === 'string' ? JSON.parse(resume.experience) : (resume.experience || []),
-          education: typeof resume.education === 'string' ? JSON.parse(resume.education) : (resume.education || []),
-          projects: typeof resume.projects === 'string' ? JSON.parse(resume.projects) : (resume.projects || []),
-          certifications: typeof resume.certifications === 'string' ? JSON.parse(resume.certifications) : (resume.certifications || [])
+          skills: parsedSkills,
+          experience: parsedExperience,
+          education: parsedEducation,
+          projects: parsedProjects,
+          certifications: parsedCertifications,
+          // Use the actual personal_info from the database
+          personal_info: parsedPersonalInfo
         };
         
         console.log('📄 [STREAM] Parsed resume data:', {
           hasSkills: activeResumeData.skills.length > 0,
           experienceCount: activeResumeData.experience.length,
-          firstExpLocation: activeResumeData.experience[0]?.location
+          firstExpLocation: activeResumeData.experience[0]?.location,
+          personalInfoLocation: activeResumeData.personal_info?.location,
+          personalInfoKeys: Object.keys(activeResumeData.personal_info || {})
         });
       } else {
         console.log('⚠️ [STREAM] No active resume found for user');
@@ -461,32 +491,92 @@ router.post("/stream", unifiedAuth.requireAuth, async (req: Request, res: Respon
             };
             console.log('🎯 Using structured job filters:', jobParams);
           } else {
-            jobParams = aiService.extractJobSearchParams(message);
-            console.log('🔍 Extracted job search params from message:', jobParams);
+            jobParams = aiService.extractJobSearchParams(message, activeResumeData);
+            // Log moved to extractJobSearchParams method to show final params
           }
           
-          // Stream jobs one by one with AI match scoring
-          await aiService.streamJobSearchWithScoring(
-            jobParams,
-            activeResumeData,
-            (job) => {
-              // Stream each job as it's processed
+          // Check if this is a general job request (use cache) or specific search (fresh)
+          const isGeneralJobRequest = !context?.jobFilters && (
+            message.toLowerCase().includes('find jobs') ||
+            message.toLowerCase().includes('show jobs') ||
+            message.toLowerCase().includes('job opportunities') ||
+            !jobParams.query || jobParams.query === 'developer'
+          );
+
+          if (isGeneralJobRequest) {
+            console.log('🔄 Using cached job search for general request');
+            
+            // Use cached job search for general requests
+            const cachedResult = await cachedJobSearchService.getJobResults(user.id, false);
+            
+            if (cachedResult.success && cachedResult.data) {
+              console.log(`📋 Streaming ${cachedResult.data.length} cached jobs`);
+              
+              // Stream cached jobs
+              for (const job of cachedResult.data) {
+                res.write(`data: ${JSON.stringify({ 
+                  type: 'job',
+                  job: job
+                })}\n\n`);
+              }
+              
+              // Send completion message
+              const cacheMessage = cachedResult.fromCache ? 'from cache' : 'fresh results';
               res.write(`data: ${JSON.stringify({ 
-                type: 'job',
-                job: job
+                type: 'complete',
+                message: `Found ${cachedResult.data.length} jobs ${cacheMessage}`,
+                suggestions: [
+                  'Tailor resume for these roles',
+                  'Research companies before applying',
+                  'Network with professionals'
+                ]
+              })}\n\n`);
+            } else {
+              res.write(`data: ${JSON.stringify({ 
+                type: 'error', 
+                message: 'Failed to load job results' 
               })}\n\n`);
             }
-          );
-          
-          // Send completion with suggestions
-          res.write(`data: ${JSON.stringify({ 
-            type: 'complete',
-            suggestions: [
-              'Tailor resume for these roles',
-              'Research companies before applying',
-              'Network with professionals'
-            ]
-          })}\n\n`);
+          } else {
+            console.log('🔍 Using fresh job search for specific request');
+            
+            // Use fresh search for specific requests
+            const searchResult = await cachedJobSearchService.searchJobs(user.id, {
+              query: jobParams.query,
+              location: jobParams.location,
+              jobType: jobParams.jobType,
+              experienceLevel: jobParams.experienceLevel,
+              limit: jobParams.maxResults || 10
+            });
+            
+            if (searchResult.success && searchResult.data) {
+              console.log(`🔍 Streaming ${searchResult.data.length} fresh job results`);
+              
+              // Stream fresh jobs
+              for (const job of searchResult.data) {
+                res.write(`data: ${JSON.stringify({ 
+                  type: 'job',
+                  job: job
+                })}\n\n`);
+              }
+              
+              // Send completion message
+              res.write(`data: ${JSON.stringify({ 
+                type: 'complete',
+                message: `Found ${searchResult.data.length} jobs matching your search`,
+                suggestions: [
+                  'Refine your search criteria',
+                  'Save interesting positions',
+                  'Apply to matching roles'
+                ]
+              })}\n\n`);
+            } else {
+              res.write(`data: ${JSON.stringify({ 
+                type: 'error', 
+                message: searchResult.message || 'Failed to search jobs' 
+              })}\n\n`);
+            }
+          }
           res.end();
           return;
           

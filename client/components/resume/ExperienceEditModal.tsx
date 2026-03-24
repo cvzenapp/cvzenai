@@ -16,6 +16,23 @@ interface Experience {
   current: boolean;
   description: string;
   location?: string;
+  responsibilities?: string[];
+  technologies?: string[];
+  companyLogo?: string;
+  companyUrl?: string;
+  employmentType?: string;
+  achievements?: string[];
+  keyMetrics?: {
+    metric: string;
+    value: string;
+    description?: string;
+  }[];
+  skills?: string[];
+  // Optimization fields
+  is_optimized?: boolean;
+  description_optimized?: string;
+  responsibilities_optimized?: string[];
+  achievements_optimized?: string[];
 }
 
 interface ExperienceEditModalProps {
@@ -37,6 +54,8 @@ export function ExperienceEditModal({
   const [selectedExperienceIndex, setSelectedExperienceIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [combinedContent, setCombinedContent] = useState('');
+  const [currentWorkToggle, setCurrentWorkToggle] = useState(false);
 
   // Initialize with current experiences when modal opens
   useEffect(() => {
@@ -117,6 +136,15 @@ export function ExperienceEditModal({
       
       setExperiences(experiencesWithIds.length > 0 ? experiencesWithIds : [createNewExperience()]);
       setSelectedExperienceIndex(0);
+      
+      // Set combined content for the first experience
+      if (experiencesWithIds.length > 0) {
+        setCombinedContent(combineExperienceContent(experiencesWithIds[0]));
+        setCurrentWorkToggle(experiencesWithIds[0]?.current || false);
+      } else {
+        setCombinedContent('');
+        setCurrentWorkToggle(false);
+      }
     }
   }, [isOpen, currentExperiences]);
 
@@ -128,8 +156,147 @@ export function ExperienceEditModal({
     endDate: '',
     current: false,
     description: '',
-    location: ''
+    location: '',
+    responsibilities: [],
+    technologies: [],
+    companyLogo: '',
+    companyUrl: '',
+    employmentType: '',
+    achievements: [],
+    keyMetrics: [],
+    skills: [],
+    is_optimized: false
   });
+
+  // Function to combine all experience properties into a single text
+  const combineExperienceContent = (exp: Experience): string => {
+    let content = '';
+    
+    // Use optimized content if available
+    const description = exp.is_optimized && exp.description_optimized 
+      ? exp.description_optimized 
+      : exp.description;
+    
+    const responsibilities = exp.is_optimized && exp.responsibilities_optimized 
+      ? exp.responsibilities_optimized 
+      : exp.responsibilities;
+    
+    const achievements = exp.is_optimized && exp.achievements_optimized 
+      ? exp.achievements_optimized 
+      : exp.achievements;
+
+    if (description) {
+      content += `DESCRIPTION:\n${description}\n\n`;
+    }
+    
+    if (responsibilities && responsibilities.length > 0) {
+      content += `RESPONSIBILITIES:\n${responsibilities.map(r => `• ${r}`).join('\n')}\n\n`;
+    }
+    
+    if (achievements && achievements.length > 0) {
+      content += `ACHIEVEMENTS:\n${achievements.map(a => `• ${a}`).join('\n')}\n\n`;
+    }
+    
+    if (exp.technologies && exp.technologies.length > 0) {
+      content += `TECHNOLOGIES:\n${exp.technologies.join(', ')}\n\n`;
+    }
+    
+    if (exp.skills && exp.skills.length > 0) {
+      content += `SKILLS:\n${exp.skills.join(', ')}\n\n`;
+    }
+    
+    if (exp.keyMetrics && exp.keyMetrics.length > 0) {
+      content += `KEY METRICS:\n${exp.keyMetrics.map(m => `• ${m.metric}: ${m.value}${m.description ? ` (${m.description})` : ''}`).join('\n')}\n\n`;
+    }
+    
+    if (exp.employmentType) {
+      content += `EMPLOYMENT TYPE:\n${exp.employmentType}\n\n`;
+    }
+    
+    if (exp.companyUrl) {
+      content += `COMPANY URL:\n${exp.companyUrl}\n\n`;
+    }
+    
+    return content.trim();
+  };
+
+  // Function to parse combined content back into experience properties
+  const parseCombinedContent = (content: string, baseExp: Experience): Experience => {
+    const sections = content.split(/\n\n(?=[A-Z ]+:)/);
+    const updatedExp = { ...baseExp };
+    
+    sections.forEach(section => {
+      const lines = section.split('\n');
+      const header = lines[0].replace(':', '').trim();
+      const contentLines = lines.slice(1);
+      
+      switch (header) {
+        case 'DESCRIPTION':
+          const descContent = contentLines.join('\n').trim();
+          if (updatedExp.is_optimized) {
+            updatedExp.description_optimized = descContent;
+          } else {
+            updatedExp.description = descContent;
+          }
+          break;
+        case 'RESPONSIBILITIES':
+          const respContent = contentLines
+            .map(line => line.replace(/^•\s*/, '').trim())
+            .filter(line => line);
+          if (updatedExp.is_optimized) {
+            updatedExp.responsibilities_optimized = respContent;
+          } else {
+            updatedExp.responsibilities = respContent;
+          }
+          break;
+        case 'ACHIEVEMENTS':
+          const achContent = contentLines
+            .map(line => line.replace(/^•\s*/, '').trim())
+            .filter(line => line);
+          if (updatedExp.is_optimized) {
+            updatedExp.achievements_optimized = achContent;
+          } else {
+            updatedExp.achievements = achContent;
+          }
+          break;
+        case 'TECHNOLOGIES':
+          updatedExp.technologies = contentLines.join(' ')
+            .split(',')
+            .map(tech => tech.trim())
+            .filter(tech => tech);
+          break;
+        case 'SKILLS':
+          updatedExp.skills = contentLines.join(' ')
+            .split(',')
+            .map(skill => skill.trim())
+            .filter(skill => skill);
+          break;
+        case 'KEY METRICS':
+          updatedExp.keyMetrics = contentLines
+            .map(line => {
+              const match = line.replace(/^•\s*/, '').match(/^([^:]+):\s*([^(]+)(?:\(([^)]+)\))?/);
+              if (match) {
+                return {
+                  metric: match[1].trim(),
+                  value: match[2].trim(),
+                  description: match[3]?.trim() || ''
+                };
+              }
+              return null;
+            })
+            .filter(metric => metric !== null) as { metric: string; value: string; description?: string; }[];
+          break;
+        case 'EMPLOYMENT TYPE':
+          updatedExp.employmentType = contentLines.join(' ').trim();
+          break;
+        case 'COMPANY URL':
+          updatedExp.companyUrl = contentLines.join(' ').trim();
+          break;
+      }
+    });
+    
+    return updatedExp;
+  };
 
   const handleExperienceChange = (field: keyof Experience, value: string | boolean) => {
     console.log(`Changing ${field} to:`, value);
@@ -140,12 +307,39 @@ export function ExperienceEditModal({
     };
     console.log('Updated experience:', updatedExperiences[selectedExperienceIndex]);
     setExperiences(updatedExperiences);
+    
+    // Update toggle state for visual feedback
+    if (field === 'current') {
+      setCurrentWorkToggle(value as boolean);
+    }
+    
+    // Update combined content when basic fields change
+    if (['company', 'position', 'location', 'startDate', 'endDate', 'current'].includes(field as string)) {
+      setCombinedContent(combineExperienceContent(updatedExperiences[selectedExperienceIndex]));
+    }
+  };
+
+  const handleCombinedContentChange = (content: string) => {
+    setCombinedContent(content);
+    
+    // Parse and update the experience
+    const updatedExperiences = [...experiences];
+    const currentExp = updatedExperiences[selectedExperienceIndex];
+    updatedExperiences[selectedExperienceIndex] = parseCombinedContent(content, currentExp);
+    setExperiences(updatedExperiences);
+  };
+
+  const handleExperienceSelect = (index: number) => {
+    setSelectedExperienceIndex(index);
+    setCombinedContent(combineExperienceContent(experiences[index]));
+    setCurrentWorkToggle(experiences[index]?.current || false);
   };
 
   const addExperience = () => {
     const newExperience = createNewExperience();
     setExperiences([...experiences, newExperience]);
     setSelectedExperienceIndex(experiences.length);
+    setCombinedContent(combineExperienceContent(newExperience));
   };
 
   const removeExperience = (index: number) => {
@@ -155,9 +349,11 @@ export function ExperienceEditModal({
     setExperiences(updatedExperiences);
     
     // Adjust selected index
-    if (selectedExperienceIndex >= updatedExperiences.length) {
-      setSelectedExperienceIndex(updatedExperiences.length - 1);
-    }
+    const newIndex = selectedExperienceIndex >= updatedExperiences.length 
+      ? updatedExperiences.length - 1 
+      : selectedExperienceIndex;
+    setSelectedExperienceIndex(newIndex);
+    setCombinedContent(combineExperienceContent(updatedExperiences[newIndex]));
   };
 
   const generateAIDescription = async () => {
@@ -281,7 +477,7 @@ export function ExperienceEditModal({
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => setSelectedExperienceIndex(index)}
+                  onClick={() => handleExperienceSelect(index)}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1 min-w-0">
@@ -348,6 +544,16 @@ export function ExperienceEditModal({
               />
             </div>
 
+            <div>
+              <Label htmlFor="employmentType">Employment Type</Label>
+              <Input
+                id="employmentType"
+                value={selectedExperience.employmentType || ''}
+                onChange={(e) => handleExperienceChange('employmentType', e.target.value)}
+                placeholder="e.g., Full-time, Part-time, Contract, Freelance, Internship"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="startDate">Start Date *</Label>
@@ -370,27 +576,50 @@ export function ExperienceEditModal({
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="currentWork"
-                checked={selectedExperience.current}
-                onChange={(e) => {
-                  handleExperienceChange('current', e.target.checked);
-                  if (e.target.checked) {
+            <div className="flex items-center space-x-3">
+              <div
+                onClick={() => {
+                  const currentExp = experiences[selectedExperienceIndex];
+                  const newValue = !currentWorkToggle;
+                  console.log('Toggle clicked:', { current: currentWorkToggle, newValue });
+                  handleExperienceChange('current', newValue);
+                  if (newValue) {
                     handleExperienceChange('endDate', '');
                   }
                 }}
-                className="h-4 w-4"
-              />
-              <label htmlFor="currentWork" className="text-sm cursor-pointer">
-                I currently work here
+                className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors duration-200 ${
+                  currentWorkToggle ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+                style={{
+                  backgroundColor: currentWorkToggle ? '#3b82f6' : '#e5e7eb'
+                }}
+              >
+                <span
+                  className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-lg"
+                  style={{
+                    transform: currentWorkToggle ? 'translateX(24px)' : 'translateX(4px)'
+                  }}
+                />
+              </div>
+              <label 
+                onClick={() => {
+                  const currentExp = experiences[selectedExperienceIndex];
+                  const newValue = !currentWorkToggle;
+                  console.log('Label clicked:', { current: currentWorkToggle, newValue });
+                  handleExperienceChange('current', newValue);
+                  if (newValue) {
+                    handleExperienceChange('endDate', '');
+                  }
+                }}
+                className="text-sm cursor-pointer select-none"
+              >
+                I currently work here {currentWorkToggle ? '(ON)' : '(OFF)'}
               </label>
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <Label htmlFor="description">Job Description & Achievements</Label>
+                <Label htmlFor="combinedContent">Complete Experience Details</Label>
                 <Button
                   onClick={generateAIDescription}
                   disabled={isGenerating || !selectedExperience.company || !selectedExperience.position}
@@ -403,16 +632,17 @@ export function ExperienceEditModal({
                 </Button>
               </div>
               <Textarea
-                id="description"
-                value={selectedExperience.description}
-                onChange={(e) => handleExperienceChange('description', e.target.value)}
-                placeholder="Describe your key responsibilities and achievements...&#10;&#10;Key Achievements:&#10;• Increased sales by 25% through strategic initiatives&#10;• Led team of 10 developers on major project&#10;• Reduced processing time by 40%"
-                rows={10}
-                className="resize-none"
+                id="combinedContent"
+                value={combinedContent}
+                onChange={(e) => handleCombinedContentChange(e.target.value)}
+                placeholder="DESCRIPTION:&#10;Describe your key responsibilities and role...&#10;&#10;RESPONSIBILITIES:&#10;• Managed team of 10 developers&#10;• Led architecture decisions&#10;• Implemented CI/CD pipelines&#10;&#10;ACHIEVEMENTS:&#10;• Increased team productivity by 40%&#10;• Reduced deployment time by 60%&#10;• Delivered 5 major features on time&#10;&#10;TECHNOLOGIES:&#10;React, Node.js, AWS, Docker&#10;&#10;SKILLS:&#10;Leadership, Project Management, Technical Architecture&#10;&#10;KEY METRICS:&#10;• Team Size: 10 developers&#10;• Projects Delivered: 15 (On-time delivery rate: 95%)&#10;• Performance Improvement: 40% increase in productivity&#10;&#10;EMPLOYMENT TYPE:&#10;Full-time&#10;&#10;COMPANY URL:&#10;https://company.com"
+                rows={15}
+                className="resize-none font-mono text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Include both responsibilities and achievements. Use bullet points for achievements.
-              </p>
+              <div className="text-xs text-gray-500 mt-2 space-y-1">
+                <p>Edit all experience details in one place. Use the section headers (DESCRIPTION:, RESPONSIBILITIES:, etc.) to organize content.</p>
+                <p>• Use bullet points for lists • Separate sections with blank lines • Include optimized content if available</p>
+              </div>
             </div>
             </div>
             

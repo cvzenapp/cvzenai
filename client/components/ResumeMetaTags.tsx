@@ -12,7 +12,11 @@ export const ResumeMetaTags: React.FC<ResumeMetaTagsProps> = ({ resume, shareTok
 
     const name = resume.personalInfo.name || 'Professional';
     const title = resume.personalInfo.title || 'Professional';
-    const summary = resume.summary || '';
+    const summary = typeof resume.summary === 'object' && resume.summary 
+      ? (resume.summary.is_optimized && resume.summary.content_optimized 
+          ? resume.summary.content_optimized 
+          : resume.summary.content || '')
+      : (resume.summary || '');
     const location = resume.personalInfo.location || '';
     const skills = resume.skills?.slice(0, 5).map(skill => 
       typeof skill === 'string' ? skill : skill.name
