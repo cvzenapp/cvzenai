@@ -1389,7 +1389,7 @@ class AIService {
     
     // Extract location if mentioned
     const locationMatch = query.match(/(?:in|at|near|around)\s+([a-z\s,]+?)(?:\s|$|,)/i);
-    const location = locationMatch ? locationMatch[1].trim() : undefined;
+    let location = locationMatch ? locationMatch[1].trim() : undefined;
     
     // Extract job type if mentioned
     let jobType = undefined;

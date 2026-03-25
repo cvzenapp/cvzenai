@@ -1,4 +1,4 @@
-import { getAuthToken } from './unifiedAuthService';
+import { unifiedAuthService } from './unifiedAuthService';
 
 export interface OptimizationProgress {
   type: 'connected' | 'progress' | 'section_completed' | 'section_skipped' | 'section_error' | 'completed' | 'final_result' | 'error';
@@ -33,7 +33,8 @@ export class ResumeOptimizationStreamService {
     onError: (error: string) => void
   ): Promise<void> {
     try {
-      const token = await getAuthToken();
+      const authState = unifiedAuthService.getAuthState();
+      const token = authState.token || localStorage.getItem("authToken");
       if (!token) {
         throw new Error('Authentication required');
       }

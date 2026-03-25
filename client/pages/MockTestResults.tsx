@@ -12,16 +12,17 @@ import {
   Download,
   Share2
 } from 'lucide-react';
-import { mockTestApi, MockTestResults } from '../services/mockTestApi';
+import { mockTestApi, MockTestResult } from '../services/mockTestApi';
 
 export const MockTestResultsPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   
-  const [results, setResults] = useState<MockTestResults | null>(null);
+  const [results, setResults] = useState<MockTestResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
+  const [retaking, setRetaking] = useState(false);
 
   useEffect(() => {
     if (sessionId) {
@@ -46,6 +47,37 @@ export const MockTestResultsPage: React.FC = () => {
       setError(err.message || 'Failed to load test results');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetakeTest = async () => {
+    if (!results) return;
+    
+    try {
+      setRetaking(true);
+      setError(null);
+      
+      // First get the session to get the interviewId
+      const sessionResponse = await mockTestApi.getSession(results.sessionId);
+      
+      if (!sessionResponse.success) {
+        setError('Failed to get session information');
+        return;
+      }
+      
+      const response = await mockTestApi.generateTest(sessionResponse.session.interviewId, results.testLevel);
+      
+      if (response.success) {
+        // Navigate to the new test session
+        navigate(`/mock-test/session/${response.session.id}`);
+      } else {
+        setError('Failed to generate new test');
+      }
+    } catch (err: any) {
+      console.error('Error generating new test:', err);
+      setError(err.message || 'Failed to generate new test');
+    } finally {
+      setRetaking(false);
     }
   };
 
@@ -137,10 +169,10 @@ export const MockTestResultsPage: React.FC = () => {
     );
   }
 
-  const { session, questions } = results;
-  const percentage = session.percentageScore || 0;
-  const correctAnswers = questions.filter(q => q.isCorrect).length;
-  const LevelIcon = getLevelIcon(session.testLevel);
+  const percentage = results.percentageScore || 0;
+  const correctAnswers = results.correctAnswers || 0;
+  const questions = results.questionResults || [];
+  const LevelIcon = getLevelIcon(results.testLevel);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
@@ -149,7 +181,17 @@ export const MockTestResultsPage: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => navigate(`/mock-test/${session.interviewId}`)}
+              onClick={async () => {
+                // Get session info for navigation
+                try {
+                  const sessionResponse = await mockTestApi.getSession(results.sessionId);
+                  if (sessionResponse.success) {
+                    navigate(`/mock-test/${sessionResponse.session.interviewId}`);
+                  }
+                } catch (err) {
+                  console.error('Error getting session info:', err);
+                }
+              }}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-slate-600" />
@@ -159,10 +201,10 @@ export const MockTestResultsPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-slate-900 font-jakarta capitalize">
-                {session.testLevel} Level Results
+                {results.testLevel} Level Results
               </h1>
               <p className="text-sm text-slate-600 mt-1">
-                Completed on {new Date(session.completedAt!).toLocaleDateString()}
+                Test completed
               </p>
             </div>
           </div>
@@ -205,7 +247,7 @@ export const MockTestResultsPage: React.FC = () => {
             </div>
             
             <h2 className="text-xl font-semibold text-slate-900 font-jakarta mb-2">
-              Your Score: {session.candidateScore}/{session.totalScore} points
+              Your Score: {correctAnswers}/{results.totalQuestions} correct
             </h2>
             <p className="text-slate-600 font-jakarta mb-4">
               {getPerformanceMessage(percentage)}
@@ -220,14 +262,13 @@ export const MockTestResultsPage: React.FC = () => {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-slate-900 font-jakarta">
-                  {session.startedAt && session.completedAt ? 
-                    formatDuration(session.startedAt, session.completedAt) : 'N/A'}
+                  {Math.round((results.timeTaken || 0) / 60)}m {Math.round((results.timeTaken || 0) % 60)}s
                 </div>
                 <div className="text-sm text-slate-600 font-jakarta">Time Taken</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-slate-900 font-jakarta capitalize">
-                  {session.testLevel}
+                  {results.testLevel}
                 </div>
                 <div className="text-sm text-slate-600 font-jakarta">Difficulty Level</div>
               </div>
@@ -238,11 +279,38 @@ export const MockTestResultsPage: React.FC = () => {
         {/* Actions */}
         <div className="flex flex-wrap gap-4 mb-8">
           <button
-            onClick={() => navigate(`/mock-test/${session.interviewId}`)}
-            className="bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors flex items-center gap-2"
+            onClick={handleRetakeTest}
+            disabled={retaking}
+            className="bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors flex items-center gap-2 disabled:opacity-50"
           >
-            <RotateCcw className="w-4 h-4" />
-            Take Another Test
+            {retaking ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Generating Test...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-4 h-4" />
+                Retake Test
+              </>
+            )}
+          </button>
+          <button
+            onClick={async () => {
+              // Get session info for navigation
+              try {
+                const sessionResponse = await mockTestApi.getSession(results.sessionId);
+                if (sessionResponse.success) {
+                  navigate(`/mock-test/${sessionResponse.session.interviewId}`);
+                }
+              } catch (err) {
+                console.error('Error getting session info:', err);
+              }
+            }}
+            className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Choose Different Level
           </button>
           <button
             onClick={() => window.print()}
@@ -256,7 +324,7 @@ export const MockTestResultsPage: React.FC = () => {
               if (navigator.share) {
                 navigator.share({
                   title: 'Mock Test Results',
-                  text: `I scored ${percentage.toFixed(0)}% on my ${session.testLevel} level mock test!`,
+                  text: `I scored ${percentage.toFixed(0)}% on my ${results.testLevel} level mock test!`,
                   url: window.location.href
                 });
               }
@@ -269,149 +337,102 @@ export const MockTestResultsPage: React.FC = () => {
         </div>
 
         {/* Question Review */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 font-jakarta mb-6">
-            Question Review
-          </h3>
-          
-          <div className="space-y-4">
-            {questions.map((question, index) => {
-              const isExpanded = expandedQuestions.has(question.id);
-              const isCorrect = question.isCorrect;
-              
-              return (
-                <div
-                  key={question.id}
-                  className={`border rounded-lg p-4 transition-all ${
-                    isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                  }`}
-                >
-                  <div 
-                    className="flex items-start justify-between cursor-pointer"
-                    onClick={() => toggleQuestionExpansion(question.id)}
+        {questions && questions.length > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 font-jakarta mb-6">
+              Question Review
+            </h3>
+            
+            <div className="space-y-4">
+              {questions.map((questionResult, index) => {
+                const isExpanded = expandedQuestions.has(index);
+                const isCorrect = questionResult.isCorrect;
+                
+                return (
+                  <div
+                    key={index}
+                    className={`border rounded-lg p-4 transition-all ${
+                      isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                    }`}
                   >
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isCorrect ? 'bg-green-500' : 'bg-red-500'
-                      }`}>
-                        {isCorrect ? (
-                          <CheckCircle className="w-4 h-4 text-white" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-slate-600 font-jakarta">
-                            Question {index + 1}
-                          </span>
-                          <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-jakarta">
-                            {question.questionType.toUpperCase()}
-                          </span>
-                          <span className="text-sm text-slate-500 font-jakarta">
-                            {question.pointsEarned || 0}/{question.points} pts
-                          </span>
+                    <div 
+                      className="flex items-start justify-between cursor-pointer"
+                      onClick={() => toggleQuestionExpansion(index)}
+                    >
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCorrect ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          {isCorrect ? (
+                            <CheckCircle className="w-4 h-4 text-white" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-white" />
+                          )}
                         </div>
-                        <p className="text-slate-900 font-jakarta">
-                          {question.questionText}
-                        </p>
-                      </div>
-                    </div>
-                    <button className="text-slate-400 hover:text-slate-600 ml-4">
-                      <svg 
-                        className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-slate-200 space-y-4">
-                      {/* Options for MCQ/Single Selection */}
-                      {(question.questionType === 'mcq' || question.questionType === 'single_selection') && question.options && (
-                        <div>
-                          <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Options:</h5>
-                          <div className="space-y-2">
-                            {question.options.map((option: any) => {
-                              const isSelected = question.selectedOptions?.includes(option.id);
-                              const isCorrectOption = option.isCorrect;
-                              
-                              return (
-                                <div
-                                  key={option.id}
-                                  className={`p-3 rounded-lg border ${
-                                    isCorrectOption
-                                      ? 'border-green-300 bg-green-100'
-                                      : isSelected
-                                        ? 'border-red-300 bg-red-100'
-                                        : 'border-slate-200 bg-white'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-slate-700 font-jakarta">
-                                      {option.id}.
-                                    </span>
-                                    <span className="text-slate-700 font-jakarta flex-1">
-                                      {option.text}
-                                    </span>
-                                    {isCorrectOption && (
-                                      <CheckCircle className="w-4 h-4 text-green-600" />
-                                    )}
-                                    {isSelected && !isCorrectOption && (
-                                      <XCircle className="w-4 h-4 text-red-600" />
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-semibold text-slate-600 font-jakarta">
+                              Question {index + 1}
+                            </span>
                           </div>
+                          <p className="text-slate-900 font-jakarta">
+                            {questionResult.question}
+                          </p>
                         </div>
-                      )}
+                      </div>
+                      <button className="text-slate-400 hover:text-slate-600 ml-4">
+                        <svg 
+                          className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
 
-                      {/* Your Answer */}
-                      {question.candidateAnswer && (
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t border-slate-200 space-y-4">
+                        {/* Your Answer */}
                         <div>
                           <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Your Answer:</h5>
                           <div className="bg-slate-100 rounded-lg p-3">
                             <p className="text-slate-700 font-jakarta whitespace-pre-wrap">
-                              {question.candidateAnswer}
+                              {questionResult.userAnswer || 'No answer provided'}
                             </p>
                           </div>
                         </div>
-                      )}
 
-                      {/* Correct Answer */}
-                      <div>
-                        <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Correct Answer:</h5>
-                        <div className="bg-green-100 rounded-lg p-3">
-                          <p className="text-green-800 font-jakarta whitespace-pre-wrap">
-                            {question.correctAnswer}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Explanation */}
-                      {question.explanation && (
+                        {/* Correct Answer */}
                         <div>
-                          <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Explanation:</h5>
-                          <div className="bg-blue-50 rounded-lg p-3">
-                            <p className="text-blue-800 font-jakarta whitespace-pre-wrap">
-                              {question.explanation}
+                          <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Correct Answer:</h5>
+                          <div className="bg-green-100 rounded-lg p-3">
+                            <p className="text-green-800 font-jakarta whitespace-pre-wrap">
+                              {questionResult.correctAnswer}
                             </p>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+
+                        {/* Explanation */}
+                        {questionResult.explanation && (
+                          <div>
+                            <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Explanation:</h5>
+                            <div className="bg-blue-50 rounded-lg p-3">
+                              <p className="text-blue-800 font-jakarta whitespace-pre-wrap">
+                                {questionResult.explanation}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Performance Tips */}
         <div className="bg-slate-50 rounded-xl p-6 border border-slate-200 mt-8">
