@@ -233,8 +233,8 @@ export class MockTestService {
       const sessionQuery = `
         INSERT INTO mock_test_sessions (
           candidate_id, interview_id, test_level, job_description, 
-          candidate_resume, candidate_skills, total_questions, total_score, duration_minutes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          candidate_resume, candidate_skills, total_questions, total_score, duration_minutes, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `;
       
@@ -247,8 +247,23 @@ export class MockTestService {
         candidateSkills,
         totalQuestions,
         totalQuestions * 10, // 10 points per question
-        duration
+        duration,
+        'generated' // Explicitly set status to generated
       ]);
+
+      const sessionId = sessionResult.rows[0].id;
+      
+      // Pre-generate all questions for the session
+      await this.preGenerateAllQuestions(
+        sessionId,
+        interview.job_title || 'Software Developer',
+        interview.job_description || interview.description,
+        resumeContent,
+        candidateSkills,
+        jobRequirements,
+        testLevel,
+        totalQuestions
+      );
 
       await db.query('COMMIT');
       return this.mapSessionFromDb(sessionResult.rows[0]);
@@ -257,6 +272,54 @@ export class MockTestService {
       await db.query('ROLLBACK');
       console.error('Error generating mock test:', error);
       throw error;
+    }
+  }
+
+  private async preGenerateAllQuestions(
+    sessionId: number,
+    jobTitle: string,
+    jobDescription: string,
+    resumeContent: string,
+    candidateSkills: string[],
+    jobRequirements: string[],
+    testLevel: 'basic' | 'moderate' | 'complex',
+    totalQuestions: number
+  ): Promise<void> {
+    const db = await getDatabase();
+    
+    // Generate all questions at once using AI
+    const generatedTest = await this.generateQuestionsWithAI(
+      jobDescription,
+      jobTitle,
+      resumeContent,
+      candidateSkills,
+      jobRequirements,
+      testLevel
+    );
+
+    // Insert all questions
+    for (let i = 0; i < Math.min(generatedTest.questions.length, totalQuestions); i++) {
+      const question = generatedTest.questions[i];
+      
+      const insertQuery = `
+        INSERT INTO mock_test_questions (
+          session_id, question_text, question_type, question_category,
+          difficulty_level, options, correct_answer, explanation, points, question_order
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `;
+      
+      await db.query(insertQuery, [
+        sessionId,
+        question.questionText,
+        question.questionType,
+        question.questionCategory || 'general',
+        testLevel,
+        question.options ? JSON.stringify(question.options) : null,
+        question.correctAnswer,
+        question.explanation || '',
+        question.points || 10,
+        i + 1
+      ]);
     }
   }
 
@@ -672,64 +735,29 @@ Return valid JSON only.`,
       throw new Error('Session not found');
     }
 
-    // Count existing questions
-    const questionCountQuery = `
-      SELECT COUNT(*) as count FROM mock_test_questions WHERE session_id = $1
+    // Get answered questions count
+    const answeredQuery = `
+      SELECT COUNT(*) as count FROM mock_test_responses WHERE session_id = $1
     `;
-    const countResult = await db.query(questionCountQuery, [sessionId]);
-    const currentQuestionCount = parseInt(countResult.rows[0].count);
+    const answeredResult = await db.query(answeredQuery, [sessionId]);
+    const answeredCount = parseInt(answeredResult.rows[0].count);
     
-    // Check if we've reached the total questions limit
-    if (currentQuestionCount >= session.totalQuestions) {
-      throw new Error('All questions have been generated for this session');
+    // Get the next unanswered question
+    const nextQuestionQuery = `
+      SELECT q.* FROM mock_test_questions q
+      LEFT JOIN mock_test_responses r ON q.id = r.question_id
+      WHERE q.session_id = $1 AND r.id IS NULL
+      ORDER BY q.question_order ASC
+      LIMIT 1
+    `;
+    
+    const questionResult = await db.query(nextQuestionQuery, [sessionId]);
+    
+    if (questionResult.rows.length === 0) {
+      throw new Error('All questions have been answered for this session');
     }
 
-    // Get previous questions and answers for context
-    const previousQuestionsQuery = `
-      SELECT 
-        q.question_text,
-        q.question_type,
-        r.candidate_answer,
-        r.is_correct,
-        r.ai_feedback
-      FROM mock_test_questions q
-      LEFT JOIN mock_test_responses r ON q.id = r.question_id
-      WHERE q.session_id = $1
-      ORDER BY q.question_order ASC
-    `;
-    const previousResult = await db.query(previousQuestionsQuery, [sessionId]);
-    const previousQuestions = previousResult.rows;
-
-    // Generate next question using AI
-    const nextQuestion = await this.generateNextQuestionWithAI(
-      session,
-      previousQuestions,
-      currentQuestionCount + 1
-    );
-
-    // Insert the generated question
-    const insertQuery = `
-      INSERT INTO mock_test_questions (
-        session_id, question_text, question_type, question_category,
-        difficulty_level, options, correct_answer, explanation, points, question_order
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING *
-    `;
-    
-    const result = await db.query(insertQuery, [
-      sessionId,
-      nextQuestion.questionText,
-      nextQuestion.questionType,
-      nextQuestion.questionCategory,
-      session.testLevel,
-      nextQuestion.options ? JSON.stringify(nextQuestion.options) : null,
-      '', // No predefined correct answer
-      '', // No predefined explanation
-      10, // Standard points per question
-      currentQuestionCount + 1
-    ]);
-
-    const questionRow = result.rows[0];
+    const questionRow = questionResult.rows[0];
     const question: MockTestQuestion = {
       id: questionRow.id,
       sessionId: questionRow.session_id,
@@ -742,14 +770,14 @@ Return valid JSON only.`,
       explanation: questionRow.explanation,
       points: questionRow.points,
       questionOrder: questionRow.question_order,
-      createdAt:  questionRow.created_at
+      createdAt: questionRow.created_at
     };
 
     return {
       question,
-      questionNumber: currentQuestionCount + 1,
+      questionNumber: answeredCount + 1,
       totalQuestions: session.totalQuestions,
-      isLastQuestion: (currentQuestionCount + 1) >= session.totalQuestions
+      isLastQuestion: (answeredCount + 1) >= session.totalQuestions
     };
   }
 
@@ -969,7 +997,11 @@ Note: Only include "options" for mcq and single_selection types.`;
       if (questionType === 'mcq' || questionType === 'single_selection') {
         // For multiple choice, evaluate the selected option
         const options = question.options ? this.safeJsonParse(question.options, 'options') : [];
-        const selectedOption = options.find((opt: any) => opt.id === answerText);
+        
+        // Find the selected option by text (frontend sends option text, not ID)
+        const selectedOption = options.find((opt: any) => 
+          opt.text === answerText || opt.id === answerText
+        );
         const selectedText = selectedOption ? selectedOption.text : answerText;
 
         prompt = `
@@ -977,12 +1009,14 @@ Evaluate this multiple choice answer:
 
 Question: ${question.question_text}
 Available Options: ${options.map((opt: any) => `${opt.id}: ${opt.text}`).join('\n')}
-Selected Answer: ${answerText} - ${selectedText}
+Selected Answer: ${selectedText}
 
 Evaluate if the selected answer is correct for this question. Consider:
 1. Technical accuracy of the selected option
 2. Relevance to the question asked
 3. Completeness of the answer
+
+For multiple choice questions, be generous with scoring - if the answer demonstrates understanding of the concept, give a high score (0.8-1.0).
 
 Respond with JSON only:
 {
@@ -1046,8 +1080,15 @@ Respond with JSON only:
       
       const evaluation = JSON.parse(aiResponse.response);
       
+      console.log(`[MOCK TEST] AI Evaluation for question ${question.id}:`, {
+        questionType,
+        answerText,
+        evaluation,
+        threshold: questionType === 'coding' ? 0.6 : (questionType === 'mcq' || questionType === 'single_selection' ? 0.5 : 0.7)
+      });
+      
       // Determine correctness based on question type
-      const threshold = questionType === 'coding' ? 0.6 : 0.7;
+      const threshold = questionType === 'coding' ? 0.6 : (questionType === 'mcq' || questionType === 'single_selection' ? 0.5 : 0.7);
       const isCorrect = evaluation.score >= threshold;
       const pointsEarned = Math.round(evaluation.score * points);
       
@@ -1081,22 +1122,24 @@ Respond with JSON only:
       const scoreQuery = `
         SELECT 
           COUNT(*) as total_answered,
-          SUM(points_earned) as total_earned,
-          mts.total_score
-        FROM mock_test_responses mtr
-        JOIN mock_test_sessions mts ON mtr.session_id = mts.id
-        WHERE mtr.session_id = $1 AND mts.candidate_id = $2::uuid
-        GROUP BY mts.total_score
+          SUM(COALESCE(points_earned, 0)) as total_earned,
+          COUNT(DISTINCT q.id) as total_questions,
+          SUM(q.points) as max_possible_score
+        FROM mock_test_questions q
+        LEFT JOIN mock_test_responses r ON q.id = r.question_id
+        WHERE q.session_id = $1
       `;
       
-      const scoreResult = await db.query(scoreQuery, [sessionId, candidateId]);
+      const scoreResult = await db.query(scoreQuery, [sessionId]);
       
       if (scoreResult.rows.length === 0) {
-        throw new Error('No responses found for this test');
+        throw new Error('No questions found for this test');
       }
 
-      const { total_earned, total_score } = scoreResult.rows[0];
-      const percentageScore = total_score > 0 ? (total_earned / total_score) * 100 : 0;
+      const { total_earned, max_possible_score, total_questions } = scoreResult.rows[0];
+      const earnedPoints = parseInt(total_earned) || 0;
+      const maxPoints = parseInt(max_possible_score) || (parseInt(total_questions) * 10);
+      const percentageScore = maxPoints > 0 ? (earnedPoints / maxPoints) * 100 : 0;
 
       // Update session
       const updateQuery = `
@@ -1112,7 +1155,7 @@ Respond with JSON only:
       `;
       
       const result = await db.query(updateQuery, [
-        total_earned,
+        earnedPoints,
         percentageScore,
         sessionId,
         candidateId

@@ -68,8 +68,9 @@ export const MockTestResultsPage: React.FC = () => {
       const response = await mockTestApi.generateTest(sessionResponse.session.interviewId, results.testLevel);
       
       if (response.success) {
-        // Navigate to the new test session
-        navigate(`/mock-test/session/${response.session.id}`);
+        // Force a full page redirect to avoid any React Router caching issues
+        // Add timestamp to ensure fresh load
+        window.location.href = `/mock-test/session/${response.session.id}?t=${Date.now()}`;
       } else {
         setError('Failed to generate new test');
       }

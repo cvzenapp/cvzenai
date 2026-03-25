@@ -9,7 +9,7 @@ import {
   Send,
   Timer
 } from 'lucide-react';
-import { mockTestApi, MockTestSession as MockTestSessionData, Question } from '../../services/mockTestApi';
+import { mockTestApi, MockTestSession as MockTestSessionData, MockTestQuestion } from '../../services/mockTestApi';
 
 interface MockTestSessionProps {
   sessionId: number;
@@ -23,7 +23,7 @@ export const MockTestSession: React.FC<MockTestSessionProps> = ({
   onBack 
 }) => {
   const [session, setSession] = useState<MockTestSessionData | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<MockTestQuestion[]>([]);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
@@ -118,10 +118,13 @@ export const MockTestSession: React.FC<MockTestSessionProps> = ({
       if (data.success) {
         const transformedQuestion = {
           id: data.question.id,
-          question: data.question.questionText,
-          type: data.question.questionType === 'mcq' ? 'multiple_choice' : 
-                data.question.questionType === 'coding' ? 'coding' : 'short_answer',
-          options: data.question.options?.map((opt: any) => opt.text) || undefined
+          questionText: data.question.questionText,
+          questionType: data.question.questionType,
+          options: data.question.options || undefined,
+          sessionId: data.question.sessionId || sessionId,
+          difficultyLevel: data.question.difficultyLevel || 'moderate',
+          points: data.question.points || 10,
+          questionOrder: data.question.questionOrder || data.questionNumber
         };
         
         setQuestions([transformedQuestion]);
@@ -142,8 +145,53 @@ export const MockTestSession: React.FC<MockTestSessionProps> = ({
       ...prev,
       [questionId]: answer
     }));
+  };
 
-    // Submit answer immediately and get next question
+  const handleNext = () => {
+    const currentQuestion = questions[0];
+    const currentAnswer = answers[currentQuestion.id];
+    
+    if (!currentAnswer) {
+      setError('Please select an answer before proceeding');
+      return;
+    }
+    
+    // Submit answer and get next question
+    submitAnswerAndNext(currentQuestion.id, currentAnswer);
+  };
+
+  const handleCompleteTest = async () => {
+    const currentQuestion = questions[0];
+    const currentAnswer = answers[currentQuestion.id];
+    
+    if (!currentAnswer) {
+      setError('Please select an answer before completing the test');
+      return;
+    }
+    
+    try {
+      // Submit the last answer first
+      await fetch(`/api/mock-tests/session/${sessionId}/answer`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('recruiter_token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          questionId: currentQuestion.id,
+          answer: currentAnswer
+        })
+      });
+
+      // Then complete the test
+      handleSubmit();
+    } catch (err) {
+      console.error('Error submitting final answer:', err);
+      setError('Failed to submit final answer');
+    }
+  };
+
+  const submitAnswerAndNext = async (questionId: number, answer: string) => {
     try {
       await fetch(`/api/mock-tests/session/${sessionId}/answer`, {
         method: 'POST',
@@ -157,18 +205,17 @@ export const MockTestSession: React.FC<MockTestSessionProps> = ({
         })
       });
 
-      // Load next question after a short delay
-      setTimeout(async () => {
-        if (currentQuestionNumber < totalQuestions) {
-          await loadNextQuestion();
-        } else {
-          // All questions answered, complete the test
-          handleSubmit();
-        }
-      }, 1000);
+      // Load next question
+      if (currentQuestionNumber < totalQuestions) {
+        await loadNextQuestion();
+      } else {
+        // All questions answered, complete the test
+        handleSubmit();
+      }
 
     } catch (err) {
       console.error('Error submitting answer:', err);
+      setError('Failed to submit answer');
     }
   };
 
@@ -333,43 +380,49 @@ export const MockTestSession: React.FC<MockTestSessionProps> = ({
             Question {currentQuestionNumber} of {totalQuestions}
           </span>
           <span className="text-sm text-slate-500 font-jakarta">
-            {currentQuestion.type.charAt(0).toUpperCase() + currentQuestion.type.slice(1)}
+            {currentQuestion.questionType.charAt(0).toUpperCase() + currentQuestion.questionType.slice(1)}
           </span>
         </div>
 
         <h3 className="text-lg font-semibold text-slate-900 font-jakarta mb-4">
-          {currentQuestion.question}
+          {currentQuestion.questionText}
         </h3>
 
-        {currentQuestion.type === 'multiple_choice' && currentQuestion.options && (
+        {(currentQuestion.questionType === 'mcq' || currentQuestion.questionType === 'single_selection') && currentQuestion.options && (
           <div className="space-y-3">
-            {currentQuestion.options.map((option, index) => (
-              <label
-                key={index}
-                className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:border-brand-main/30 cursor-pointer transition-colors"
-              >
-                <input
-                  type="radio"
-                  name={`question-${currentQuestion.id}`}
-                  value={option}
-                  checked={answers[currentQuestion.id] === option}
-                  onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                  className="text-brand-main focus:ring-brand-main"
-                />
-                <span className="text-slate-700 font-jakarta">{option}</span>
-              </label>
-            ))}
+            {currentQuestion.options.map((option: any, index: number) => {
+              // Handle both string array and object array formats
+              const optionText = typeof option === 'string' ? option : option.text;
+              const optionId = typeof option === 'string' ? option : option.id;
+              
+              return (
+                <label
+                  key={index}
+                  className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:border-brand-main/30 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion.id}`}
+                    value={optionText}
+                    checked={answers[currentQuestion.id] === optionText}
+                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                    className="text-brand-main focus:ring-brand-main"
+                  />
+                  <span className="text-slate-700 font-jakarta">{optionText}</span>
+                </label>
+              );
+            })}
           </div>
         )}
 
-        {(currentQuestion.type === 'short_answer' || currentQuestion.type === 'coding') && (
+        {(currentQuestion.questionType === 'objective' || currentQuestion.questionType === 'coding') && (
           <textarea
             value={answers[currentQuestion.id] || ''}
             onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
             placeholder="Type your answer here..."
-            rows={currentQuestion.type === 'coding' ? 10 : 4}
+            rows={currentQuestion.questionType === 'coding' ? 10 : 4}
             className="w-full p-3 border border-slate-200 rounded-lg focus:border-brand-main focus:ring-brand-main/20 focus:ring-2 focus:outline-none font-jakarta resize-none"
-            style={currentQuestion.type === 'coding' ? { fontFamily: 'monospace' } : {}}
+            style={currentQuestion.questionType === 'coding' ? { fontFamily: 'monospace' } : {}}
           />
         )}
       </div>
@@ -388,13 +441,23 @@ export const MockTestSession: React.FC<MockTestSessionProps> = ({
           Question {currentQuestionNumber} of {totalQuestions}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className="flex items-center gap-2 bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors"
-        >
-          <Send className="w-4 h-4" />
-          Complete Test
-        </button>
+        {currentQuestionNumber < totalQuestions ? (
+          <button
+            onClick={handleNext}
+            className="flex items-center gap-2 bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors"
+          >
+            Next
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={handleCompleteTest}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            Complete Test
+          </button>
+        )}
       </div>
     </div>
   );
