@@ -13,6 +13,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { mockTestApi } from '../services/mockTestApi';
+import { MockTestProgressOverview } from '../components/mocktest/MockTestProgressOverview';
 
 interface MockTestLevel {
   level: string;
@@ -186,6 +187,12 @@ export const MockTest: React.FC = () => {
       </div>
 
       {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <MockTestProgressOverview
+          interviewId={interviewId ? parseInt(interviewId) : undefined}
+          onStartTest={handleStartTest}
+        />
+      </div>
     
     </div>
   );

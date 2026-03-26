@@ -10,15 +10,18 @@ import {
   Clock,
   RotateCcw,
   Download,
-  Share2
+  Share2,
+  TrendingUp
 } from 'lucide-react';
-import { mockTestApi, MockTestResult } from '../services/mockTestApi';
+import { mockTestApi, MockTestResult, MockTestProgress } from '../services/mockTestApi';
+import { getScoreTier, getAttemptDisplay, canTakeAttempt } from '../utils/mockTestUtils';
 
 export const MockTestResultsPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   
   const [results, setResults] = useState<MockTestResult | null>(null);
+  const [progress, setProgress] = useState<MockTestProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
@@ -39,6 +42,18 @@ export const MockTestResultsPage: React.FC = () => {
       
       if (response.success) {
         setResults(response.results);
+        
+        // Load progress for this level
+        const sessionResponse = await mockTestApi.getSession(parseInt(sessionId!));
+        if (sessionResponse.success) {
+          const progressResponse = await mockTestApi.getProgress(sessionResponse.session.interviewId);
+          if (progressResponse.success) {
+            const levelProgress = progressResponse.progress.find(
+              p => p.testLevel === response.results.testLevel
+            );
+            setProgress(levelProgress || null);
+          }
+        }
       } else {
         setError('Failed to load test results');
       }
@@ -174,6 +189,7 @@ export const MockTestResultsPage: React.FC = () => {
   const correctAnswers = results.correctAnswers || 0;
   const questions = results.questionResults || [];
   const LevelIcon = getLevelIcon(results.testLevel);
+  const scoreTier = getScoreTier(percentage);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
@@ -214,7 +230,7 @@ export const MockTestResultsPage: React.FC = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Score Overview */}
-        <div className={`rounded-xl border-2 p-6 mb-8 ${getScoreBgColor(percentage)}`}>
+        <div className={`rounded-xl border-2 p-6 mb-8 ${scoreTier.bgColor} ${scoreTier.borderColor}`}>
           <div className="text-center">
             <div className="w-24 h-24 mx-auto mb-4 relative">
               <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
@@ -236,15 +252,21 @@ export const MockTestResultsPage: React.FC = () => {
                   fill="transparent"
                   strokeDasharray={`${2 * Math.PI * 40}`}
                   strokeDashoffset={`${2 * Math.PI * 40 * (1 - percentage / 100)}`}
-                  className={getScoreColor(percentage)}
+                  className={scoreTier.color.replace('text-', 'text-')}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-2xl font-bold font-jakarta ${getScoreColor(percentage)}`}>
+                <span className={`text-2xl font-bold font-jakarta ${scoreTier.color}`}>
                   {percentage.toFixed(0)}%
                 </span>
               </div>
+            </div>
+            
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${scoreTier.bgColor} ${scoreTier.borderColor} border mb-4`}>
+              <span className={`text-lg font-bold ${scoreTier.color}`}>
+                {scoreTier.label}
+              </span>
             </div>
             
             <h2 className="text-xl font-semibold text-slate-900 font-jakarta mb-2">
@@ -277,25 +299,73 @@ export const MockTestResultsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Progress Summary */}
+        {progress && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <TrendingUp className="w-5 h-5 text-brand-main" />
+              <h3 className="text-lg font-semibold text-slate-900 font-jakarta">
+                Your Progress
+              </h3>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <div className="text-xl font-bold text-slate-900">
+                  {progress.currentAttempts}/3
+                </div>
+                <div className="text-sm text-slate-600">Attempts Used</div>
+              </div>
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <div className="text-xl font-bold text-slate-900">
+                  {progress.bestScore.toFixed(0)}%
+                </div>
+                <div className="text-sm text-slate-600">Best Score</div>
+              </div>
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <div className={`text-xl font-bold ${getScoreTier(progress.bestScore).color}`}>
+                  {getScoreTier(progress.bestScore).label}
+                </div>
+                <div className="text-sm text-slate-600">Performance Tier</div>
+              </div>
+            </div>
+
+            {canTakeAttempt(progress) && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800 font-jakarta">
+                  You have {3 - progress.currentAttempts} attempt{3 - progress.currentAttempts !== 1 ? 's' : ''} remaining for this level.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex flex-wrap gap-4 mb-8">
-          <button
-            onClick={handleRetakeTest}
-            disabled={retaking}
-            className="bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            {retaking ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Generating Test...
-              </>
-            ) : (
-              <>
-                <RotateCcw className="w-4 h-4" />
-                Retake Test
-              </>
-            )}
-          </button>
+          {(!progress || progress.currentAttempts < 3) ? (
+            <button
+              onClick={handleRetakeTest}
+              disabled={retaking}
+              className="bg-brand-main hover:bg-brand-background text-white px-6 py-2 rounded-lg font-semibold font-jakarta transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              {retaking ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Generating Test...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-4 h-4" />
+                  Retake Test {progress ? `(${(progress.currentAttempts || 0) + 1}/3)` : ''}
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="bg-slate-100 text-slate-600 px-6 py-2 rounded-lg font-semibold font-jakarta flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Maximum attempts reached (3/3)
+            </div>
+          )}
           <button
             onClick={async () => {
               // Get session info for navigation
@@ -375,6 +445,11 @@ export const MockTestResultsPage: React.FC = () => {
                             <span className="text-sm font-semibold text-slate-600 font-jakarta">
                               Question {index + 1}
                             </span>
+                            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                              isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {questionResult.pointsEarned || 0}/{questionResult.maxPoints || 10} pts
+                            </span>
                           </div>
                           <p className="text-slate-900 font-jakarta">
                             {questionResult.question}
@@ -395,6 +470,16 @@ export const MockTestResultsPage: React.FC = () => {
 
                     {isExpanded && (
                       <div className="mt-4 pt-4 border-t border-slate-200 space-y-4">
+                        {/* Points Earned */}
+                        <div>
+                          <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Points:</h5>
+                          <div className="bg-blue-100 rounded-lg p-3">
+                            <p className="text-blue-800 font-jakarta">
+                              {questionResult.pointsEarned || 0} / {questionResult.maxPoints || 10} points
+                            </p>
+                          </div>
+                        </div>
+
                         {/* Your Answer */}
                         <div>
                           <h5 className="font-semibold text-slate-900 font-jakarta mb-2">Your Answer:</h5>

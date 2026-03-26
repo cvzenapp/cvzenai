@@ -28,6 +28,19 @@ export function createMockTestRoutes() {
         });
       }
 
+      // Check if user has already reached maximum attempts for this level
+      const progress = await mockTestService.getMockTestProgress(
+        candidateId,
+        parseInt(interviewId) === 0 ? null : parseInt(interviewId)
+      );
+      
+      const levelProgress = progress.find(p => p.testLevel === testLevel);
+      if (levelProgress && levelProgress.currentAttempts >= 3) {
+        return res.status(400).json({ 
+          error: `Maximum attempts (3) reached for ${testLevel} level` 
+        });
+      }
+
       const session = await mockTestService.generateMockTest(
         candidateId,
         parseInt(interviewId),
@@ -302,23 +315,39 @@ export function createMockTestRoutes() {
         return res.status(401).json({ error: 'User not authenticated' });
       }
 
+      // Get progress for this interview to determine attempts
+      const progress = await mockTestService.getMockTestProgress(
+        candidateId,
+        parseInt(interviewId)
+      );
+
       // Get existing tests for this interview
       const existingTests = await mockTestService.getCandidateMockTests(
         candidateId,
         parseInt(interviewId)
       );
 
-      const completedLevels = existingTests
-        .filter(test => test.status === 'completed')
-        .map(test => test.testLevel);
+      // Create progress map for easy lookup
+      const progressMap = new Map(progress.map(p => [p.testLevel, p]));
 
-      const availableLevels = ['basic', 'moderate', 'complex'].map(level => ({
-        level,
-        completed: completedLevels.includes(level as any),
-        available: level === 'basic' || 
-          (level === 'moderate' && completedLevels.includes('basic')) ||
-          (level === 'complex' && completedLevels.includes('moderate'))
-      }));
+      const availableLevels = ['basic', 'moderate', 'complex'].map(level => {
+        const levelProgress = progressMap.get(level as any);
+        const hasAttempts = levelProgress && levelProgress.currentAttempts > 0;
+        const canRetake = !levelProgress || levelProgress.currentAttempts < 3;
+        
+        console.log(`[MOCK TEST] Level ${level}: hasAttempts=${hasAttempts}, canRetake=${canRetake}, currentAttempts=${levelProgress?.currentAttempts || 0}`);
+        
+        return {
+          level,
+          completed: hasAttempts,
+          available: canRetake, // Always available if under 3 attempts
+          attempts: levelProgress?.currentAttempts || 0,
+          bestScore: levelProgress?.bestScore || 0,
+          attempt1Score: levelProgress?.attempt1Score || null,
+          attempt2Score: levelProgress?.attempt2Score || null,
+          attempt3Score: levelProgress?.attempt3Score || null
+        };
+      });
 
       res.json({
         success: true,
@@ -337,6 +366,34 @@ export function createMockTestRoutes() {
       console.error('Error fetching test levels:', error);
       res.status(500).json({ 
         error: error.message || 'Failed to fetch test levels' 
+      });
+    }
+  });
+
+  // Get mock test progress for candidate
+  router.get('/progress', requireAuth, async (req, res) => {
+    try {
+      const candidateId = req.user?.id;
+      const { interviewId } = req.query;
+
+      if (!candidateId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const progress = await mockTestService.getMockTestProgress(
+        candidateId,
+        interviewId ? parseInt(interviewId as string) : undefined
+      );
+
+      res.json({
+        success: true,
+        progress
+      });
+
+    } catch (error: any) {
+      console.error('Error getting mock test progress:', error);
+      res.status(500).json({ 
+        error: error.message || 'Failed to get mock test progress' 
       });
     }
   });

@@ -2,6 +2,11 @@ export interface MockTestLevel {
   level: string;
   completed: boolean;
   available: boolean;
+  attempts?: number;
+  bestScore?: number;
+  attempt1Score?: number | null;
+  attempt2Score?: number | null;
+  attempt3Score?: number | null;
 }
 
 export interface ExistingTest {
@@ -11,6 +16,7 @@ export interface ExistingTest {
   percentageScore?: number;
   createdAt: string;
   completedAt?: string;
+  interviewId?: number;
 }
 
 export interface MockTestSession {
@@ -54,6 +60,8 @@ export interface MockTestResult {
     correctAnswer: string;
     isCorrect: boolean;
     explanation?: string;
+    pointsEarned?: number;
+    maxPoints?: number;
   }>;
 }
 
@@ -90,6 +98,26 @@ export interface MockTestResults {
     isCorrect?: boolean;
     pointsEarned?: number;
   }>;
+}
+
+export interface MockTestProgress {
+  id: number;
+  candidateId: string;
+  interviewId?: number;
+  testLevel: 'basic' | 'moderate' | 'complex';
+  attempt1Score?: number;
+  attempt1SessionId?: number;
+  attempt1CompletedAt?: string;
+  attempt2Score?: number;
+  attempt2SessionId?: number;
+  attempt2CompletedAt?: string;
+  attempt3Score?: number;
+  attempt3SessionId?: number;
+  attempt3CompletedAt?: string;
+  bestScore: number;
+  currentAttempts: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 class MockTestApi {
@@ -169,7 +197,7 @@ class MockTestApi {
 
   async getSession(sessionId: number): Promise<{
     success: boolean;
-    session: MockTestSessionData;
+    session: MockTestSession;
   }> {
     return this.request(`/session/${sessionId}`);
   }
@@ -212,6 +240,17 @@ class MockTestApi {
     const url = interviewId 
       ? `/my-tests?interviewId=${interviewId}`
       : '/my-tests';
+      
+    return this.request(url);
+  }
+
+  async getProgress(interviewId?: number): Promise<{
+    success: boolean;
+    progress: MockTestProgress[];
+  }> {
+    const url = interviewId 
+      ? `/progress?interviewId=${interviewId}`
+      : '/progress';
       
     return this.request(url);
   }

@@ -69,6 +69,26 @@ export interface GeneratedMockTest {
   }>;
 }
 
+interface MockTestProgress {
+  id: number;
+  candidateId: string;
+  interviewId?: number;
+  testLevel: 'basic' | 'moderate' | 'complex';
+  attempt1Score?: number;
+  attempt1SessionId?: number;
+  attempt1CompletedAt?: string;
+  attempt2Score?: number;
+  attempt2SessionId?: number;
+  attempt2CompletedAt?: string;
+  attempt3Score?: number;
+  attempt3SessionId?: number;
+  attempt3CompletedAt?: string;
+  bestScore: number;
+  currentAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class MockTestService {
   constructor() {
     // No need for pool parameter - using getDatabase() like other services
@@ -104,6 +124,199 @@ export class MockTestService {
     }
   }
 
+  // Progress tracking methods
+  async updateMockTestProgress(
+    candidateId: string,
+    interviewId: number | null,
+    testLevel: 'basic' | 'moderate' | 'complex',
+    score: number,
+    sessionId: number
+  ): Promise<MockTestProgress> {
+    const db = await getDatabase();
+
+    // Get existing progress or create new
+    let existingQuery: string;
+    let existingParams: any[];
+
+    if (interviewId !== null) {
+      existingQuery = `
+        SELECT * FROM mock_test_progress 
+        WHERE candidate_id = $1::uuid 
+        AND interview_id = $2
+        AND test_level = $3
+      `;
+      existingParams = [candidateId, interviewId, testLevel];
+    } else {
+      existingQuery = `
+        SELECT * FROM mock_test_progress 
+        WHERE candidate_id = $1::uuid 
+        AND interview_id IS NULL
+        AND test_level = $2
+      `;
+      existingParams = [candidateId, testLevel];
+    }
+    const existingResult = await db.query(existingQuery, existingParams);
+    
+    if (existingResult.rows.length === 0) {
+      // Create new progress record
+      const insertQuery = `
+        INSERT INTO mock_test_progress (
+          candidate_id, interview_id, test_level,
+          attempt_1_score, attempt_1_session_id, attempt_1_completed_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING *
+      `;
+      
+      const result = await db.query(insertQuery, [
+        candidateId, interviewId, testLevel, score, sessionId
+      ]);
+      
+      return this.mapProgressFromDb(result.rows[0]);
+    } else {
+      // Update existing progress
+      const existing = existingResult.rows[0];
+      let updateQuery: string;
+      let params: any[];
+
+      if (existing.attempt_1_score === null) {
+        let updateQuery: string;
+        let params: any[];
+
+        if (interviewId !== null) {
+          updateQuery = `
+            UPDATE mock_test_progress 
+            SET attempt_1_score = $4, attempt_1_session_id = $5, attempt_1_completed_at = NOW(), updated_at = NOW()
+            WHERE candidate_id = $1::uuid AND interview_id = $2 AND test_level = $3
+            RETURNING *
+          `;
+          params = [candidateId, interviewId, testLevel, score, sessionId];
+        } else {
+          updateQuery = `
+            UPDATE mock_test_progress 
+            SET attempt_1_score = $3, attempt_1_session_id = $4, attempt_1_completed_at = NOW(), updated_at = NOW()
+            WHERE candidate_id = $1::uuid AND interview_id IS NULL AND test_level = $2
+            RETURNING *
+          `;
+          params = [candidateId, testLevel, score, sessionId];
+        }
+
+        const result = await db.query(updateQuery, params);
+        return this.mapProgressFromDb(result.rows[0]);
+      } else if (existing.attempt_2_score === null) {
+        let updateQuery: string;
+        let params: any[];
+
+        if (interviewId !== null) {
+          updateQuery = `
+            UPDATE mock_test_progress 
+            SET attempt_2_score = $4, attempt_2_session_id = $5, attempt_2_completed_at = NOW(), updated_at = NOW()
+            WHERE candidate_id = $1::uuid AND interview_id = $2 AND test_level = $3
+            RETURNING *
+          `;
+          params = [candidateId, interviewId, testLevel, score, sessionId];
+        } else {
+          updateQuery = `
+            UPDATE mock_test_progress 
+            SET attempt_2_score = $3, attempt_2_session_id = $4, attempt_2_completed_at = NOW(), updated_at = NOW()
+            WHERE candidate_id = $1::uuid AND interview_id IS NULL AND test_level = $2
+            RETURNING *
+          `;
+          params = [candidateId, testLevel, score, sessionId];
+        }
+
+        const result = await db.query(updateQuery, params);
+        return this.mapProgressFromDb(result.rows[0]);
+      } else if (existing.attempt_3_score === null) {
+        let updateQuery: string;
+        let params: any[];
+
+        if (interviewId !== null) {
+          updateQuery = `
+            UPDATE mock_test_progress 
+            SET attempt_3_score = $4, attempt_3_session_id = $5, attempt_3_completed_at = NOW(), updated_at = NOW()
+            WHERE candidate_id = $1::uuid AND interview_id = $2 AND test_level = $3
+            RETURNING *
+          `;
+          params = [candidateId, interviewId, testLevel, score, sessionId];
+        } else {
+          updateQuery = `
+            UPDATE mock_test_progress 
+            SET attempt_3_score = $3, attempt_3_session_id = $4, attempt_3_completed_at = NOW(), updated_at = NOW()
+            WHERE candidate_id = $1::uuid AND interview_id IS NULL AND test_level = $2
+            RETURNING *
+          `;
+          params = [candidateId, testLevel, score, sessionId];
+        }
+
+        const result = await db.query(updateQuery, params);
+        return this.mapProgressFromDb(result.rows[0]);
+      } else {
+        throw new Error('Maximum 3 attempts reached for this test level');
+      }
+    }
+  }
+
+  async getMockTestProgress(
+    candidateId: string,
+    interviewId?: number
+  ): Promise<MockTestProgress[]> {
+    const db = await getDatabase();
+    
+    let query: string;
+    let params: any[];
+
+    if (interviewId !== undefined) {
+      query = `
+        SELECT * FROM mock_test_progress 
+        WHERE candidate_id = $1::uuid AND interview_id = $2
+        ORDER BY 
+          CASE test_level 
+            WHEN 'basic' THEN 1 
+            WHEN 'moderate' THEN 2 
+            WHEN 'complex' THEN 3 
+          END
+      `;
+      params = [candidateId, interviewId];
+    } else {
+      query = `
+        SELECT * FROM mock_test_progress 
+        WHERE candidate_id = $1::uuid AND interview_id IS NULL
+        ORDER BY 
+          CASE test_level 
+            WHEN 'basic' THEN 1 
+            WHEN 'moderate' THEN 2 
+            WHEN 'complex' THEN 3 
+          END
+      `;
+      params = [candidateId];
+    }
+
+    const result = await db.query(query, params);
+    return result.rows.map(row => this.mapProgressFromDb(row));
+  }
+
+  private mapProgressFromDb(row: any): MockTestProgress {
+    return {
+      id: row.id,
+      candidateId: row.candidate_id,
+      interviewId: row.interview_id,
+      testLevel: row.test_level,
+      attempt1Score: row.attempt_1_score,
+      attempt1SessionId: row.attempt_1_session_id,
+      attempt1CompletedAt: row.attempt_1_completed_at,
+      attempt2Score: row.attempt_2_score,
+      attempt2SessionId: row.attempt_2_session_id,
+      attempt2CompletedAt: row.attempt_2_completed_at,
+      attempt3Score: row.attempt_3_score,
+      attempt3SessionId: row.attempt_3_session_id,
+      attempt3CompletedAt: row.attempt_3_completed_at,
+      bestScore: parseFloat(row.best_score) || 0,
+      currentAttempts: parseInt(row.current_attempts) || 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
   async generateMockTest(
     candidateId: string,
     interviewId: number,
@@ -114,116 +327,146 @@ export class MockTestService {
     try {
       await db.query('BEGIN');
 
-      // Get interview and candidate details
-      const interviewQuery = `
-        SELECT 
-          ii.*,
-          jp.title as job_title,
-          jp.description as job_description,
-          jp.requirements,
-          r.summary as resume_summary,
-          r.personal_info,
-          r.skills as resume_skills,
-          r.experience,
-          r.education,
-          r.projects,
-          r.certifications,
-          u.first_name,
-          u.last_name,
-          u.email as candidate_email
-        FROM interview_invitations ii
-        LEFT JOIN job_postings jp ON ii.job_posting_id = jp.id
-        LEFT JOIN resumes r ON ii.resume_id = r.id
-        LEFT JOIN users u ON ii.candidate_id = u.id
-        WHERE ii.id = $1 AND ii.candidate_id = $2::uuid AND ii.status = 'accepted'
-      `;
-      
-      const interviewResult = await db.query(interviewQuery, [interviewId, candidateId]);
-      
-      if (interviewResult.rows.length === 0) {
-        throw new Error('Interview not found or not accepted');
-      }
+      let interview: any;
+      let resumeContent: string;
+      let candidateSkills: string[] = [];
 
-      const interview = interviewResult.rows[0];
-      
-      // Parse requirements from JSONB
-      const jobRequirements = interview.requirements ? 
-        this.safeJsonParse(interview.requirements, 'requirements') : [];
-      
-      // Build resume content from separate fields
-      const personalInfo = interview.personal_info ? 
-        this.safeJsonParse(interview.personal_info, 'personal_info') : {};
-      const experience = interview.experience ? 
-        this.safeJsonParse(interview.experience, 'experience') : [];
-      const education = interview.education ? 
-        this.safeJsonParse(interview.education, 'education') : [];
-      const projects = interview.projects ? 
-        this.safeJsonParse(interview.projects, 'projects') : [];
-      const certifications = interview.certifications ? 
-        this.safeJsonParse(interview.certifications, 'certifications') : [];
-      
-      // Extract candidate skills from resume
-      const resumeSkills = interview.resume_skills ? 
-        this.safeJsonParse(interview.resume_skills, 'resume_skills') : [];
-      const candidateSkills = Array.isArray(resumeSkills) ? resumeSkills : [];
-      
-      // Build comprehensive resume content for AI
-      const candidateName = `${interview.first_name || ''} ${interview.last_name || ''}`.trim() || 'N/A';
-      const resumeContent = `
-        PERSONAL INFO:
-        Name: ${personalInfo.name || personalInfo.firstName + ' ' + personalInfo.lastName || candidateName}
-        Email: ${personalInfo.email || interview.candidate_email || 'N/A'}
-        Phone: ${personalInfo.phone || 'N/A'}
-        Location: ${personalInfo.location || 'N/A'}
-        
-        PROFESSIONAL SUMMARY:
-        ${interview.resume_summary || 'N/A'}
-        
-        WORK EXPERIENCE:
-        ${experience.map((exp: any, index: number) => `
-        ${index + 1}. ${exp.position || exp.title} at ${exp.company}
-           Duration: ${exp.startDate} - ${exp.endDate || 'Present'}
-           ${exp.description || exp.responsibilities || ''}
-        `).join('\n')}
-        
-        EDUCATION:
-        ${education.map((edu: any, index: number) => `
-        ${index + 1}. ${edu.degree} in ${edu.field || edu.major}
-           Institution: ${edu.institution || edu.school}
-           Year: ${edu.graduationYear || edu.endDate || 'N/A'}
-        `).join('\n')}
-        
-        SKILLS:
-        ${candidateSkills.join(', ')}
-        
-        PROJECTS:
-        ${projects.map((proj: any, index: number) => `
-        ${index + 1}. ${proj.name || proj.title}
-           ${proj.description || ''}
-           Technologies: ${proj.technologies ? proj.technologies.join(', ') : 'N/A'}
-        `).join('\n')}
-        
-        CERTIFICATIONS:
-        ${certifications.map((cert: any, index: number) => `
-        ${index + 1}. ${cert.name}
-           Issuer: ${cert.issuer || 'N/A'}
-           Date: ${cert.date || 'N/A'}
-        `).join('\n')}
-      `.trim();
+      if (interviewId === 0) {
+        // General mock test - create default content
+        interview = {
+          job_title: 'General Technical Interview',
+          job_description: 'General technical interview covering fundamental programming concepts, problem-solving, and best practices.',
+          description: 'General technical interview covering fundamental programming concepts, problem-solving, and best practices.',
+          requirements: ['Programming fundamentals', 'Problem solving', 'Technical communication'],
+          first_name: 'Test',
+          last_name: 'User',
+          candidate_email: 'test@example.com'
+        };
 
-      // Check if a mock test already exists for this level
-      const existingTestQuery = `
-        SELECT * FROM mock_test_sessions 
-        WHERE candidate_id = $1::uuid AND interview_id = $2 AND test_level = $3 
-        AND status != 'expired'
-        ORDER BY created_at DESC LIMIT 1
-      `;
-      
-      const existingTest = await db.query(existingTestQuery, [candidateId, interviewId, testLevel]);
-      
-      if (existingTest.rows.length > 0) {
-        await db.query('COMMIT');
-        return this.mapSessionFromDb(existingTest.rows[0]);
+        // Get user's basic info for general test
+        const userQuery = `
+          SELECT first_name, last_name, email FROM users WHERE id = $1::uuid
+        `;
+        const userResult = await db.query(userQuery, [candidateId]);
+        
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          interview.first_name = user.first_name || 'Test';
+          interview.last_name = user.last_name || 'User';
+          interview.candidate_email = user.email || 'test@example.com';
+        }
+
+        // Build basic resume content for general test
+        resumeContent = `
+          PERSONAL INFO:
+          Name: ${interview.first_name} ${interview.last_name}
+          Email: ${interview.candidate_email}
+          
+          PROFESSIONAL SUMMARY:
+          Preparing for technical interviews with focus on programming fundamentals and problem-solving skills.
+          
+          SKILLS:
+          Programming fundamentals, Problem solving, Technical communication, Software development
+        `.trim();
+
+        candidateSkills = ['Programming', 'Problem Solving', 'Software Development', 'Technical Communication'];
+      } else {
+        // Existing interview-based logic
+        const interviewQuery = `
+          SELECT 
+            ii.*,
+            jp.title as job_title,
+            jp.description as job_description,
+            jp.requirements,
+            r.summary as resume_summary,
+            r.personal_info,
+            r.skills as resume_skills,
+            r.experience,
+            r.education,
+            r.projects,
+            r.certifications,
+            u.first_name,
+            u.last_name,
+            u.email as candidate_email
+          FROM interview_invitations ii
+          LEFT JOIN job_postings jp ON ii.job_posting_id = jp.id
+          LEFT JOIN resumes r ON ii.resume_id = r.id
+          LEFT JOIN users u ON ii.candidate_id = u.id
+          WHERE ii.id = $1 AND ii.candidate_id = $2::uuid AND ii.status = 'accepted'
+        `;
+        
+        const interviewResult = await db.query(interviewQuery, [interviewId, candidateId]);
+        
+        if (interviewResult.rows.length === 0) {
+          throw new Error('Interview not found or not accepted');
+        }
+
+        interview = interviewResult.rows[0];
+        
+        // Parse requirements from JSONB
+        const jobRequirements = interview.requirements ? 
+          this.safeJsonParse(interview.requirements, 'requirements') : [];
+        
+        // Build resume content from separate fields
+        const personalInfo = interview.personal_info ? 
+          this.safeJsonParse(interview.personal_info, 'personal_info') : {};
+        const experience = interview.experience ? 
+          this.safeJsonParse(interview.experience, 'experience') : [];
+        const education = interview.education ? 
+          this.safeJsonParse(interview.education, 'education') : [];
+        const projects = interview.projects ? 
+          this.safeJsonParse(interview.projects, 'projects') : [];
+        const certifications = interview.certifications ? 
+          this.safeJsonParse(interview.certifications, 'certifications') : [];
+        
+        // Extract candidate skills from resume
+        const resumeSkills = interview.resume_skills ? 
+          this.safeJsonParse(interview.resume_skills, 'resume_skills') : [];
+        candidateSkills = Array.isArray(resumeSkills) ? resumeSkills : [];
+        
+        // Build comprehensive resume content for AI
+        const candidateName = `${interview.first_name || ''} ${interview.last_name || ''}`.trim() || 'N/A';
+        resumeContent = `
+          PERSONAL INFO:
+          Name: ${personalInfo.name || personalInfo.firstName + ' ' + personalInfo.lastName || candidateName}
+          Email: ${personalInfo.email || interview.candidate_email || 'N/A'}
+          Phone: ${personalInfo.phone || 'N/A'}
+          Location: ${personalInfo.location || 'N/A'}
+          
+          PROFESSIONAL SUMMARY:
+          ${interview.resume_summary || 'N/A'}
+          
+          WORK EXPERIENCE:
+          ${experience.map((exp: any, index: number) => `
+          ${index + 1}. ${exp.position || exp.title} at ${exp.company}
+             Duration: ${exp.startDate} - ${exp.endDate || 'Present'}
+             ${exp.description || exp.responsibilities || ''}
+          `).join('\n')}
+          
+          EDUCATION:
+          ${education.map((edu: any, index: number) => `
+          ${index + 1}. ${edu.degree} in ${edu.field || edu.major}
+             Institution: ${edu.institution || edu.school}
+             Year: ${edu.graduationYear || edu.endDate || 'N/A'}
+          `).join('\n')}
+          
+          SKILLS:
+          ${candidateSkills.join(', ')}
+          
+          PROJECTS:
+          ${projects.map((proj: any, index: number) => `
+          ${index + 1}. ${proj.name || proj.title}
+             ${proj.description || ''}
+             Technologies: ${proj.technologies ? proj.technologies.join(', ') : 'N/A'}
+          `).join('\n')}
+          
+          CERTIFICATIONS:
+          ${certifications.map((cert: any, index: number) => `
+          ${index + 1}. ${cert.name}
+             Issuer: ${cert.issuer || 'N/A'}
+             Date: ${cert.date || 'N/A'}
+          `).join('\n')}
+        `.trim();
       }
 
       // Create mock test session (no questions generated upfront)
@@ -240,7 +483,7 @@ export class MockTestService {
       
       const sessionResult = await db.query(sessionQuery, [
         candidateId,
-        interviewId,
+        interviewId === 0 ? null : interviewId, // Store null for general tests
         testLevel,
         interview.job_description || interview.description,
         resumeContent,
@@ -253,17 +496,8 @@ export class MockTestService {
 
       const sessionId = sessionResult.rows[0].id;
       
-      // Pre-generate all questions for the session
-      await this.preGenerateAllQuestions(
-        sessionId,
-        interview.job_title || 'Software Developer',
-        interview.job_description || interview.description,
-        resumeContent,
-        candidateSkills,
-        jobRequirements,
-        testLevel,
-        totalQuestions
-      );
+      // Don't pre-generate questions - they will be generated dynamically one by one
+      console.log(`✅ [MOCK TEST] Created new session ${sessionId} for ${testLevel} level - questions will be generated dynamically`);
 
       await db.query('COMMIT');
       return this.mapSessionFromDb(sessionResult.rows[0]);
@@ -742,42 +976,131 @@ Return valid JSON only.`,
     const answeredResult = await db.query(answeredQuery, [sessionId]);
     const answeredCount = parseInt(answeredResult.rows[0].count);
     
-    // Get the next unanswered question
-    const nextQuestionQuery = `
-      SELECT q.* FROM mock_test_questions q
-      LEFT JOIN mock_test_responses r ON q.id = r.question_id
-      WHERE q.session_id = $1 AND r.id IS NULL
-      ORDER BY q.question_order ASC
-      LIMIT 1
-    `;
-    
-    const questionResult = await db.query(nextQuestionQuery, [sessionId]);
-    
-    if (questionResult.rows.length === 0) {
-      throw new Error('All questions have been answered for this session');
+    // Check if all questions have been answered
+    if (answeredCount >= session.totalQuestions) {
+      throw new Error('All questions have been generated and answered for this session');
     }
 
-    const questionRow = questionResult.rows[0];
-    const question: MockTestQuestion = {
-      id: questionRow.id,
-      sessionId: questionRow.session_id,
-      questionText: questionRow.question_text,
-      questionType: questionRow.question_type,
-      questionCategory: questionRow.question_category,
-      difficultyLevel: questionRow.difficulty_level,
-      options: questionRow.options ? this.safeJsonParse(questionRow.options, 'options') : undefined,
-      correctAnswer: questionRow.correct_answer,
-      explanation: questionRow.explanation,
-      points: questionRow.points,
-      questionOrder: questionRow.question_order,
-      createdAt: questionRow.created_at
-    };
+    const questionNumber = answeredCount + 1;
+    
+    // Check if this question already exists in the database
+    const existingQuestionQuery = `
+      SELECT * FROM mock_test_questions 
+      WHERE session_id = $1 AND question_order = $2
+    `;
+    const existingResult = await db.query(existingQuestionQuery, [sessionId, questionNumber]);
+    
+    let question: MockTestQuestion;
+    
+    if (existingResult.rows.length > 0) {
+      // Question already exists, return it
+      const questionRow = existingResult.rows[0];
+      question = {
+        id: questionRow.id,
+        sessionId: questionRow.session_id,
+        questionText: questionRow.question_text,
+        questionType: questionRow.question_type,
+        questionCategory: questionRow.question_category,
+        difficultyLevel: questionRow.difficulty_level,
+        options: questionRow.options ? this.safeJsonParse(questionRow.options, 'options') : undefined,
+        correctAnswer: questionRow.correct_answer,
+        explanation: questionRow.explanation,
+        points: questionRow.points,
+        questionOrder: questionRow.question_order,
+        createdAt: questionRow.created_at
+      };
+    } else {
+      // Generate new question dynamically
+      console.log(`🔄 [MOCK TEST] Generating question ${questionNumber} dynamically for session ${sessionId}`);
+      
+      // Get previous questions and responses for context
+      const previousQuestionsQuery = `
+        SELECT q.*, r.candidate_answer, r.is_correct 
+        FROM mock_test_questions q
+        LEFT JOIN mock_test_responses r ON q.id = r.question_id
+        WHERE q.session_id = $1 AND q.question_order < $2
+        ORDER BY q.question_order ASC
+      `;
+      const previousResult = await db.query(previousQuestionsQuery, [sessionId, questionNumber]);
+      
+      // Generate question with AI
+      const questionData = await this.generateNextQuestionWithAI(
+        session,
+        previousResult.rows,
+        questionNumber
+      );
+      
+      // Determine correct answer and explanation based on question type
+      let correctAnswer = '';
+      let explanation = '';
+      
+      if (questionData.questionType === 'mcq' || questionData.questionType === 'single_selection') {
+        // For MCQ, find the correct option
+        if (questionData.options && questionData.options.length > 0) {
+          const correctOption = questionData.options.find(opt => opt.isCorrect);
+          if (correctOption) {
+            correctAnswer = correctOption.id;
+            explanation = questionData.explanation || `The correct answer is ${correctOption.text}`;
+          } else {
+            // Fallback: mark first option as correct
+            correctAnswer = questionData.options[0].id;
+            explanation = questionData.explanation || `The correct answer is ${questionData.options[0].text}`;
+          }
+        }
+      } else {
+        // For objective/coding questions, use the provided correct answer
+        correctAnswer = questionData.correctAnswer || 'This will be evaluated by AI based on the candidate\'s response';
+        explanation = questionData.explanation || 'Answer will be evaluated for technical accuracy and completeness';
+      }
+      
+      // Insert the generated question into database
+      const insertQuery = `
+        INSERT INTO mock_test_questions (
+          session_id, question_text, question_type, question_category,
+          difficulty_level, options, correct_answer, explanation, points, question_order
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `;
+      
+      const points = session.testLevel === 'basic' ? 5 : session.testLevel === 'moderate' ? 7 : 10;
+      
+      const insertResult = await db.query(insertQuery, [
+        sessionId,
+        questionData.questionText,
+        questionData.questionType,
+        questionData.questionCategory || 'technical',
+        session.testLevel,
+        questionData.options ? JSON.stringify(questionData.options) : null,
+        correctAnswer,
+        explanation,
+        points,
+        questionNumber
+      ]);
+      
+      const questionRow = insertResult.rows[0];
+      question = {
+        id: questionRow.id,
+        sessionId: questionRow.session_id,
+        questionText: questionRow.question_text,
+        questionType: questionRow.question_type,
+        questionCategory: questionRow.question_category,
+        difficultyLevel: questionRow.difficulty_level,
+        options: questionRow.options ? this.safeJsonParse(questionRow.options, 'options') : undefined,
+        correctAnswer: questionRow.correct_answer,
+        explanation: questionRow.explanation,
+        points: questionRow.points,
+        questionOrder: questionRow.question_order,
+        createdAt: questionRow.created_at
+      };
+      
+      console.log(`✅ [MOCK TEST] Generated and saved question ${questionNumber} for session ${sessionId}`);
+    }
 
     return {
       question,
-      questionNumber: answeredCount + 1,
+      questionNumber,
       totalQuestions: session.totalQuestions,
-      isLastQuestion: (answeredCount + 1) >= session.totalQuestions
+      isLastQuestion: questionNumber >= session.totalQuestions
     };
   }
 
@@ -789,7 +1112,9 @@ Return valid JSON only.`,
     questionText: string;
     questionType: 'mcq' | 'single_selection' | 'objective' | 'coding';
     questionCategory: string;
-    options?: Array<{ id: string; text: string; }>;
+    options?: Array<{ id: string; text: string; isCorrect: boolean; }>;
+    correctAnswer?: string;
+    explanation?: string;
   }> {
     const contextSummary = previousQuestions.length > 0 
       ? previousQuestions.map((pq, idx) => 
@@ -813,7 +1138,8 @@ INSTRUCTIONS:
 1. Generate a ${session.testLevel} level question appropriate for this candidate
 2. Make it relevant to the job requirements and candidate's background
 3. Consider previous questions to avoid repetition and build complexity
-4. Choose appropriate question type based on the topic
+4. For MCQ/single_selection: provide exactly 4 options with ONE correct answer
+5. For objective/coding: provide a model answer for evaluation
 
 QUESTION TYPES:
 - mcq: Multiple choice with 4 options (for knowledge/concepts)
@@ -827,36 +1153,110 @@ Respond with JSON only:
   "questionType": "mcq|single_selection|objective|coding",
   "questionCategory": "technical|behavioral|domain_specific|problem_solving",
   "options": [
-    {"id": "A", "text": "Option A text"},
-    {"id": "B", "text": "Option B text"},
-    {"id": "C", "text": "Option C text"},
-    {"id": "D", "text": "Option D text"}
-  ]
+    {"id": "A", "text": "Option A text", "isCorrect": false},
+    {"id": "B", "text": "Option B text", "isCorrect": true},
+    {"id": "C", "text": "Option C text", "isCorrect": false},
+    {"id": "D", "text": "Option D text", "isCorrect": false}
+  ],
+  "correctAnswer": "Model answer for objective/coding questions",
+  "explanation": "Brief explanation of why the answer is correct"
 }
 
-Note: Only include "options" for mcq and single_selection types.`;
+IMPORTANT:
+- For MCQ/single_selection: include "options" array with exactly ONE option marked isCorrect: true
+- For objective/coding: omit "options", provide "correctAnswer" with model response
+- Ensure JSON is valid and properly formatted
+- Make questions challenging but fair for ${session.testLevel} level`;
 
     try {
       const aiResponse = await abstractedAiService.generateResponse({
-        systemPrompt: 'You are an expert technical interviewer who creates personalized, contextual questions.',
+        systemPrompt: 'You are an expert technical interviewer who creates personalized, contextual questions with proper answer formats.',
         userPrompt: prompt,
         options: {
           temperature: 0.7,
-          maxTokens: 800
+          maxTokens: 1000
         }
       });
 
-      const questionData = JSON.parse(aiResponse.response);
+      if (!aiResponse.success || !aiResponse.response) {
+        throw new Error('AI response failed');
+      }
+
+      // Clean and parse the response
+      const cleanedResponse = aiResponse.response.trim();
+      let questionData;
+      
+      try {
+        // Try to extract JSON from the response
+        const jsonStart = cleanedResponse.indexOf('{');
+        const jsonEnd = cleanedResponse.lastIndexOf('}') + 1;
+        
+        if (jsonStart === -1 || jsonEnd === 0) {
+          throw new Error('No JSON found in response');
+        }
+        
+        const jsonString = cleanedResponse.substring(jsonStart, jsonEnd);
+        questionData = JSON.parse(jsonString);
+        
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        throw new Error('Invalid JSON in AI response');
+      }
+
+      // Validate the response structure
+      if (!questionData.questionText || !questionData.questionType) {
+        throw new Error('Missing required fields in AI response');
+      }
+
+      // Ensure proper format based on question type
+      if (questionData.questionType === 'mcq' || questionData.questionType === 'single_selection') {
+        if (!questionData.options || !Array.isArray(questionData.options) || questionData.options.length !== 4) {
+          throw new Error('MCQ questions must have exactly 4 options');
+        }
+        
+        // Ensure exactly one correct answer
+        const correctOptions = questionData.options.filter((opt: any) => opt.isCorrect);
+        if (correctOptions.length !== 1) {
+          // Fix by marking first option as correct if none or multiple are marked
+          questionData.options.forEach((opt: any, index: number) => {
+            opt.isCorrect = index === 0;
+          });
+        }
+      }
+
+      console.log(`✅ [MOCK TEST] AI generated ${questionData.questionType} question for session ${session.id}`);
       return questionData;
       
     } catch (error) {
       console.error('AI question generation failed:', error);
-      // Fallback question
-      return {
-        questionText: `What is your experience with ${session.candidateSkills[0] || 'the main technologies'} mentioned in your resume?`,
-        questionType: 'objective',
-        questionCategory: 'technical'
-      };
+      
+      // Enhanced fallback question based on candidate skills
+      const skill = session.candidateSkills[0] || 'programming';
+      const questionTypes = ['mcq', 'objective'];
+      const questionType = questionTypes[questionNumber % 2] as 'mcq' | 'objective';
+      
+      if (questionType === 'mcq') {
+        return {
+          questionText: `What is a fundamental concept in ${skill} that every developer should understand?`,
+          questionType: 'mcq',
+          questionCategory: 'technical',
+          options: [
+            { id: 'A', text: 'Basic syntax and core principles', isCorrect: true },
+            { id: 'B', text: 'Advanced optimization techniques only', isCorrect: false },
+            { id: 'C', text: 'Historical development timeline', isCorrect: false },
+            { id: 'D', text: 'Marketing and business applications', isCorrect: false }
+          ],
+          explanation: `Understanding basic syntax and core principles is fundamental for any ${skill} developer.`
+        };
+      } else {
+        return {
+          questionText: `Explain the importance of ${skill} in modern software development and how you would apply it in a real project.`,
+          questionType: 'objective',
+          questionCategory: 'technical',
+          correctAnswer: `${skill} is important in modern software development because it enables developers to build efficient, scalable, and maintainable applications. In a real project, I would apply ${skill} by following best practices, writing clean code, implementing proper error handling, and ensuring good performance.`,
+          explanation: `This tests understanding of ${skill}'s practical application and importance in development.`
+        };
+      }
     }
   }
 
@@ -921,6 +1321,8 @@ Note: Only include "options" for mcq and single_selection types.`;
       
       // Evaluate answer using AI (no predefined correct answer)
       const { isCorrect, pointsEarned, feedback } = await this.evaluateAnswerWithAI(question, answer);
+      
+      console.log(`[MOCK TEST] Answer evaluation for question ${questionId}: isCorrect=${isCorrect}, pointsEarned=${pointsEarned}`);
       
       // Insert or update response
       const responseQuery = `
@@ -995,13 +1397,36 @@ Note: Only include "options" for mcq and single_selection types.`;
       let prompt = '';
       
       if (questionType === 'mcq' || questionType === 'single_selection') {
-        // For multiple choice, evaluate the selected option
+        // For multiple choice, check against the correct answer directly
         const options = question.options ? this.safeJsonParse(question.options, 'options') : [];
+        const correctAnswerId = question.correct_answer;
         
         // Find the selected option by text (frontend sends option text, not ID)
         const selectedOption = options.find((opt: any) => 
           opt.text === answerText || opt.id === answerText
         );
+        
+        // Find the correct option
+        const correctOption = options.find((opt: any) => 
+          opt.id === correctAnswerId || opt.isCorrect === true
+        );
+        
+        if (selectedOption && correctOption) {
+          // Direct comparison for MCQ - either correct (1.0) or incorrect (0.0)
+          const isExactMatch = selectedOption.id === correctOption.id || 
+                              selectedOption.text === correctOption.text ||
+                              (selectedOption.isCorrect === true);
+          
+          return {
+            isCorrect: isExactMatch,
+            pointsEarned: isExactMatch ? points : 0,
+            feedback: isExactMatch ? 
+              `Correct! ${correctOption.text}` : 
+              `Incorrect. The correct answer is: ${correctOption.text}`
+          };
+        }
+
+        // Fallback to AI evaluation only if option matching fails
         const selectedText = selectedOption ? selectedOption.text : answerText;
 
         prompt = `
@@ -1010,19 +1435,15 @@ Evaluate this multiple choice answer:
 Question: ${question.question_text}
 Available Options: ${options.map((opt: any) => `${opt.id}: ${opt.text}`).join('\n')}
 Selected Answer: ${selectedText}
+Correct Answer: ${correctOption ? correctOption.text : 'Unknown'}
 
-Evaluate if the selected answer is correct for this question. Consider:
-1. Technical accuracy of the selected option
-2. Relevance to the question asked
-3. Completeness of the answer
-
-For multiple choice questions, be generous with scoring - if the answer demonstrates understanding of the concept, give a high score (0.8-1.0).
+IMPORTANT: For multiple choice questions, give EXACTLY 1.0 score if correct, 0.0 if incorrect. No partial credit.
 
 Respond with JSON only:
 {
   "isCorrect": boolean,
-  "score": number (0-1),
-  "feedback": "brief explanation of why this answer is correct/incorrect"
+  "score": number (exactly 1.0 or 0.0),
+  "feedback": "brief explanation"
 }`;
       } else if (questionType === 'coding') {
         prompt = `
@@ -1061,6 +1482,12 @@ Evaluate the answer based on:
 3. CLARITY: Is the explanation clear and well-structured?
 4. DEPTH: Does it show good understanding of the topic?
 
+IMPORTANT: 
+- Give 1.0 score for excellent answers that fully address the question
+- Give 0.8-0.9 for good answers with minor issues
+- Give 0.6-0.7 for acceptable answers that meet basic requirements
+- Give below 0.6 for poor or incorrect answers
+
 Respond with JSON only:
 {
   "isCorrect": boolean,
@@ -1088,9 +1515,13 @@ Respond with JSON only:
       });
       
       // Determine correctness based on question type
-      const threshold = questionType === 'coding' ? 0.6 : (questionType === 'mcq' || questionType === 'single_selection' ? 0.5 : 0.7);
-      const isCorrect = evaluation.score >= threshold;
-      const pointsEarned = Math.round(evaluation.score * points);
+      const isCorrect = questionType === 'mcq' || questionType === 'single_selection' ? 
+        evaluation.score === 1.0 : 
+        evaluation.score >= (questionType === 'coding' ? 0.6 : 0.7);
+      
+      const pointsEarned = questionType === 'mcq' || questionType === 'single_selection' ?
+        (evaluation.score === 1.0 ? points : 0) :
+        Math.round(evaluation.score * points);
       
       return {
         isCorrect,
@@ -1118,19 +1549,38 @@ Respond with JSON only:
     try {
       await db.query('BEGIN');
 
+      // Calculate final score - check both questions and responses
+      const debugQuery = `
+        SELECT 
+          q.id as question_id,
+          q.points as question_points,
+          r.points_earned,
+          r.is_correct,
+          r.candidate_answer
+        FROM mock_test_questions q
+        LEFT JOIN mock_test_responses r ON q.id = r.question_id AND r.session_id = q.session_id
+        WHERE q.session_id = $1
+        ORDER BY q.question_order
+      `;
+      
+      const debugResult = await db.query(debugQuery, [sessionId]);
+      console.log(`[MOCK TEST] Questions and responses for session ${sessionId}:`, debugResult.rows);
+
       // Calculate final score
       const scoreQuery = `
         SELECT 
-          COUNT(*) as total_answered,
-          SUM(COALESCE(points_earned, 0)) as total_earned,
           COUNT(DISTINCT q.id) as total_questions,
+          COUNT(r.id) as total_answered,
+          SUM(COALESCE(r.points_earned, 0)) as total_earned,
           SUM(q.points) as max_possible_score
         FROM mock_test_questions q
-        LEFT JOIN mock_test_responses r ON q.id = r.question_id
+        LEFT JOIN mock_test_responses r ON q.id = r.question_id AND r.session_id = q.session_id
         WHERE q.session_id = $1
       `;
       
       const scoreResult = await db.query(scoreQuery, [sessionId]);
+      
+      console.log(`[MOCK TEST] Score calculation for session ${sessionId}:`, scoreResult.rows[0]);
       
       if (scoreResult.rows.length === 0) {
         throw new Error('No questions found for this test');
@@ -1140,6 +1590,8 @@ Respond with JSON only:
       const earnedPoints = parseInt(total_earned) || 0;
       const maxPoints = parseInt(max_possible_score) || (parseInt(total_questions) * 10);
       const percentageScore = maxPoints > 0 ? (earnedPoints / maxPoints) * 100 : 0;
+
+      console.log(`[MOCK TEST] Calculated score: ${earnedPoints}/${maxPoints} = ${percentageScore}%`);
 
       // Update session
       const updateQuery = `
@@ -1161,13 +1613,24 @@ Respond with JSON only:
         candidateId
       ]);
 
-      await db.query('COMMIT');
-      
       if (result.rows.length === 0) {
         throw new Error('Session not found or unauthorized');
       }
 
-      return this.mapSessionFromDb(result.rows[0]);
+      const session = this.mapSessionFromDb(result.rows[0]);
+
+      // Update progress tracking
+      await this.updateMockTestProgress(
+        candidateId,
+        session.interviewId, // Already null for general tests
+        session.testLevel,
+        percentageScore,
+        sessionId
+      );
+
+      await db.query('COMMIT');
+      
+      return session;
       
     } catch (error) {
       await db.query('ROLLBACK');
@@ -1194,6 +1657,8 @@ Respond with JSON only:
         correctAnswer: string;
         isCorrect: boolean;
         explanation?: string;
+        pointsEarned?: number;
+        maxPoints?: number;
       }>;
     };
   }> {
@@ -1250,7 +1715,9 @@ Respond with JSON only:
         userAnswer: response?.candidateAnswer || 'No answer',
         correctAnswer: question.correctAnswer,
         isCorrect: response?.isCorrect || false,
-        explanation: question.explanation
+        explanation: question.explanation,
+        pointsEarned: response?.pointsEarned || 0,
+        maxPoints: question.points
       };
     });
 
